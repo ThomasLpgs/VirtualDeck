@@ -1,0 +1,78 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* The window is larger than the panel (SHADOW_MARGIN in main.js) so the drop shadow is not clipped. */
+body {
+  box-sizing: border-box;
+  padding: 24px;
+}
+
+.deck-panel {
+  height: 100%;
+}
+
+.deck-panel.opening {
+  animation: panel-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.deck-panel.opening .key {
+  animation: key-in 260ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--i) * 14ms + 40ms);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+
+@keyframes key-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.97);
+  }
+}
+
+.deck-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.deck-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-right: -4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: background 150ms, color 150ms;
+}
+
+.deck-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.deck-icon-btn .glyph {
+  width: 14px;
+  height: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deck-panel.opening,
+  .deck-panel.opening .key {
+    animation: none;
+  }
+}
