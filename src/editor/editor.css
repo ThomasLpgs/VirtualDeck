@@ -1098,6 +1098,18 @@ input[type='range']:focus {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+.backup-status {
+  margin: 0;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  color: var(--ok);
+  font-size: 12.5px;
+}
+
+.backup-status.warn {
+  color: var(--warn);
+}
+
 /* ---------- Scrollbars ---------- */
 
 ::-webkit-scrollbar {

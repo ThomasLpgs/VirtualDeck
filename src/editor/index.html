@@ -269,6 +269,28 @@
             <label class="switch"><input type="checkbox" id="login" /><span></span></label>
           </div>
         </section>
+
+        <h2 class="section-title">Sauvegarde</h2>
+        <section class="card rows">
+          <div class="setting">
+            <div class="setting-text">
+              <p class="setting-title">Exporter ma configuration</p>
+              <p class="muted">
+                Crée un fichier avec tes boutons, leurs sons et leurs images. Pratique pour changer de PC ou partager
+                ton deck. Le mot de passe OBS n'est pas inclus.
+              </p>
+            </div>
+            <button id="export-config" class="btn" type="button">Exporter…</button>
+          </div>
+          <div class="setting">
+            <div class="setting-text">
+              <p class="setting-title">Importer une configuration</p>
+              <p class="muted">Remplace tes boutons, ta grille et ton raccourci. Ta connexion OBS est conservée.</p>
+            </div>
+            <button id="import-config" class="btn" type="button">Importer…</button>
+          </div>
+          <p id="backup-status" class="backup-status" aria-live="polite" hidden></p>
+        </section>
       </div>
     </main>
 

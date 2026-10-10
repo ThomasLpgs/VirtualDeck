@@ -9,6 +9,8 @@ const listener = (channel) => (callback) => {
 contextBridge.exposeInMainWorld('api', {
   getConfig: () => ipcRenderer.invoke('config:get'),
   saveConfig: (config) => ipcRenderer.invoke('config:save', config),
+  exportConfig: () => ipcRenderer.invoke('config:export'),
+  importConfig: () => ipcRenderer.invoke('config:import'),
   press: (index) => ipcRenderer.invoke('deck:press', index),
   hideDeck: () => ipcRenderer.send('deck:hide'),
   openEditor: (buttonIndex) => ipcRenderer.send('editor:open', buttonIndex),
