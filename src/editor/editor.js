@@ -103,7 +103,15 @@ function scheduleSave() {
   saveTimer = setTimeout(save, SAVE_DEBOUNCE_MS);
 }
 
+// Writes a pending debounced save right away (before export/import reads the config).
+async function flushSave() {
+  if (!saveTimer) return;
+  clearTimeout(saveTimer);
+  await save();
+}
+
 async function save() {
+  saveTimer = null;
   const result = await api.saveConfig(config);
   if (!result.ok) {
     setStatus(`Erreur : ${result.error}`, true);
@@ -684,6 +692,45 @@ function renderObsState() {
   if (config) markLiveScene();
 }
 
+// ---------- Backup ----------
+
+function showBackupStatus(text, warn = false) {
+  const status = $('backup-status');
+  status.textContent = text;
+  status.classList.toggle('warn', warn);
+  status.hidden = false;
+}
+
+async function exportConfig() {
+  await flushSave();
+  const result = await api.exportConfig();
+  if (!result) return;
+  if (!result.ok) return showBackupStatus(`Échec de l'export : ${result.error}`, true);
+  const skipped = result.missing.length
+    ? ` ${result.missing.length} fichier(s) introuvable(s) n'ont pas pu être inclus : ${result.missing.map(fileName).join(', ')}.`
+    : '';
+  showBackupStatus(`Configuration exportée dans « ${fileName(result.path)} ».${skipped}`, Boolean(skipped));
+}
+
+async function importConfig() {
+  await flushSave();
+  const result = await api.importConfig();
+  if (!result) return;
+  if (!result.ok) return showBackupStatus(`Échec de l'import : ${result.error}`, true);
+  config = result.config;
+  selected = 0;
+  renderSettings();
+  renderPreview();
+  renderInspector();
+  setStatus('Enregistré');
+  showBackupStatus(
+    result.hotkeyOk
+      ? `Configuration importée : ${result.buttonCount} boutons.`
+      : `Configuration importée, mais le raccourci « ${formatHotkey(config.hotkey).join(' + ')} » est déjà pris : choisis-en un autre ci-dessus.`,
+    !result.hotkeyOk,
+  );
+}
+
 // ---------- Wiring ----------
 
 function bindStaticFields() {
@@ -749,6 +796,9 @@ function bindStaticFields() {
     api.obsConnect(config.obs);
     scheduleSave();
   });
+
+  $('export-config').addEventListener('click', exportConfig);
+  $('import-config').addEventListener('click', importConfig);
 
   setupHotkeyField();
 }

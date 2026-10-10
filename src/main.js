@@ -15,6 +15,7 @@ const { pathToFileURL } = require('url');
 const config = require('./config');
 const { ObsManager } = require('./obs');
 const { runAction } = require('./actions');
+const backup = require('./backup');
 
 const fs = require('fs');
 
@@ -23,6 +24,8 @@ const APP_ICON = path.join(__dirname, 'assets', 'icon.png');
 // Must match "build.appId" in package.json, or Windows notifications won't show in the installed app.
 const APP_ID = 'com.streamdeckvirtuel.app';
 const LUCIDE_DIR = path.join(__dirname, '..', 'node_modules', 'lucide-static');
+const BACKUP_EXT = 'svdeck';
+const BACKUP_FILTERS = [{ name: 'Sauvegarde Stream Deck virtuel', extensions: [BACKUP_EXT] }];
 // Must match the CSS variables in shared/keys.css and the body padding in deck/deck.css.
 const KEY_SIZE = 88;
 const KEY_GAP = 10;
@@ -203,21 +206,92 @@ function createTray() {
 
 // ---------- IPC ----------
 
+// Persists a new config and applies it everywhere. Returns whether the hotkey could be registered.
+function applyConfig(next) {
+  cfg = config.save(next);
+  const hotkeyOk = registerHotkey();
+  app.setLoginItemSettings({ openAtLogin: cfg.launchAtLogin });
+  tray.setToolTip(`Stream Deck virtuel (${cfg.hotkey})`);
+  obs.configure(cfg.obs);
+  broadcast('config:changed', forRenderer(cfg));
+  return hotkeyOk;
+}
+
 function registerIpc() {
   ipcMain.handle('config:get', () => forRenderer(cfg));
 
   ipcMain.handle('config:save', (_e, next) => {
     try {
-      cfg = config.save(next);
+      return { ok: true, hotkeyOk: applyConfig(next) };
     } catch (err) {
       return { ok: false, error: err.message };
     }
-    const hotkeyOk = registerHotkey();
-    app.setLoginItemSettings({ openAtLogin: cfg.launchAtLogin });
-    tray.setToolTip(`Stream Deck virtuel (${cfg.hotkey})`);
-    obs.configure(cfg.obs);
-    broadcast('config:changed', forRenderer(cfg));
-    return { ok: true, hotkeyOk };
+  });
+
+  ipcMain.handle('config:export', async () => {
+    const date = new Date().toISOString().slice(0, 10);
+    const { canceled, filePath } = await dialog.showSaveDialog(editorWin, {
+      title: 'Exporter ma configuration',
+      defaultPath: path.join(app.getPath('documents'), `Stream Deck virtuel ${date}.${BACKUP_EXT}`),
+      filters: BACKUP_FILTERS,
+    });
+    if (canceled || !filePath) return null;
+    try {
+      const { bundle, missing } = backup.exportBundle(cfg);
+      fs.writeFileSync(filePath, JSON.stringify(bundle));
+      return { ok: true, path: filePath, missing };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('config:import', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(editorWin, {
+      title: 'Importer une configuration',
+      properties: ['openFile'],
+      filters: BACKUP_FILTERS,
+    });
+    if (canceled || !filePaths[0]) return null;
+
+    let bundle;
+    try {
+      bundle = backup.parseBundle(fs.readFileSync(filePaths[0], 'utf8'));
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+
+    // An imported deck may come from someone else: point out buttons that launch things.
+    const openCount = bundle.config.buttons.filter((b) => b?.action?.type === 'open').length;
+    const { response } = await dialog.showMessageBox(editorWin, {
+      type: 'question',
+      buttons: ['Importer', 'Annuler'],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+      title: 'Importer une configuration',
+      message: `Remplacer tes boutons par ceux de « ${path.basename(filePaths[0])} » ?`,
+      detail:
+        'Ta grille et ton raccourci seront aussi remplacés. Ta connexion OBS est conservée.' +
+        (openCount
+          ? `\n\n${openCount} bouton(s) ouvrent un programme ou un lien : vérifie-les dans l'éditeur avant de t'en servir.`
+          : ''),
+    });
+    if (response !== 0) return null;
+
+    try {
+      const imported = backup.restoreBundle(bundle, path.join(app.getPath('userData'), 'media'));
+      const hotkeyOk = applyConfig({
+        ...cfg,
+        hotkey: imported.hotkey || cfg.hotkey,
+        closeAfterAction: imported.closeAfterAction,
+        grid: imported.grid,
+        buttons: imported.buttons,
+        obs: { ...cfg.obs, url: imported.obsUrl || cfg.obs.url },
+      });
+      return { ok: true, hotkeyOk, config: forRenderer(cfg), buttonCount: imported.buttons.length };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
   });
 
   ipcMain.handle('deck:press', async (_e, index) => {
