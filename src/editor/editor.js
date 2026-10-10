@@ -52,6 +52,8 @@ let obsState = { status: 'disconnected' };
 let icons = { names: [], tags: {} };
 let saveTimer = null;
 let dragFrom = null;
+// Scene / source names fetched from OBS, offered as suggestions in the action fields.
+const obsLists = { scenes: [], sources: [] };
 // A button the main process asked us to select (from the deck) before config finished loading.
 let pendingSelect = null;
 
@@ -319,11 +321,82 @@ function field(labelText, control, hintText) {
   return wrap;
 }
 
-function textInput(value, onInput, { placeholder = '', list } = {}) {
+function textInput(value, onInput, { placeholder = '', options } = {}) {
   const input = el('input', { value: value || '', placeholder, spellcheck: false });
-  if (list) input.setAttribute('list', list);
   input.addEventListener('input', () => onInput(input.value));
-  return input;
+  return options ? combo(input, options, onInput) : input;
+}
+
+// Themed replacement for <datalist>, whose native popup is white and cannot be styled.
+// Free typing stays allowed: suggestions only filter as you type.
+function combo(input, getOptions, onPick) {
+  const menu = el('div', { className: 'combo-menu', hidden: true });
+  menu.setAttribute('role', 'listbox');
+  const wrap = el('div', { className: 'combo' }, input, createGlyph('chevrons-up-down', 'glyph combo-chevron'), menu);
+  input.setAttribute('role', 'combobox');
+  input.setAttribute('autocomplete', 'off');
+  let active = -1;
+  const items = () => [...menu.children];
+
+  function close() {
+    menu.hidden = true;
+    active = -1;
+  }
+  function pick(value) {
+    input.value = value;
+    onPick(value);
+    close();
+  }
+  function open() {
+    const all = getOptions();
+    const query = input.value.trim().toLowerCase();
+    // When the field already holds a valid choice, list everything so the user can switch.
+    const shown = all.includes(input.value) ? all : all.filter((o) => o.toLowerCase().includes(query));
+    if (!shown.length) return close();
+    menu.replaceChildren(
+      ...shown.map((option) => {
+        const item = el('div', { className: 'combo-option', textContent: option });
+        item.setAttribute('role', 'option');
+        item.classList.toggle('current', option === input.value);
+        // mousedown + preventDefault keeps focus in the input, so blur doesn't close the menu first.
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          pick(option);
+        });
+        return item;
+      }),
+    );
+    active = -1;
+    menu.hidden = false;
+  }
+  function move(delta) {
+    const list = items();
+    if (!list.length) return;
+    active = (active + delta + list.length) % list.length;
+    list.forEach((item, i) => item.classList.toggle('active', i === active));
+    list[active].scrollIntoView({ block: 'nearest' });
+  }
+
+  input.addEventListener('focus', open);
+  input.addEventListener('input', open);
+  input.addEventListener('blur', close);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (menu.hidden) open();
+      else move(1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      move(-1);
+    } else if (e.key === 'Enter' && active >= 0) {
+      e.preventDefault();
+      pick(items()[active].textContent);
+    } else if (e.key === 'Escape' && !menu.hidden) {
+      e.stopPropagation();
+      close();
+    }
+  });
+  return wrap;
 }
 
 function button(text, onClick, className = 'btn') {
@@ -371,7 +444,10 @@ function renderActionFields() {
       container.append(
         field(
           'Scène',
-          textInput(action.scene, (scene) => updateAction({ scene }), { list: 'scene-list', placeholder: 'Nom de la scène' }),
+          textInput(action.scene, (scene) => updateAction({ scene }), {
+            options: () => obsLists.scenes,
+            placeholder: 'Nom de la scène',
+          }),
           'Le bouton affiche un badge LIVE quand cette scène est à l’antenne.',
         ),
       );
@@ -384,10 +460,10 @@ function renderActionFields() {
           updateAction({ scene });
           refreshSources(scene);
         },
-        { list: 'scene-list', placeholder: 'Vide = scène en cours' },
+        { options: () => obsLists.scenes, placeholder: 'Vide = scène en cours' },
       );
       const sourceInput = textInput(action.source, (source) => updateAction({ source }), {
-        list: 'source-list',
+        options: () => obsLists.sources,
         placeholder: 'Nom de la source',
       });
 
@@ -474,16 +550,12 @@ function renderActionFields() {
   }
 }
 
-function fillDatalist(id, values) {
-  $(id).replaceChildren(...values.map((v) => new Option(v)));
-}
-
 async function refreshScenes() {
-  fillDatalist('scene-list', await api.obsScenes());
+  obsLists.scenes = await api.obsScenes();
 }
 
 async function refreshSources(scene) {
-  fillDatalist('source-list', await api.obsSources(scene));
+  obsLists.sources = await api.obsSources(scene);
 }
 
 // ---------- Hotkey ----------

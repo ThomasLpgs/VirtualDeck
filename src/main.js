@@ -19,6 +19,9 @@ const { runAction } = require('./actions');
 const fs = require('fs');
 
 const PRELOAD = path.join(__dirname, 'preload.js');
+const APP_ICON = path.join(__dirname, 'assets', 'icon.png');
+// Must match "build.appId" in package.json, or Windows notifications won't show in the installed app.
+const APP_ID = 'com.streamdeckvirtuel.app';
 const LUCIDE_DIR = path.join(__dirname, '..', 'node_modules', 'lucide-static');
 // Must match the CSS variables in shared/keys.css and the body padding in deck/deck.css.
 const KEY_SIZE = 88;
@@ -38,6 +41,13 @@ const FILE_FILTERS = {
 
 // Sounds are triggered from a click in the deck, but may also be played while it is hidden.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
+// The packaged app is named "Stream Deck virtuel" (productName), which would move the config
+// to a new folder. Pin it so the installed app and `npm start` share the same buttons.
+// Only when untouched, so test runs can still point userData elsewhere.
+if (app.getPath('userData') === path.join(app.getPath('appData'), app.getName())) {
+  app.setPath('userData', path.join(app.getPath('appData'), 'streamdeck-virtuel'));
+}
 
 let cfg;
 let deckWin = null;
@@ -145,6 +155,7 @@ function openEditor(buttonIndex) {
     minWidth: 1000,
     minHeight: 640,
     title: 'Stream Deck virtuel — Configuration',
+    icon: APP_ICON,
     backgroundColor: '#0e0f12',
     autoHideMenuBar: true,
     // Custom dark title bar that keeps the native Windows controls.
@@ -173,23 +184,7 @@ function registerHotkey() {
 }
 
 function trayIcon() {
-  // 32x32 BGRA bitmap of a 3x2 key grid, so no binary asset is needed.
-  const size = 32;
-  const buf = Buffer.alloc(size * size * 4);
-  const keys = [];
-  for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) keys.push([3 + c * 9, 7 + r * 10]);
-  for (const [kx, ky] of keys) {
-    for (let y = ky; y < ky + 8; y++) {
-      for (let x = kx; x < kx + 8; x++) {
-        const i = (y * size + x) * 4;
-        buf[i] = 0xff; // B
-        buf[i + 1] = 0x8a; // G
-        buf[i + 2] = 0x5b; // R
-        buf[i + 3] = 0xff; // A
-      }
-    }
-  }
-  return nativeImage.createFromBitmap(buf, { width: size, height: size });
+  return nativeImage.createFromPath(APP_ICON).resize({ width: 32, height: 32, quality: 'best' });
 }
 
 function createTray() {
@@ -288,7 +283,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('will-quit', () => globalShortcut.unregisterAll());
 
   app.whenReady().then(() => {
-    app.setAppUserModelId('streamdeck-virtuel');
+    app.setAppUserModelId(APP_ID);
     const loaded = config.load();
     cfg = loaded.config;
 
