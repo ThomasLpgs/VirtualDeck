@@ -20,12 +20,17 @@
 ## Fonctionnalités
 
 - **Une grille qui s'ouvre où tu es** : `Ctrl + Maj + Espace` (modifiable) l'affiche sous la souris, par-dessus les jeux en plein écran fenêtré. `Échap` ou un clic à côté la ferme. Les touches `1` à `9` déclenchent les boutons au clavier.
-- **Pilote OBS Studio et Streamlabs Desktop** : changer de scène, afficher/masquer une source, lancer une animation qui se cache toute seule, démarrer ou arrêter le live et l'enregistrement.
-- **Badge LIVE** sur le bouton de la scène actuellement à l'antenne.
+- **Pilote OBS Studio et Streamlabs Desktop** : scènes, sources et animations, sons coupés, clips, live et enregistrement.
+- **État en direct sur les boutons** : badge LIVE sur la scène à l'antenne, chrono « LIVE 1:02:03 » et « REC 12:03 » (ou « PAUSE ») sur les boutons Stream et Enregistrer, « MUET » sur un son coupé. Tout suit aussi ce que tu fais directement dans OBS.
+- **Multi-actions** : un seul bouton enchaîne plusieurs actions, avec une attente possible avant chacune (par exemple « Pause » : scène Pause, puis musique, puis webcam masquée).
+- **Pages** : jusqu'à 10 grilles, chacune avec son propre nombre de colonnes et de lignes. Elles s'ouvrent dans le deck ou dans une bulle qui sort du bouton, au-dessus du deck (au choix dans les Réglages).
+- **Raccourci par bouton** : déclenche n'importe quel bouton de partout, sans ouvrir le deck (les touches F13 à F24 marchent seules).
+- **Format vertical (TikTok, Shorts…)** avec le plugin [Aitum Vertical](https://github.com/Aitum/obs-vertical-canvas) : scènes, sources, live, enregistrement et clips en horizontal, en vertical ou les deux en même temps.
 - **Sons** (mp3, wav, ogg…) avec réglage du volume ; un second clic coupe le son.
 - **Ouvrir** un programme, un fichier ou un lien (`https://`, `spotify:`, `steam://`, `discord://`…).
-- **Personnalisation** : plus de 2 000 icônes, emojis ou tes propres images, 10 couleurs ou une couleur libre, grille jusqu'à 8 × 6.
+- **Personnalisation** : plus de 2 000 icônes, emojis ou tes propres images, 10 couleurs ou une couleur libre, grille jusqu'à 8 × 6. Le deck se déplace et se redimensionne (60 % à 160 %).
 - **Export / import** de toute la configuration (sons et images compris), pour changer de PC ou partager ton deck.
+- **Mises à jour** : une pastille dans l'éditeur prévient quand une nouvelle version est disponible.
 - **6 langues** : français, anglais, espagnol, allemand, italien, portugais (ou automatique selon Windows).
 - Tourne discrètement dans la zone de notification, peut se lancer au démarrage de Windows.
 
@@ -38,7 +43,7 @@
   </tr>
   <tr>
     <td><img src="docs/screenshots/editor-connection.png" alt="Connexion à OBS" /><br /><sub>Connexion à OBS ou Streamlabs, avec guide pas à pas</sub></td>
-    <td><img src="docs/screenshots/editor-settings.png" alt="Réglages" /><br /><sub>Réglages : langue, raccourci, sauvegarde</sub></td>
+    <td><img src="docs/screenshots/editor-settings.png" alt="Réglages" /><br /><sub>Réglages : langue, raccourci, taille du deck, pages, sauvegarde</sub></td>
   </tr>
 </table>
 
@@ -70,18 +75,38 @@ Dans l'onglet **Boutons**, clique sur une case puis choisis :
 
 | Action | Ce que fait le bouton |
 | --- | --- |
-| **Scène** | Passe sur la scène choisie (la liste vient directement d'OBS). |
-| **Source / animation** | *Animation* : affiche la source, attend sa durée puis la cache (idéal pour une vidéo `.webm` transparente). *Basculer*, *Afficher*, *Masquer* : contrôle la visibilité. |
-| **Enregistrer** | Démarre ou arrête l'enregistrement. |
-| **Stream** | Démarre ou arrête le live. |
+| **Scène** | Passe sur la scène choisie (la liste vient directement d'OBS). Avec Aitum Vertical : une scène horizontale et/ou une scène verticale, changées ensemble. |
+| **Source / animation** | *Animation* : affiche la source, attend sa durée puis la cache (idéal pour une vidéo `.webm` transparente). *Basculer*, *Afficher*, *Masquer* : contrôle la visibilité. Avec Aitum Vertical : la même animation en horizontal et en vertical. |
+| **Muet** | Coupe ou réactive une source audio (micro, musique…). Le bouton affiche « MUET » en rouge tant qu'elle est coupée. |
+| **Clip** | Sauvegarde les dernières secondes dans un fichier vidéo (tampon de relecture d'OBS, à démarrer dans OBS). En vertical avec le Backtrack d'Aitum. |
+| **Enregistrer** | Démarre ou arrête l'enregistrement, avec le chrono sur le bouton. |
+| **Stream** | Démarre ou arrête le live, avec le chrono sur le bouton. |
 | **Son** | Joue un fichier audio, ou le coupe s'il est en cours. |
 | **Ouvrir** | Lance un programme, un fichier ou un lien. |
+| **Page** | Va à la page suivante, précédente ou à une page précise, sans fermer le deck. |
+| **Multi** | Enchaîne plusieurs de ces actions dans l'ordre, avec une attente possible avant chacune. Si une étape échoue, les suivantes s'exécutent quand même. |
 
-Glisse-dépose les boutons pour les réorganiser. Tout est enregistré automatiquement.
+En bas des réglages de chaque bouton, **Raccourci** lui donne une combinaison de touches qui le déclenche de n'importe où.
+
+Glisse-dépose les boutons pour les réorganiser, et ajoute des pages avec **+** au-dessus de l'aperçu. Tout est enregistré automatiquement.
 
 ### 3. Utiliser le deck
 
 Appuie sur `Ctrl + Maj + Espace` n'importe où (ou sur la touche choisie dans **Réglages** : les touches F13 à F24 des souris et claviers programmables marchent aussi), puis clique sur un bouton.
+
+- **Changer de page** : flèches ‹ › en haut du deck, touches ← → du clavier, ou un bouton **Page**.
+- **Déplacer** le deck en le tirant par sa barre du haut : il se rouvre ensuite au même endroit. **Redimensionner** par le coin en bas à droite.
+- Dans **Réglages › Ouverture des pages**, *Deck superposé* ouvre les pages dans une bulle qui sort du bouton : re-cliquer sur le bouton ou sur le deck la referme.
+
+### 4. Format vertical avec Aitum Vertical (optionnel)
+
+Si le plugin [Aitum Vertical](https://github.com/Aitum/obs-vertical-canvas) est installé dans OBS, VirtualDeck le détecte tout seul :
+
+- **Scène** et **Source / animation** proposent des champs verticaux en plus des horizontaux ; chaque champ rempli agit sur son format, les deux en même temps si les deux sont remplis.
+- **Stream**, **Enregistrer** et **Clip** ont un choix **Sortie** : *Horizontal* (OBS), *Vertical* (Aitum) ou *Les deux*.
+- Les sources des scènes verticales nécessitent OBS 32 ou plus récent.
+
+Si le plugin n'est plus détecté, la partie horizontale continue de marcher et le deck signale les boutons concernés.
 
 ## Sauvegarde et changement de PC
 
@@ -108,11 +133,13 @@ src/
 ├── obs.js           client OBS WebSocket v5
 ├── streamlabs.js    client Streamlabs Remote Control
 ├── backup.js        export / import
+├── updates.js       vérification des nouvelles versions (GitHub Releases)
 ├── i18n.js          traductions côté processus principal
 ├── i18n/*.json      un fichier par langue
 ├── deck/            la grille (fenêtre transparente)
 ├── editor/          l'éditeur
 └── shared/          code commun aux deux fenêtres
+test/                tests automatiques (node:test, avec un faux OBS)
 ```
 
 Ajouter une langue : copie `src/i18n/en.json` vers `src/i18n/<code>.json`, traduis les valeurs, puis ajoute le code dans `LANGUAGES` (`src/i18n.js`). Une clé absente retombe sur l'anglais.
