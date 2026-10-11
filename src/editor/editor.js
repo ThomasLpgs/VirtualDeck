@@ -1227,6 +1227,19 @@ function bindStaticFields() {
   );
 
   $('deck-position-reset').addEventListener('click', () => api.resetDeckPosition());
+  $('page-mode').replaceWith(
+    segmented(
+      [
+        ['replace', t('pageMode.replace')],
+        ['popup', t('pageMode.popup')],
+      ],
+      config.pageMode || 'replace',
+      (mode) => {
+        config.pageMode = mode;
+        scheduleSave();
+      },
+    ),
+  );
   // Saved by the main process (like the corner grip of the deck), not by the editor's autosave.
   $('deck-scale').addEventListener('input', (e) => {
     config.deckScale = Number(e.target.value) / 100;

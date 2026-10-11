@@ -9,6 +9,11 @@ const PRESS_DELAY_MS = 90;
 let config = null;
 // Page shown (0-based), set by the main process.
 let page = 0;
+// Page shown over the deck in popup page mode ({ page, from }), or null.
+let popup = null;
+const $popup = document.getElementById('popup');
+const $popupGrid = document.getElementById('popup-grid');
+const $popupLabel = document.getElementById('popup-label');
 // Hidden, the page stays loaded but skips refreshing (timers, OBS events); it catches up when shown.
 let visible = false;
 let streamState = { status: 'disconnected', currentScene: null };
@@ -25,18 +30,26 @@ function applyScale(scale) {
   document.documentElement.style.zoom = String(scale || 1);
 }
 
-function render() {
-  applyScale(config.deckScale);
-  grid.style.gridTemplateColumns = `repeat(${config.grid.cols}, var(--key-size))`;
-  grid.replaceChildren(
-    ...visibleButtons().map((button, i) => {
+// Fills a grid with the keys of the page starting at `start` (an index in config.buttons).
+function fillGrid(target, start) {
+  target.style.gridTemplateColumns = `repeat(${config.grid.cols}, var(--key-size))`;
+  const count = config.grid.cols * config.grid.rows;
+  target.replaceChildren(
+    ...config.buttons.slice(start, start + count).map((button, i) => {
       const key = createKey(button, i);
       // An empty "+" key is an invitation to configure it.
-      key.addEventListener('click', () => (isEmptyButton(button) ? window.api.openEditor(pageStart() + i) : press(i)));
+      key.addEventListener('click', () => (isEmptyButton(button) ? window.api.openEditor(start + i) : press(target, start, i)));
       return key;
     }),
   );
-  $pager.hidden = config.pageCount <= 1;
+}
+
+function render() {
+  applyScale(config.deckScale);
+  fillGrid(grid, pageStart());
+  if (popup) fillGrid($popupGrid, popup.page * PAGE_SIZE);
+  // Popup mode reaches the other pages through page keys only.
+  $pager.hidden = config.pageCount <= 1 || config.pageMode === 'popup';
   $pageLabel.textContent = `${page + 1}/${config.pageCount}`;
   renderObs();
 }
@@ -48,8 +61,31 @@ function renderObs() {
   markKeys(grid.children, buttons, streamState);
 }
 
-async function press(index) {
-  const key = grid.children[index];
+// Opens (or replaces, or closes with null) the page shown over the deck.
+function showPopup(next) {
+  const opening = next && !popup;
+  popup = next;
+  $popup.hidden = !popup;
+  panel.classList.toggle('covered', Boolean(popup));
+  if (!popup) return;
+  $popupLabel.textContent = t('page.n', { n: popup.page + 1 });
+  fillGrid($popupGrid, popup.page * PAGE_SIZE);
+  if (!opening) return;
+  // Start the animation from the key that opened it (when it is on the deck), in CSS pixels.
+  const zoom = Number(document.documentElement.style.zoom) || 1;
+  const from = popup.from !== null && popup.from >= pageStart() ? grid.children[popup.from - pageStart()] : null;
+  const fromBox = from?.getBoundingClientRect();
+  const box = panel.getBoundingClientRect();
+  $popup.style.setProperty('--from-x', `${fromBox ? (fromBox.x + fromBox.width / 2 - (box.x + box.width / 2)) / zoom : 0}px`);
+  $popup.style.setProperty('--from-y', `${fromBox ? (fromBox.y + fromBox.height / 2 - (box.y + box.height / 2)) / zoom : 0}px`);
+  $popup.classList.remove('opening');
+  void $popup.offsetWidth;
+  $popup.classList.add('opening');
+}
+
+// index: position of the key in `target`, the grid of the page starting at `start`.
+async function press(target, start, index) {
+  const key = target.children[index];
   if (!key) return;
   key.classList.remove('pressed', 'error', 'saved');
   void key.offsetWidth; // restart the animation
@@ -57,7 +93,7 @@ async function press(index) {
   setTimeout(() => key.classList.remove('pressed'), 150);
 
   await new Promise((r) => setTimeout(r, PRESS_DELAY_MS));
-  const result = await window.api.press(pageStart() + index);
+  const result = await window.api.press(start + index);
   // A warning means only the horizontal part ran (vertical part blocked).
   if (!result.ok || result.warning) {
     key.classList.add('error');
@@ -89,7 +125,7 @@ document.addEventListener('keydown', (e) => {
   if (['ArrowLeft', 'PageUp'].includes(e.key)) return window.api.turnPage(-1);
   if (['ArrowRight', 'PageDown'].includes(e.key)) return window.api.turnPage(1);
   const digit = e.code.match(/^(?:Digit|Numpad)([1-9])$/);
-  if (digit) grid.children[Number(digit[1]) - 1]?.click();
+  if (digit) (popup ? $popupGrid : grid).children[Number(digit[1]) - 1]?.click();
 });
 
 // The transparent margin around the panel belongs to the window: treat clicks there as "outside".
@@ -153,9 +189,15 @@ window.api.onDeckPage((next) => {
   page = next;
   if (config) render();
 });
+window.api.onDeckPopup((next) => {
+  if (config) showPopup(next);
+});
 window.api.onDeckHidden(() => {
   visible = false;
 });
+const popupBack = document.getElementById('popup-back');
+popupBack.append(createGlyph('chevron-left'));
+popupBack.addEventListener('click', () => window.api.closePopup());
 window.api.onStreamState((state) => {
   streamState = state;
   if (visible) renderObs();
