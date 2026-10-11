@@ -960,6 +960,19 @@ input[type='search']::-webkit-search-cancel-button {
   color: var(--text);
 }
 
+/* Choices in a settings row: equal widths, each on one line. */
+.setting .segmented {
+  flex: none;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  width: 280px;
+}
+
+.setting .segmented button {
+  white-space: nowrap;
+}
+
 .segmented button.selected {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text);
