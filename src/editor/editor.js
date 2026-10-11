@@ -2,7 +2,8 @@
    -- api comes from preload.js, t/I18N/loadI18n from shared/i18n.js, the rest from shared/keys.js */
 const $ = (id) => document.getElementById(id);
 
-const SAVE_DEBOUNCE_MS = 400;
+// Autosave once typing pauses for a second (closing the editor saves right away, see pagehide).
+const SAVE_DEBOUNCE_MS = 1000;
 const MAX_ICON_RESULTS = 120;
 const DEFAULT_COLOR = '#8b8d98';
 
