@@ -27,6 +27,17 @@
       <div id="grid" class="keys"></div>
       <div id="resize-grip" class="resize-grip" data-i18n-title="deck.resize"></div>
     </main>
+    <!-- A page opened over the deck, growing out of the key that asked for it (popup page mode). -->
+    <section id="popup" class="deck-panel popup" hidden>
+      <header class="deck-header">
+        <span class="popup-title">
+          <button id="popup-back" class="deck-icon-btn" type="button" data-i18n-title="deck.back"></button>
+          <span id="popup-label"></span>
+        </span>
+        <span class="deck-actions"><kbd data-i18n="key.Escape"></kbd></span>
+      </header>
+      <div id="popup-grid" class="keys"></div>
+    </section>
     <script src="../shared/i18n.js"></script>
     <script src="../shared/keys.js"></script>
     <script src="deck.js"></script>

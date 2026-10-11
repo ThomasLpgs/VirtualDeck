@@ -59,7 +59,9 @@ if (app.getPath('userData') === path.join(app.getPath('appData'), app.getName())
 let cfg;
 let deckWin = null;
 // Page shown by the deck (0-based). Not saved: the deck starts on the first page.
+// In 'popup' page mode, the deck's own grid stays on page 1 and this is the page shown over it.
 let deckPage = 0;
+let lastPageMode = null;
 // Where showDeck() last put the deck, to tell its own moves from the user's drags.
 let placedAt = null;
 // While the corner grip is dragged: the scale shown (saved on release) and where the drag began.
@@ -208,7 +210,10 @@ function createDeckWindow() {
   deckWin.setAlwaysOnTop(true, 'screen-saver');
   deckWin.loadFile(path.join(__dirname, 'deck', 'index.html'));
   // Also after the reload that follows a language change.
-  deckWin.webContents.on('did-finish-load', () => deckWin.webContents.send('deck:page', deckPage));
+  deckWin.webContents.on('did-finish-load', () => {
+    if (cfg.pageMode === 'popup') deckPage = 0;
+    deckWin.webContents.send('deck:page', deckPage);
+  });
   deckWin.on('blur', hideDeck);
   deckWin.on('moved', () => {
     const [x, y] = deckWin.getPosition();
@@ -245,12 +250,15 @@ function showDeck() {
 }
 
 // target: 'next' / 'prev' (wrapping around) or a page number (1-based).
-function goToPage(target) {
+// from: index of the key that asked for it, so a popup page can grow out of it.
+function goToPage(target, from = null) {
   const count = cfg.pageCount;
   if (target === 'next') deckPage = (deckPage + 1) % count;
   else if (target === 'prev') deckPage = (deckPage - 1 + count) % count;
   else deckPage = Math.min(count, Math.max(1, Number(target) || 1)) - 1;
-  deckWin.webContents.send('deck:page', deckPage);
+  // Popup mode: page 1 is the deck itself, any other page opens over it.
+  if (cfg.pageMode === 'popup') deckWin.webContents.send('deck:popup', deckPage ? { page: deckPage, from } : null);
+  else deckWin.webContents.send('deck:page', deckPage);
 }
 
 function hideDeck() {
@@ -258,6 +266,8 @@ function hideDeck() {
   deckWin.hide();
   // The page stays loaded (instant opening): tell it to stop refreshing what nobody sees.
   deckWin.webContents.send('deck:hidden');
+  // A popup page is temporary: the next opening shows the deck itself again.
+  if (cfg.pageMode === 'popup' && deckPage) goToPage(1);
 }
 
 function toggleDeck() {
@@ -346,7 +356,7 @@ async function runKey(index, { fromDeck = false } = {}) {
   try {
     const result = await runAction(button.action, { stream: activeStream(), playSound });
     if (result?.page) {
-      goToPage(result.page);
+      goToPage(result.page, index);
       // From a hotkey (or after the deck closed), open the deck on that page.
       if (!deckWin.isVisible()) showDeck();
     }
@@ -385,6 +395,13 @@ function createTray() {
 function applyConfig(next) {
   const previousLanguage = i18n.bundle().lang;
   cfg = config.save(next);
+  // Switching page mode starts again from the deck's first page.
+  if (lastPageMode && lastPageMode !== cfg.pageMode) {
+    deckPage = 0;
+    deckWin.webContents.send('deck:popup', null);
+    deckWin.webContents.send('deck:page', 0);
+  }
+  lastPageMode = cfg.pageMode;
   if (deckPage >= cfg.pageCount) goToPage(1);
   const hotkeyOk = registerHotkey();
   app.setLoginItemSettings({ openAtLogin: cfg.launchAtLogin });
@@ -488,6 +505,7 @@ function registerIpc() {
   ipcMain.on('deck:hide', hideDeck);
   ipcMain.on('deck:resetPosition', () => saveDeckPosition(null));
   ipcMain.on('deck:turnPage', (_e, delta) => goToPage(delta < 0 ? 'prev' : 'next'));
+  ipcMain.on('deck:closePopup', () => goToPage(1));
   ipcMain.on('deck:resize', (_e, phase) => onDeckResize(phase));
   ipcMain.on('deck:setScale', (_e, scale) => {
     if (Number.isFinite(scale)) saveDeckScale(Math.min(config.MAX_DECK_SCALE, Math.max(config.MIN_DECK_SCALE, scale)));
@@ -558,6 +576,7 @@ if (!app.requestSingleInstanceLock()) {
     app.setAppUserModelId(APP_ID);
     const loaded = config.load();
     cfg = loaded.config;
+    lastPageMode = cfg.pageMode;
     applyLanguage();
     // Keeps the startup entry pointing at the current exe, e.g. after a reinstall elsewhere.
     if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: cfg.launchAtLogin });

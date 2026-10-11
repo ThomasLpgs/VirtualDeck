@@ -42,6 +42,8 @@ function defaults() {
     launchAtLogin: false,
     grid: { cols: 3, rows: 2 },
     pageCount: 1,
+    // How page keys show a page: 'replace' the deck's grid, or 'popup' a deck over it.
+    pageMode: 'replace',
     // Top-left corner where the user dragged the deck, or null to open it under the mouse.
     deckPosition: null,
     deckScale: 1,
@@ -98,6 +100,7 @@ function normalize(raw) {
     return button;
   });
   cfg.pageCount = clamp(raw?.pageCount, 1, MAX_PAGES, base.pageCount);
+  cfg.pageMode = raw?.pageMode === 'popup' ? 'popup' : 'replace';
   // Every page but the last is full, so a page always starts at its own PAGE_SIZE boundary.
   const needed = (cfg.pageCount - 1) * PAGE_SIZE + cfg.grid.cols * cfg.grid.rows;
   while (cfg.buttons.length < needed) cfg.buttons.push(defaultButton());

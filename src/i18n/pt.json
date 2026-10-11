@@ -282,5 +282,11 @@
   "page.n": "Página {n}",
   "page.add": "Adicionar uma página",
   "page.remove": "Excluir esta página",
-  "page.removeConfirm": "Excluir a página {n} e todos os seus botões?"
+  "page.removeConfirm": "Excluir a página {n} e todos os seus botões?",
+
+  "settings.pageMode": "Abertura das páginas",
+  "settings.pageModeHint": "“No deck” troca a grade. “Deck sobreposto” abre a página por cima, saindo do botão; ao fechar o deck, volta para a página 1.",
+  "pageMode.replace": "No deck",
+  "pageMode.popup": "Deck sobreposto",
+  "deck.back": "Voltar"
 }
