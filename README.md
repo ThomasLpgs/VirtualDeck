@@ -95,6 +95,7 @@ Prérequis : Node.js et Windows.
 npm install
 npm start          # lance l'app en mode développement
 npm run dist       # crée l'installateur dans release/
+npm test           # lance les tests automatiques (aussi exécutés par GitHub à chaque push)
 ```
 
 Organisation du code :

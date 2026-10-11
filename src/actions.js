@@ -9,8 +9,22 @@ function required(value, fieldKey) {
   return value;
 }
 
+// Canvases a stream / record / clip key acts on. action.target: 'horizontal' (OBS, the default),
+// 'vertical' (Aitum Vertical) or 'both'. Without the plugin, 'both' falls back to horizontal
+// with a warning; 'vertical' alone then fails in the stream client.
+function outputTargets(action, stream) {
+  const target = action.target || 'horizontal';
+  const horizontal = target !== 'vertical';
+  const vertical = target !== 'horizontal';
+  if (horizontal && vertical && !stream.state.verticalAvailable) {
+    return { horizontal, vertical: false, warning: stream.verticalUnavailableMessage() };
+  }
+  return { horizontal, vertical, warning: null };
+}
+
 // stream: the active streaming software client (ObsManager or StreamlabsManager).
-// Resolves to { warning } when only part of the key could run (vertical part without the plugin).
+// Resolves to { warning } when only part of the key could run (vertical part without the plugin),
+// and/or { notice } to confirm something the user can't see (a saved clip).
 // Action type ids keep their historical "obs-" prefix so existing configs stay valid.
 async function runAction(action, { stream, playSound }) {
   switch (action?.type) {
@@ -54,12 +68,22 @@ async function runAction(action, { stream, playSound }) {
       await stream.setSourcesVisibility(targets, action.mode || 'toggle', (Number(action.duration) || 5) * 1000);
       return warning ? { warning } : undefined;
     }
+    case 'obs-mute':
+      await stream.setInputMute(required(action.input, 'field.input'), action.mode || 'toggle');
+      return;
+    case 'obs-replay': {
+      // Clip from the replay buffer and/or Aitum Vertical's Backtrack.
+      const { warning, ...targets } = outputTargets(action, stream);
+      await stream.saveReplay(targets);
+      return { notice: t('notice.replaySaved'), warning };
+    }
     case 'obs-record':
-      await stream.toggleRecord();
-      return;
-    case 'obs-stream':
-      await stream.toggleStream();
-      return;
+    case 'obs-stream': {
+      const { warning, ...targets } = outputTargets(action, stream);
+      if (action.type === 'obs-record') await stream.toggleRecord(targets);
+      else await stream.toggleStream(targets);
+      return warning ? { warning } : undefined;
+    }
     case 'sound':
       playSound(required(action.file, 'field.soundFile'), action.volume ?? 1);
       return;

@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('api', {
   streamReconnect: () => ipcRenderer.invoke('stream:reconnect'),
   streamScenes: () => ipcRenderer.invoke('stream:scenes'),
   streamVerticalScenes: () => ipcRenderer.invoke('stream:verticalScenes'),
+  streamInputs: () => ipcRenderer.invoke('stream:inputs'),
   streamSources: (scene, vertical) => ipcRenderer.invoke('stream:sources', scene, vertical),
   getUpdate: () => ipcRenderer.invoke('update:get'),
   openUpdate: () => ipcRenderer.send('update:open'),
