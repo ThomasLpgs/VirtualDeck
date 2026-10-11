@@ -1,7 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-require('./helpers');
-const { normalize } = require('../src/config');
+const { electron } = require('./helpers');
+const fs = require('fs');
+const { normalize, save } = require('../src/config');
 
 test('an empty config gets the defaults', () => {
   const cfg = normalize({});
@@ -95,4 +96,16 @@ test('each page has its own grid; older configs give every page the main grid', 
 test('the renderer-only image URL is never saved', () => {
   const cfg = normalize({ buttons: [{ image: 'C:\\a.png', imageUrl: 'file:///C:/a.png' }] });
   assert.equal('imageUrl' in cfg.buttons[0], false);
+});
+
+test('saving an unchanged config does not write the disk again', (t) => {
+  // config.json goes to the test folder of the Electron stand-in (see helpers.js).
+  t.after(() => fs.rmSync(electron.app.getPath('userData'), { recursive: true, force: true }));
+  const write = t.mock.method(fs, 'writeFileSync');
+  const cfg = save({ grid: { cols: 2, rows: 1 }, buttons: [{ id: 'a' }, { id: 'b' }] });
+  save(cfg);
+  save(structuredClone(cfg));
+  assert.equal(write.mock.callCount(), 1);
+  save({ ...cfg, hotkey: 'F13' });
+  assert.equal(write.mock.callCount(), 2);
 });
