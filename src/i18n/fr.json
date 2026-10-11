@@ -285,7 +285,7 @@
   "page.removeConfirm": "Supprimer la page {n} et tous ses boutons ?",
 
   "settings.pageMode": "Ouverture des pages",
-  "settings.pageModeHint": "« Dans le deck » change la grille. « Deck superposé » ouvre la page par-dessus, en sortant du bouton ; fermer le deck revient ensuite à la page 1.",
+  "settings.pageModeHint": "« Dans le deck » change la grille. « Deck superposé » ouvre la page dans une bulle qui sort du bouton, au-dessus du deck ; fermer le deck revient ensuite à la page 1.",
   "pageMode.replace": "Dans le deck",
   "pageMode.popup": "Deck superposé",
   "deck.back": "Retour"

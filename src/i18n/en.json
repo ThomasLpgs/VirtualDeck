@@ -286,7 +286,7 @@
   "page.removeConfirm": "Delete page {n} and all its buttons?",
 
   "settings.pageMode": "Opening pages",
-  "settings.pageModeHint": "“In the deck” swaps the grid. “Deck on top” opens the page over it, growing out of the button; closing the deck then goes back to page 1.",
+  "settings.pageModeHint": "“In the deck” swaps the grid. “Deck on top” opens the page in a bubble coming out of the button, above the deck; closing the deck then goes back to page 1.",
   "pageMode.replace": "In the deck",
   "pageMode.popup": "Deck on top",
   "deck.back": "Back"

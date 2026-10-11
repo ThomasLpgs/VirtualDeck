@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('api', {
   saveConfig: (config) => ipcRenderer.invoke('config:save', config),
   exportConfig: () => ipcRenderer.invoke('config:export'),
   importConfig: () => ipcRenderer.invoke('config:import'),
-  press: (index) => ipcRenderer.invoke('deck:press', index),
+  press: (index, rect) => ipcRenderer.invoke('deck:press', index, rect),
   hideDeck: () => ipcRenderer.send('deck:hide'),
   resetDeckPosition: () => ipcRenderer.send('deck:resetPosition'),
   turnPage: (delta) => ipcRenderer.send('deck:turnPage', delta),

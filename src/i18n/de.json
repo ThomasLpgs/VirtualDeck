@@ -285,7 +285,7 @@
   "page.removeConfirm": "Seite {n} mit allen Tasten löschen?",
 
   "settings.pageMode": "Seiten öffnen",
-  "settings.pageModeHint": "„Im Deck“ wechselt das Raster. „Deck darüber“ öffnet die Seite darüber, aus der Taste heraus; nach dem Schließen geht es wieder auf Seite 1.",
+  "settings.pageModeHint": "„Im Deck“ wechselt das Raster. „Deck darüber“ öffnet die Seite in einer Blase, die aus der Taste über dem Deck kommt; nach dem Schließen geht es wieder auf Seite 1.",
   "pageMode.replace": "Im Deck",
   "pageMode.popup": "Deck darüber",
   "deck.back": "Zurück"

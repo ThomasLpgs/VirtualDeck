@@ -94,42 +94,12 @@ body {
   transition: background 150ms, color 150ms;
 }
 
-/* ---------- Popup page (Settings › Pages › Deck over the deck) ---------- */
+/* ---------- Popup page: a bubble growing out of the key that opened it ---------- */
 
-body {
-  position: relative;
-}
-
-/* Same box as the deck panel (inside the body padding), above it. */
-.popup {
-  position: absolute;
-  inset: 24px;
-  /* The inset gives the size, not the panel's height: 100%. */
-  height: auto;
-  z-index: 2;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
-    0 30px 60px -12px rgba(0, 0, 0, 0.85);
-}
-
-.popup[hidden] {
+.is-popup #deck-status,
+.is-popup #open-editor,
+.is-popup .resize-grip {
   display: none;
-}
-
-/* Grows out of the key that opened it: --from-x / --from-y are set by deck.js. */
-.popup.opening {
-  animation: popup-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes popup-in {
-  from {
-    opacity: 0;
-    transform: translate(var(--from-x, 0), var(--from-y, 0)) scale(0.2);
-  }
-}
-
-#panel.covered {
-  filter: blur(2px) brightness(0.6);
 }
 
 .popup-title {
@@ -142,8 +112,47 @@ body {
   font-weight: 550;
 }
 
+.popup-title[hidden],
+.tail[hidden] {
+  display: none;
+}
+
 .popup-title .deck-icon-btn {
   margin: 0 0 0 -4px;
+}
+
+/* --tail-x: pointer position in the window (set by deck.js); the panel starts 24px in. */
+.tail {
+  position: absolute;
+  bottom: -11px;
+  left: calc(var(--tail-x, 50%) - 24px - 11px);
+  width: 22px;
+  height: 12px;
+  background: rgb(15, 16, 19);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.below .tail {
+  top: -11px;
+  bottom: auto;
+  background: rgb(25, 26, 31);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.is-popup #panel.opening {
+  transform-origin: calc(var(--tail-x, 50%) - 24px) 100%;
+  animation: bubble-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.is-popup.below #panel.opening {
+  transform-origin: calc(var(--tail-x, 50%) - 24px) 0;
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: scale(0.25);
+  }
 }
 
 /* Page switcher, shown when there is more than one page. */

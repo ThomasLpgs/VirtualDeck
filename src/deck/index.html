@@ -13,6 +13,10 @@
   <body class="i18n-pending">
     <main id="panel" class="deck-panel">
       <header class="deck-header">
+        <span id="popup-title" class="popup-title" hidden>
+          <button id="popup-back" class="deck-icon-btn" type="button" data-i18n-title="deck.back"></button>
+          <span id="popup-label"></span>
+        </span>
         <span id="deck-status" class="deck-status"></span>
         <span class="deck-actions">
           <span id="pager" class="pager" hidden>
@@ -26,18 +30,9 @@
       </header>
       <div id="grid" class="keys"></div>
       <div id="resize-grip" class="resize-grip" data-i18n-title="deck.resize"></div>
+      <!-- Pointer of a popup page, reaching into the key that opened it. -->
+      <div id="tail" class="tail" hidden></div>
     </main>
-    <!-- A page opened over the deck, growing out of the key that asked for it (popup page mode). -->
-    <section id="popup" class="deck-panel popup" hidden>
-      <header class="deck-header">
-        <span class="popup-title">
-          <button id="popup-back" class="deck-icon-btn" type="button" data-i18n-title="deck.back"></button>
-          <span id="popup-label"></span>
-        </span>
-        <span class="deck-actions"><kbd data-i18n="key.Escape"></kbd></span>
-      </header>
-      <div id="popup-grid" class="keys"></div>
-    </section>
     <script src="../shared/i18n.js"></script>
     <script src="../shared/keys.js"></script>
     <script src="deck.js"></script>
