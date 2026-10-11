@@ -83,6 +83,8 @@ function migrateLegacyUserData() {
 
 let cfg;
 let deckWin = null;
+// Where showDeck() last put the deck, to tell its own moves from the user's drags.
+let placedAt = null;
 let editorWin = null;
 let tray = null;
 // { version, url } of a newer GitHub release, once one has been found.
@@ -169,7 +171,8 @@ function createDeckWindow() {
     transparent: true,
     backgroundColor: '#00000000',
     resizable: false,
-    movable: false,
+    // Dragged by its header (see deck.css).
+    movable: true,
     minimizable: false,
     maximizable: false,
     fullscreenable: false,
@@ -182,20 +185,35 @@ function createDeckWindow() {
   deckWin.setAlwaysOnTop(true, 'screen-saver');
   deckWin.loadFile(path.join(__dirname, 'deck', 'index.html'));
   deckWin.on('blur', hideDeck);
+  deckWin.on('moved', () => {
+    const [x, y] = deckWin.getPosition();
+    if (placedAt && placedAt.x === x && placedAt.y === y) return;
+    placedAt = { x, y };
+    saveDeckPosition({ x, y });
+  });
+}
+
+// The position is owned here, not by the editor: it is saved without going through applyConfig.
+function saveDeckPosition(deckPosition) {
+  cfg = config.save({ ...cfg, deckPosition });
+  broadcast('config:changed', forRenderer(cfg));
 }
 
 function showDeck() {
   const { width, height } = deckSize();
+  // Where the user dragged it last, otherwise centered under the mouse.
+  const saved = cfg.deckPosition;
   const cursor = screen.getCursorScreenPoint();
-  const area = screen.getDisplayNearestPoint(cursor).workArea;
+  const wanted = saved || { x: Math.round(cursor.x - width / 2), y: Math.round(cursor.y - height / 2) };
+  // A saved spot may be on a screen that has since been unplugged: the nearest screen takes it.
+  const area = screen.getDisplayNearestPoint(saved ? { x: saved.x + width / 2, y: saved.y + height / 2 } : cursor).workArea;
   const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
   // The shadow margin may overflow the screen edge; only the panel itself must stay visible.
-  deckWin.setBounds({
-    x: clamp(Math.round(cursor.x - width / 2), area.x - SHADOW_MARGIN, area.x + area.width - width + SHADOW_MARGIN),
-    y: clamp(Math.round(cursor.y - height / 2), area.y - SHADOW_MARGIN, area.y + area.height - height + SHADOW_MARGIN),
-    width,
-    height,
-  });
+  placedAt = {
+    x: clamp(wanted.x, area.x - SHADOW_MARGIN, area.x + area.width - width + SHADOW_MARGIN),
+    y: clamp(wanted.y, area.y - SHADOW_MARGIN, area.y + area.height - height + SHADOW_MARGIN),
+  };
+  deckWin.setBounds({ ...placedAt, width, height });
   deckWin.webContents.send('deck:show');
   deckWin.show();
   deckWin.focus();
@@ -313,7 +331,7 @@ function registerIpc() {
 
   ipcMain.handle('config:save', (_e, next) => {
     try {
-      return { ok: true, hotkeyOk: applyConfig(next) };
+      return { ok: true, hotkeyOk: applyConfig({ ...next, deckPosition: cfg.deckPosition }) };
     } catch (err) {
       return { ok: false, error: err.message };
     }
@@ -385,8 +403,8 @@ function registerIpc() {
     if (!button) return { ok: false, error: t('error.buttonNotFound') };
     if (cfg.closeAfterAction) hideDeck();
     try {
-      await runAction(button.action, { stream: activeStream(), playSound });
-      return { ok: true };
+      const result = await runAction(button.action, { stream: activeStream(), playSound });
+      return { ok: true, warning: result?.warning };
     } catch (err) {
       if (cfg.closeAfterAction) notify(err.message);
       return { ok: false, error: err.message };
@@ -394,6 +412,7 @@ function registerIpc() {
   });
 
   ipcMain.on('deck:hide', hideDeck);
+  ipcMain.on('deck:resetPosition', () => saveDeckPosition(null));
   ipcMain.on('editor:open', (_e, buttonIndex) => {
     hideDeck();
     openEditor(buttonIndex);
@@ -428,7 +447,10 @@ function registerIpc() {
   ipcMain.handle('stream:state', () => streamState());
   ipcMain.handle('stream:reconnect', () => activeStream().reconnect());
   ipcMain.handle('stream:scenes', () => activeStream().getScenes().catch(() => []));
-  ipcMain.handle('stream:sources', (_e, scene) => activeStream().getSources(scene).catch(() => []));
+  ipcMain.handle('stream:verticalScenes', () => activeStream().getVerticalScenes().catch(() => []));
+  ipcMain.handle('stream:sources', (_e, scene, vertical) =>
+    activeStream().getSources(scene, { vertical: vertical === true }).catch(() => []),
+  );
 
   for (const client of Object.values(streams)) {
     client.on('state', () => {

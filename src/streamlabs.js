@@ -214,8 +214,25 @@ class StreamlabsManager extends EventEmitter {
     return scenes.map((s) => s.name);
   }
 
-  async getSources(sceneName) {
-    if (this.state.status !== 'connected') return [];
+  // Vertical scenes come from the Aitum Vertical plugin for OBS: Streamlabs has none to offer.
+  async getVerticalScenes() {
+    return [];
+  }
+
+  verticalUnavailableMessage() {
+    return t('error.verticalUnsupported');
+  }
+
+  async checkVerticalScene() {
+    throw new Error(t('error.verticalUnsupported'));
+  }
+
+  async setVerticalScene() {
+    throw new Error(t('error.verticalUnsupported'));
+  }
+
+  async getSources(sceneName, { vertical = false } = {}) {
+    if (this.state.status !== 'connected' || vertical) return [];
     const scene = await this.findScene(sceneName);
     return (await this.sceneItems(scene)).map((item) => item.name);
   }
@@ -240,6 +257,13 @@ class StreamlabsManager extends EventEmitter {
   }
 
   // mode: 'toggle' | 'show' | 'hide' | 'flash' (show, then hide again after durationMs).
+  // Same interface as ObsManager.setSourcesVisibility; Streamlabs has no vertical canvas.
+  async setSourcesVisibility(targets, mode, durationMs = 0) {
+    if (targets.some((target) => target.vertical)) throw new Error(t('error.verticalUnsupported'));
+    const [{ sceneName, sourceName }] = targets;
+    await this.setSourceVisibility(sceneName, sourceName, mode, durationMs);
+  }
+
   async setSourceVisibility(sceneName, sourceName, mode, durationMs = 0) {
     this.ensureConnected();
     const scene = await this.findScene(sceneName);

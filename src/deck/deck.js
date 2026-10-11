@@ -1,4 +1,4 @@
-/* global createKey, createGlyph, isEmptyButton, renderDeckHeader, loadI18n */
+/* global createKey, createGlyph, isEmptyButton, markKeys, countVerticalIssues, renderDeckHeader, loadI18n */
 const panel = document.getElementById('panel');
 const grid = document.getElementById('grid');
 const statusEl = document.getElementById('deck-status');
@@ -28,15 +28,10 @@ function render() {
 }
 
 function renderObs() {
-  renderDeckHeader(statusEl, streamState);
-  if (!config) return;
-  visibleButtons().forEach((button, i) => {
-    const isLive =
-      streamState.status === 'connected' &&
-      button.action.type === 'obs-scene' &&
-      button.action.scene === streamState.currentScene;
-    grid.children[i]?.classList.toggle('active', isLive);
-  });
+  if (!config) return renderDeckHeader(statusEl, streamState);
+  const buttons = visibleButtons();
+  renderDeckHeader(statusEl, streamState, countVerticalIssues(buttons, streamState));
+  markKeys(grid.children, buttons, streamState);
 }
 
 async function press(index) {
@@ -49,9 +44,10 @@ async function press(index) {
 
   await new Promise((r) => setTimeout(r, PRESS_DELAY_MS));
   const result = await window.api.press(index);
-  if (!result.ok) {
+  // A warning means only the horizontal part ran (vertical part blocked).
+  if (!result.ok || result.warning) {
     key.classList.add('error');
-    key.title = result.error;
+    key.title = result.error || result.warning;
   }
 }
 

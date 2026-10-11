@@ -210,5 +210,28 @@
 
   "update.pill": "Update {version} available",
   "update.pillTitle": "Opens the download page",
-  "update.tray": "Download update {version}"
+  "update.tray": "Download update {version}",
+
+  "field.horizontalScene": "Horizontal scene",
+  "field.verticalScene": "Vertical scene",
+  "field.verticalMissing": "Aitum Vertical plugin not found in OBS: only the horizontal part of this button will work.",
+  "error.verticalMissing": "Aitum Vertical plugin not found in OBS.",
+  "error.verticalUnsupported": "Vertical scenes only work with OBS and the Aitum Vertical plugin.",
+  "field.horizontalPlaceholder": "Empty: the horizontal scene doesn't change",
+  "field.verticalPlaceholder": "Empty: the vertical scene doesn't change",
+  "field.currentVerticalScenePlaceholder": "Empty = current vertical scene",
+  "field.verticalSourcesHint": "Sources of vertical scenes require OBS 32 or later.",
+  "error.verticalSourcesObs32": "Sources of vertical scenes require OBS 32 or later.",
+
+  "settings.deckPosition": "Deck position",
+  "settings.deckPositionCursor": "The deck opens under the mouse. Drag it by its top bar to pin it somewhere.",
+  "settings.deckPositionSaved": "The deck always opens where you moved it.",
+  "settings.deckPositionReset": "Open under the mouse",
+  "field.horizontalSource": "Horizontal source",
+  "field.verticalSource": "Vertical source",
+  "field.horizontalSourcePlaceholder": "Empty: nothing animates on the horizontal canvas",
+  "field.verticalSourcePlaceholder": "Empty: nothing animates on the vertical canvas",
+  "deck.verticalIssue": "Vertical unavailable · {count}",
+  "deck.verticalIssueHint": "{count} button(s) use the vertical canvas, but the Aitum Vertical plugin isn't found in OBS: they only change the horizontal part.",
+  "deck.verticalIssueKey": "Aitum Vertical plugin not found: only the horizontal part of this button works."
 }
