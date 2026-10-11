@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('api', {
   deckPointer: (index) => ipcRenderer.send('deck:pointer', index),
   resizeDeck: (phase) => ipcRenderer.send('deck:resize', phase),
   setDeckScale: (scale) => ipcRenderer.send('deck:setScale', scale),
+  previewDeckScale: (scale) => ipcRenderer.send('deck:previewScale', scale),
   openEditor: (buttonIndex) => ipcRenderer.send('editor:open', buttonIndex),
   pauseHotkey: (paused) => ipcRenderer.send('hotkey:pause', paused),
   pickFile: (kind) => ipcRenderer.invoke('dialog:pick', kind),

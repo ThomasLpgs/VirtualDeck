@@ -14,6 +14,8 @@ const IS_POPUP = new URLSearchParams(location.search).has('popup');
 document.body.classList.toggle('is-popup', IS_POPUP);
 // A bubble layout received before the config was loaded.
 let pendingPopup = null;
+// Changes received while hidden: the keys are redrawn when the deck shows up again.
+let stale = false;
 // Hidden, the page stays loaded but skips refreshing (timers, OBS events); it catches up when shown.
 let visible = false;
 let streamState = { status: 'disconnected', currentScene: null };
@@ -150,18 +152,28 @@ document.addEventListener('contextmenu', (e) => {
 
 window.api.onDeckShow(() => {
   visible = true;
-  renderObs();
+  if (stale) {
+    stale = false;
+    render();
+  } else {
+    renderObs();
+  }
   panel.classList.remove('opening');
   void panel.offsetWidth;
   panel.classList.add('opening');
 });
 window.api.onConfig((next) => {
   config = next;
-  render();
+  // The window size follows the zoom right away, even while hidden.
+  applyScale(config.deckScale);
+  if (visible) render();
+  else stale = true;
 });
 window.api.onDeckPage((next) => {
   page = next;
-  if (config) render();
+  if (!config) return;
+  if (visible) render();
+  else stale = true;
 });
 // Popup bubble: which page, where its pointer is, and whether it opens below the key.
 function showBubble(layout) {

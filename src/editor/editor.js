@@ -1252,11 +1252,13 @@ function bindStaticFields() {
     ),
   );
   // Saved by the main process (like the corner grip of the deck), not by the editor's autosave.
+  // Live preview while dragging; saved once on release.
   $('deck-scale').addEventListener('input', (e) => {
     config.deckScale = Number(e.target.value) / 100;
     renderDeckScale();
-    api.setDeckScale(config.deckScale);
+    api.previewDeckScale(config.deckScale);
   });
+  $('deck-scale').addEventListener('change', () => api.setDeckScale(config.deckScale));
   $('deck-scale-reset').addEventListener('click', () => {
     config.deckScale = 1;
     renderDeckScale();
