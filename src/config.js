@@ -62,6 +62,9 @@ function normalizeSteps(steps) {
     .map((step) => ({ delay: clamp(step.delay, 0, 600, 0), action: { ...step.action } }));
 }
 
+// Grid ({ cols, rows }) of a page (0-based).
+const gridOf = (cfg, page) => cfg.pageGrids?.[page] || cfg.grid;
+
 const clamp = (n, min, max, fallback) =>
   Number.isFinite(Number(n)) ? Math.min(max, Math.max(min, Math.round(Number(n)))) : fallback;
 
@@ -101,8 +104,17 @@ function normalize(raw) {
   });
   cfg.pageCount = clamp(raw?.pageCount, 1, MAX_PAGES, base.pageCount);
   cfg.pageMode = raw?.pageMode === 'popup' ? 'popup' : 'replace';
+  // Each page has its own grid. Page 1's is also `grid` (configs and backups from before
+  // per-page grids only have that one, and every page then starts with it).
+  const grids = Array.isArray(raw?.pageGrids) ? raw.pageGrids : [];
+  cfg.pageGrids = Array.from({ length: cfg.pageCount }, (_, p) => ({
+    cols: clamp(grids[p]?.cols, 1, MAX_COLS, cfg.grid.cols),
+    rows: clamp(grids[p]?.rows, 1, MAX_ROWS, cfg.grid.rows),
+  }));
+  cfg.grid = { ...cfg.pageGrids[0] };
   // Every page but the last is full, so a page always starts at its own PAGE_SIZE boundary.
-  const needed = (cfg.pageCount - 1) * PAGE_SIZE + cfg.grid.cols * cfg.grid.rows;
+  const last = cfg.pageGrids[cfg.pageCount - 1];
+  const needed = (cfg.pageCount - 1) * PAGE_SIZE + last.cols * last.rows;
   while (cfg.buttons.length < needed) cfg.buttons.push(defaultButton());
   return cfg;
 }
@@ -163,4 +175,5 @@ module.exports = {
   MIN_DECK_SCALE,
   MAX_DECK_SCALE,
   PAGE_SIZE,
+  gridOf,
 };
