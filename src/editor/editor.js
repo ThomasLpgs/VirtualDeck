@@ -1,4 +1,5 @@
-/* global api, createKey, createGlyph, renderDeckHeader -- api comes from preload.js, the rest from shared/keys.js */
+/* global api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader
+   -- api comes from preload.js, t/I18N/loadI18n from shared/i18n.js, the rest from shared/keys.js */
 const $ = (id) => document.getElementById(id);
 
 const SAVE_DEBOUNCE_MS = 400;
@@ -6,16 +7,16 @@ const MAX_ICON_RESULTS = 120;
 const DEFAULT_COLOR = '#8b8d98';
 
 const PALETTE = [
-  ['Gris', '#8b8d98'],
-  ['Rouge', '#f2555a'],
-  ['Orange', '#f5843b'],
-  ['Ambre', '#f2b33d'],
-  ['Vert', '#3fcf8e'],
-  ['Turquoise', '#2bc4c4'],
-  ['Bleu', '#4c8dff'],
-  ['Indigo', '#7c8cff'],
-  ['Violet', '#b06cff'],
-  ['Rose', '#f062a8'],
+  ['grey', '#8b8d98'],
+  ['red', '#f2555a'],
+  ['orange', '#f5843b'],
+  ['amber', '#f2b33d'],
+  ['green', '#3fcf8e'],
+  ['teal', '#2bc4c4'],
+  ['blue', '#4c8dff'],
+  ['indigo', '#7c8cff'],
+  ['violet', '#b06cff'],
+  ['pink', '#f062a8'],
 ];
 
 // Shown before the user searches: the icons a streamer reaches for first.
@@ -29,31 +30,33 @@ const SUGGESTED_ICONS = [
   'coffee', 'sun', 'moon', 'eye', 'eye-off', 'globe', 'external-link', 'house',
 ];
 
+// Action type ids keep their historical "obs-" prefix; they work with every streaming software.
 const ACTIONS = [
-  { type: 'none', label: 'Aucune', icon: 'ban', defaults: {} },
-  { type: 'obs-scene', label: 'Scène OBS', icon: 'clapperboard', defaults: { scene: '' } },
-  { type: 'obs-source', label: 'Source / animation', icon: 'layers', defaults: { scene: '', source: '', mode: 'flash', duration: 5 } },
-  { type: 'obs-record', label: 'Enregistrer', icon: 'circle-dot', defaults: {} },
-  { type: 'obs-stream', label: 'Stream', icon: 'radio', defaults: {} },
-  { type: 'sound', label: 'Son', icon: 'volume-2', defaults: { file: '', volume: 1 } },
-  { type: 'open', label: 'Ouvrir', icon: 'external-link', defaults: { target: '' } },
+  { type: 'none', icon: 'ban', defaults: {} },
+  { type: 'obs-scene', icon: 'clapperboard', defaults: { scene: '' } },
+  { type: 'obs-source', icon: 'layers', defaults: { scene: '', source: '', mode: 'flash', duration: 5 } },
+  { type: 'obs-record', icon: 'circle-dot', defaults: {} },
+  { type: 'obs-stream', icon: 'radio', defaults: {} },
+  { type: 'sound', icon: 'volume-2', defaults: { file: '', volume: 1 } },
+  { type: 'open', icon: 'external-link', defaults: { target: '' } },
 ];
 
-const SOURCE_MODES = [
-  ['flash', 'Animation'],
-  ['toggle', 'Basculer'],
-  ['show', 'Afficher'],
-  ['hide', 'Masquer'],
-];
+const SOURCE_MODES = ['flash', 'toggle', 'show', 'hide'];
+
+// Connection form per streaming software: which config field holds the secret.
+const SOFTWARE = {
+  obs: { label: 'OBS', secret: 'password', secretLabel: 'conn.password', secretPlaceholder: 'conn.passwordPlaceholder' },
+  streamlabs: { label: 'Streamlabs', secret: 'token', secretLabel: 'conn.token', secretPlaceholder: 'conn.tokenPlaceholder' },
+};
 
 let config = null;
 let selected = 0;
-let obsState = { status: 'disconnected' };
+let streamState = { status: 'disconnected' };
 let icons = { names: [], tags: {} };
 let saveTimer = null;
 let dragFrom = null;
-// Scene / source names fetched from OBS, offered as suggestions in the action fields.
-const obsLists = { scenes: [], sources: [] };
+// Scene / source names fetched from the streaming software, offered as suggestions.
+const streamLists = { scenes: [], sources: [] };
 // A button the main process asked us to select (from the deck) before config finished loading.
 let pendingSelect = null;
 
@@ -68,7 +71,8 @@ api.onEditorSelect((index) => {
 
 const current = () => config.buttons[selected];
 const fileName = (p) => (p ? p.split(/[\\/]/).pop() : '');
-const isObsAction = (type) => type.startsWith('obs-');
+const isStreamAction = (type) => type.startsWith('obs-');
+const software = () => SOFTWARE[config.software];
 
 function emptyButton() {
   return {
@@ -98,7 +102,7 @@ function setStatus(text, warn = false) {
 }
 
 function scheduleSave() {
-  setStatus('Enregistrement…');
+  setStatus(t('save.saving'));
   clearTimeout(saveTimer);
   saveTimer = setTimeout(save, SAVE_DEBOUNCE_MS);
 }
@@ -114,16 +118,17 @@ async function save() {
   saveTimer = null;
   const result = await api.saveConfig(config);
   if (!result.ok) {
-    setStatus(`Erreur : ${result.error}`, true);
+    setStatus(t('save.error', { error: result.error }), true);
     return;
   }
   const hint = $('hotkey-hint');
   if (result.hotkeyOk) {
-    setStatus('Enregistré');
+    setStatus(t('save.saved'));
+    hint.textContent = t('settings.hotkeyHint');
     hint.classList.remove('warn');
   } else {
-    setStatus('Raccourci indisponible', true);
-    hint.textContent = `« ${formatHotkey(config.hotkey).join(' + ')} » est déjà utilisé par une autre application. Choisis-en un autre.`;
+    setStatus(t('save.hotkeyUnavailable'), true);
+    hint.textContent = t('settings.hotkeyTaken', { hotkey: formatHotkey(config.hotkey).join(' + ') });
     hint.classList.add('warn');
   }
 }
@@ -131,8 +136,10 @@ async function save() {
 // ---------- Tabs ----------
 
 function showView(name) {
-  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.view === name));
+  document.querySelectorAll('.tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.view === name));
   document.querySelectorAll('.view').forEach((v) => (v.hidden = v.id !== `view-${name}`));
+  // Survives the page reload that follows a language change.
+  sessionStorage.setItem('view', name);
 }
 
 // ---------- Preview ----------
@@ -171,7 +178,7 @@ function markLiveScene() {
     const action = config.buttons[i].action;
     key.classList.toggle(
       'active',
-      obsState.status === 'connected' && action.type === 'obs-scene' && action.scene === obsState.currentScene,
+      streamState.status === 'connected' && action.type === 'obs-scene' && action.scene === streamState.currentScene,
     );
   });
 }
@@ -218,8 +225,8 @@ function updateAction(patch) {
 }
 
 function renderHead() {
-  $('button-number').textContent = selected + 1;
-  $('button-title').textContent = current().label || 'Sans titre';
+  $('button-number').textContent = t('editor.buttonN', { n: selected + 1 });
+  $('button-title').textContent = current().label || t('editor.untitled');
 }
 
 function renderInspector() {
@@ -227,7 +234,7 @@ function renderInspector() {
   renderHead();
   $('label').value = button.label;
   $('emoji').value = button.icon;
-  $('image-pick').textContent = button.image ? fileName(button.image) : 'Choisir…';
+  $('image-pick').textContent = button.image ? fileName(button.image) : t('common.choose');
   $('image-pick').title = button.image || '';
   $('image-clear').hidden = !button.image;
   renderIconGrid();
@@ -243,7 +250,7 @@ function renderIconGrid() {
     names = SUGGESTED_ICONS.filter((n) => icons.names.includes(n));
   } else {
     names = icons.names
-      .filter((n) => n.includes(query) || icons.tags[n]?.some((t) => t.includes(query)))
+      .filter((n) => n.includes(query) || icons.tags[n]?.some((tag) => tag.includes(query)))
       .slice(0, MAX_ICON_RESULTS);
   }
 
@@ -260,7 +267,7 @@ function renderIconGrid() {
     });
     return cell;
   });
-  if (!cells.length) cells.push(el('p', { className: 'icon-empty', textContent: 'Aucune icône trouvée' }));
+  if (!cells.length) cells.push(el('p', { className: 'icon-empty', textContent: t('editor.noIcon') }));
   $('icon-grid').replaceChildren(...cells);
 }
 
@@ -273,7 +280,7 @@ function refreshIconSelection() {
 function renderSwatches() {
   const color = current().color.toLowerCase();
   const swatches = PALETTE.map(([name, value]) => {
-    const swatch = el('button', { type: 'button', className: 'swatch', title: name });
+    const swatch = el('button', { type: 'button', className: 'swatch', title: t(`color.${name}`) });
     swatch.style.setProperty('--swatch', value);
     swatch.classList.toggle('selected', value === color);
     swatch.addEventListener('click', () => {
@@ -284,8 +291,8 @@ function renderSwatches() {
   });
 
   const isCustom = !PALETTE.some(([, value]) => value === color);
-  const picker = el('input', { type: 'color', value: color, title: 'Couleur personnalisée' });
-  const custom = el('label', { className: 'swatch custom', title: 'Couleur personnalisée' }, picker);
+  const picker = el('input', { type: 'color', value: color, title: t('color.custom') });
+  const custom = el('label', { className: 'swatch custom', title: t('color.custom') }, picker);
   if (isCustom) {
     custom.classList.add('selected');
     custom.style.setProperty('--swatch', color);
@@ -303,7 +310,7 @@ function renderActionTiles() {
         'button',
         { type: 'button', className: 'action-tile' },
         createGlyph(action.icon),
-        el('span', { textContent: action.label }),
+        el('span', { textContent: t(`action.${action.type}`) }),
       );
       tile.setAttribute('role', 'radio');
       tile.setAttribute('aria-checked', String(action.type === type));
@@ -321,7 +328,7 @@ function renderActionTiles() {
   );
 }
 
-// ---------- Action fields ----------
+// ---------- Form helpers ----------
 
 function field(labelText, control, hintText) {
   const wrap = el('div', { className: 'field' }, el('label', { textContent: labelText }), control);
@@ -407,6 +414,42 @@ function combo(input, getOptions, onPick) {
   return wrap;
 }
 
+// Themed replacement for <select> (same reason as combo): a button that opens an option list.
+function themedSelect(options, value, onChange) {
+  const label = el('span', { className: 'select-value' });
+  const trigger = el('button', { type: 'button', className: 'select-trigger' }, label, createGlyph('chevrons-up-down', 'glyph combo-chevron'));
+  const menu = el('div', { className: 'combo-menu', hidden: true });
+  menu.setAttribute('role', 'listbox');
+  const wrap = el('div', { className: 'combo select' }, trigger, menu);
+
+  const render = () => {
+    label.textContent = options.find(([v]) => v === value)?.[1] ?? '';
+    menu.replaceChildren(
+      ...options.map(([optValue, text]) => {
+        const item = el('div', { className: 'combo-option', textContent: text });
+        item.setAttribute('role', 'option');
+        item.classList.toggle('current', optValue === value);
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          menu.hidden = true;
+          if (optValue === value) return;
+          value = optValue;
+          render();
+          onChange(optValue);
+        });
+        return item;
+      }),
+    );
+  };
+  trigger.addEventListener('click', () => (menu.hidden = !menu.hidden));
+  trigger.addEventListener('blur', () => (menu.hidden = true));
+  trigger.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') menu.hidden = true;
+  });
+  render();
+  return wrap;
+}
+
 function button(text, onClick, className = 'btn') {
   const b = el('button', { type: 'button', className, textContent: text });
   b.addEventListener('click', onClick);
@@ -430,13 +473,15 @@ function segmented(options, value, onChange) {
   return wrap;
 }
 
-function obsCallout() {
+// ---------- Action fields ----------
+
+function offlineCallout() {
   return el(
     'div',
     { className: 'callout' },
     createGlyph('plug-zap'),
-    el('span', { textContent: "OBS n'est pas connecté : les listes de scènes et de sources sont vides." }),
-    button('Voir le guide', () => showView('obs')),
+    el('span', { textContent: t('callout.offline', { software: software().label }) }),
+    button(t('callout.openGuide'), () => showView('connection')),
   );
 }
 
@@ -445,18 +490,18 @@ function renderActionFields() {
   const container = $('action-fields');
   container.replaceChildren();
 
-  if (isObsAction(action.type) && obsState.status !== 'connected') container.append(obsCallout());
+  if (isStreamAction(action.type) && streamState.status !== 'connected') container.append(offlineCallout());
 
   switch (action.type) {
     case 'obs-scene':
       container.append(
         field(
-          'Scène',
+          t('field.scene'),
           textInput(action.scene, (scene) => updateAction({ scene }), {
-            options: () => obsLists.scenes,
-            placeholder: 'Nom de la scène',
+            options: () => streamLists.scenes,
+            placeholder: t('field.scenePlaceholder'),
           }),
-          'Le bouton affiche un badge LIVE quand cette scène est à l’antenne.',
+          t('field.sceneHint'),
         ),
       );
       break;
@@ -468,27 +513,31 @@ function renderActionFields() {
           updateAction({ scene });
           refreshSources(scene);
         },
-        { options: () => obsLists.scenes, placeholder: 'Vide = scène en cours' },
+        { options: () => streamLists.scenes, placeholder: t('field.currentScenePlaceholder') },
       );
       const sourceInput = textInput(action.source, (source) => updateAction({ source }), {
-        options: () => obsLists.sources,
-        placeholder: 'Nom de la source',
+        options: () => streamLists.sources,
+        placeholder: t('field.sourcePlaceholder'),
       });
 
       const duration = el('input', { type: 'number', min: 0.5, max: 600, step: 0.5, value: action.duration ?? 5 });
       duration.addEventListener('input', () => updateAction({ duration: Number(duration.value) || 5 }));
-      const durationField = field('Durée (secondes)', duration, 'Mets la durée de ta vidéo : la source se masque ensuite toute seule.');
+      const durationField = field(t('field.duration'), duration, t('field.durationHint'));
       durationField.hidden = action.mode !== 'flash';
 
       container.append(
-        field('Scène', sceneInput),
-        field('Source', sourceInput),
+        field(t('field.scene'), sceneInput),
+        field(t('field.source'), sourceInput),
         field(
-          'Comportement',
-          segmented(SOURCE_MODES, action.mode || 'toggle', (mode) => {
-            updateAction({ mode });
-            durationField.hidden = mode !== 'flash';
-          }),
+          t('field.behavior'),
+          segmented(
+            SOURCE_MODES.map((mode) => [mode, t(`mode.${mode}`)]),
+            action.mode || 'toggle',
+            (mode) => {
+              updateAction({ mode });
+              durationField.hidden = mode !== 'flash';
+            },
+          ),
         ),
         durationField,
       );
@@ -497,15 +546,12 @@ function renderActionFields() {
     }
 
     case 'obs-record':
-      container.append(el('p', { className: 'muted', textContent: "Lance l'enregistrement OBS, ou l'arrête s'il est en cours." }));
-      break;
-
     case 'obs-stream':
-      container.append(el('p', { className: 'muted', textContent: "Lance le stream OBS, ou l'arrête s'il est en cours." }));
+      container.append(el('p', { className: 'muted', textContent: t(`action.${action.type}.hint`, { software: software().label }) }));
       break;
 
     case 'sound': {
-      const name = el('span', { className: 'file-name', textContent: fileName(action.file) || 'Aucun fichier' });
+      const name = el('span', { className: 'file-name', textContent: fileName(action.file) || t('field.noFile') });
       const volume = el('input', { type: 'range', min: 0, max: 100, value: Math.round((action.volume ?? 1) * 100) });
       const volumeValue = el('span', { className: 'range-value', textContent: `${volume.value} %` });
       volume.addEventListener('input', () => {
@@ -514,40 +560,40 @@ function renderActionFields() {
       });
       container.append(
         field(
-          'Fichier son',
+          t('field.soundFile'),
           inline(
             name,
-            button('Choisir…', async () => {
+            button(t('common.choose'), async () => {
               const picked = await api.pickFile('sound');
               if (!picked) return;
               name.textContent = fileName(picked.path);
               updateAction({ file: picked.path });
             }),
           ),
-          'Appuyer à nouveau pendant la lecture arrête le son.',
+          t('field.soundHint'),
         ),
-        field('Volume', inline(volume, volumeValue)),
+        field(t('field.volume'), inline(volume, volumeValue)),
       );
       break;
     }
 
     case 'open': {
       const target = textInput(action.target, (value) => updateAction({ target: value }), {
-        placeholder: 'https://… ou C:\\…\\programme.exe',
+        placeholder: t('field.targetPlaceholder'),
       });
       container.append(
         field(
-          'Programme, fichier ou lien',
+          t('field.target'),
           inline(
             target,
-            button('Parcourir…', async () => {
+            button(t('common.browse'), async () => {
               const picked = await api.pickFile('program');
               if (!picked) return;
               target.value = picked.path;
               updateAction({ target: picked.path });
             }),
           ),
-          'Les liens spotify:, steam:// ou discord:// marchent aussi.',
+          t('field.targetHint'),
         ),
       );
       break;
@@ -559,11 +605,11 @@ function renderActionFields() {
 }
 
 async function refreshScenes() {
-  obsLists.scenes = await api.obsScenes();
+  streamLists.scenes = await api.streamScenes();
 }
 
 async function refreshSources(scene) {
-  obsLists.sources = await api.obsSources(scene);
+  streamLists.sources = await api.streamSources(scene);
 }
 
 // ---------- Hotkey ----------
@@ -585,7 +631,7 @@ const KEY_NAMES = {
   Pause: 'Pause',
   ScrollLock: 'Scrolllock',
 };
-const PRETTY = { Control: 'Ctrl', Shift: 'Maj', Space: 'Espace', Super: 'Win', Up: '↑', Down: '↓', Left: '←', Right: '→' };
+const ARROWS = { Up: '↑', Down: '↓', Left: '←', Right: '→' };
 
 function keyFromEvent(e) {
   let m;
@@ -610,8 +656,10 @@ function acceleratorFromEvent(e) {
   return [...mods, key].join('+');
 }
 
+// Accelerator parts as shown on a keyboard of the current language ("Maj", "Strg"…).
 function formatHotkey(acc) {
-  return acc ? acc.split('+').map((p) => PRETTY[p] || p) : ['Aucun'];
+  if (!acc) return [t('common.none')];
+  return acc.split('+').map((part) => ARROWS[part] || (I18N.strings[`key.${part}`] ? t(`key.${part}`) : part));
 }
 
 function renderHotkey() {
@@ -625,24 +673,24 @@ function renderHotkey() {
 }
 
 function setupHotkeyField() {
-  const field = $('hotkey');
+  const hotkeyButton = $('hotkey');
   let capturing = false;
   const stop = () => {
     if (!capturing) return;
     capturing = false;
-    field.classList.remove('capturing');
+    hotkeyButton.classList.remove('capturing');
     renderHotkey();
     api.pauseHotkey(false);
   };
-  field.addEventListener('click', () => {
+  hotkeyButton.addEventListener('click', () => {
     if (capturing) return;
     capturing = true;
     api.pauseHotkey(true);
-    field.classList.add('capturing');
-    field.textContent = 'Appuie sur ta combinaison… (Échap pour annuler)';
+    hotkeyButton.classList.add('capturing');
+    hotkeyButton.textContent = t('settings.hotkeyCapture');
   });
-  field.addEventListener('blur', stop);
-  field.addEventListener('keydown', (e) => {
+  hotkeyButton.addEventListener('blur', stop);
+  hotkeyButton.addEventListener('keydown', (e) => {
     if (!capturing) return;
     e.preventDefault();
     if (e.key === 'Escape') return stop();
@@ -655,41 +703,66 @@ function setupHotkeyField() {
   });
 }
 
-// ---------- OBS ----------
+// ---------- Connection ----------
 
-function friendlyObsError(state) {
+function connectionError(state) {
+  const { label, secret } = software();
   if (state.authFailed) {
-    return config.obs.password
-      ? 'Mot de passe refusé par OBS. Recopie-le depuis « Afficher les informations de connexion » (étape 3).'
-      : 'OBS demande un mot de passe : copie-le depuis « Afficher les informations de connexion » (étape 3).';
+    const missing = !config[config.software][secret];
+    return t(`conn.error.auth.${config.software}.${missing ? 'missing' : 'wrong'}`, { software: label });
   }
-  return "OBS ne répond pas. Vérifie qu'il est ouvert et que le serveur WebSocket est activé (étape 2). Nouvel essai automatique toutes les 5 secondes.";
+  return t(`conn.error.unreachable.${config.software}`, { software: label });
 }
 
-function renderObsState() {
-  const { status } = obsState;
-  const short = { connected: 'OBS connecté', connecting: 'Connexion…', disconnected: 'OBS hors ligne' }[status];
+function renderConnectionForm() {
+  const settings = config[config.software];
+  const { secret, secretLabel, secretPlaceholder } = software();
+  document.querySelectorAll('#software-switch button').forEach((b) => {
+    const isCurrent = b.dataset.software === config.software;
+    b.classList.toggle('selected', isCurrent);
+    b.setAttribute('aria-checked', String(isCurrent));
+  });
+  document.querySelectorAll('[data-guide]').forEach((g) => (g.hidden = g.dataset.guide !== config.software));
+  $('conn-url').value = settings.url;
+  $('conn-secret-label').textContent = t(secretLabel);
+  $('conn-secret').placeholder = t(secretPlaceholder);
+  $('conn-secret').value = settings[secret];
+}
 
-  const pill = $('obs-pill');
-  pill.className = `pill ${status}`;
-  $('obs-pill-text').textContent = short;
+function renderStreamState() {
+  const { status } = streamState;
+  const label = software().label;
 
-  $('obs-big-status').className = `big-status ${status}`;
-  $('obs-big-text').textContent = { connected: 'Connecté à OBS', connecting: 'Connexion en cours…', disconnected: 'Non connecté' }[status];
+  $('stream-pill').className = `pill ${status}`;
+  $('stream-pill-text').textContent = t(`status.${status}`, { software: label });
 
-  const detail = $('obs-detail');
+  $('conn-big-status').className = `big-status ${status}`;
+  $('conn-big-text').textContent = t(`conn.big.${status}`, { software: label });
+
+  const detail = $('conn-detail');
   detail.classList.remove('error');
   if (status === 'connected') {
-    detail.textContent = `Scène à l'antenne : ${obsState.currentScene || '—'}`;
-  } else if (status === 'disconnected' && obsState.error) {
-    detail.textContent = friendlyObsError(obsState);
+    detail.textContent = t('conn.liveScene', { scene: streamState.currentScene || '—' });
+  } else if (status === 'disconnected' && streamState.error) {
+    detail.textContent = connectionError(streamState);
     detail.classList.add('error');
   } else {
-    detail.textContent = 'Suis les étapes ci-dessous, puis clique sur « Se connecter ».';
+    detail.textContent = t('conn.followSteps');
   }
 
-  renderDeckHeader($('preview-status'), obsState);
+  renderDeckHeader($('preview-status'), { ...streamState, label });
   if (config) markLiveScene();
+}
+
+function setSoftware(name) {
+  if (config.software === name) return;
+  config.software = name;
+  streamLists.scenes = [];
+  streamLists.sources = [];
+  renderConnectionForm();
+  renderStreamState();
+  renderActionFields();
+  scheduleSave();
 }
 
 // ---------- Backup ----------
@@ -705,28 +778,28 @@ async function exportConfig() {
   await flushSave();
   const result = await api.exportConfig();
   if (!result) return;
-  if (!result.ok) return showBackupStatus(`Échec de l'export : ${result.error}`, true);
+  if (!result.ok) return showBackupStatus(t('backup.exportFailed', { error: result.error }), true);
   const skipped = result.missing.length
-    ? ` ${result.missing.length} fichier(s) introuvable(s) n'ont pas pu être inclus : ${result.missing.map(fileName).join(', ')}.`
+    ? ` ${t('backup.exportMissing', { count: result.missing.length, files: result.missing.map(fileName).join(', ') })}`
     : '';
-  showBackupStatus(`Configuration exportée dans « ${fileName(result.path)} ».${skipped}`, Boolean(skipped));
+  showBackupStatus(t('backup.exported', { file: fileName(result.path) }) + skipped, Boolean(skipped));
 }
 
 async function importConfig() {
   await flushSave();
   const result = await api.importConfig();
   if (!result) return;
-  if (!result.ok) return showBackupStatus(`Échec de l'import : ${result.error}`, true);
+  if (!result.ok) return showBackupStatus(t('backup.importFailed', { error: result.error }), true);
   config = result.config;
   selected = 0;
   renderSettings();
   renderPreview();
   renderInspector();
-  setStatus('Enregistré');
+  setStatus(t('save.saved'));
   showBackupStatus(
     result.hotkeyOk
-      ? `Configuration importée : ${result.buttonCount} boutons.`
-      : `Configuration importée, mais le raccourci « ${formatHotkey(config.hotkey).join(' + ')} » est déjà pris : choisis-en un autre ci-dessus.`,
+      ? t('backup.imported', { count: result.buttonCount })
+      : t('backup.importedHotkeyTaken', { hotkey: formatHotkey(config.hotkey).join(' + ') }),
     !result.hotkeyOk,
   );
 }
@@ -739,7 +812,7 @@ function bindStaticFields() {
   $('clear-button').append(createGlyph('trash-2'));
 
   document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => showView(tab.dataset.view)));
-  $('obs-pill').addEventListener('click', () => showView('obs'));
+  $('stream-pill').addEventListener('click', () => showView('connection'));
 
   document.querySelectorAll('.stepper').forEach((stepper) => {
     stepper.querySelectorAll('button').forEach((b) =>
@@ -782,20 +855,34 @@ function bindStaticFields() {
     scheduleSave();
   });
 
-  $('obs-url').addEventListener('change', (e) => {
-    config.obs.url = e.target.value.trim();
+  document.querySelectorAll('#software-switch button').forEach((b) =>
+    b.addEventListener('click', () => setSoftware(b.dataset.software)),
+  );
+  $('conn-url').addEventListener('change', (e) => {
+    config[config.software].url = e.target.value.trim();
     scheduleSave();
   });
-  $('obs-password').addEventListener('change', (e) => {
-    config.obs.password = e.target.value;
+  $('conn-secret').addEventListener('change', (e) => {
+    config[config.software][software().secret] = e.target.value;
     scheduleSave();
   });
-  $('obs-connect').addEventListener('click', () => {
-    config.obs.url = $('obs-url').value.trim();
-    config.obs.password = $('obs-password').value;
-    api.obsConnect(config.obs);
+  $('conn-connect').addEventListener('click', async () => {
+    config[config.software].url = $('conn-url').value.trim();
+    config[config.software][software().secret] = $('conn-secret').value;
     scheduleSave();
+    await flushSave();
+    api.streamReconnect();
   });
+
+  const languages = [['auto', t('settings.languageAuto')], ...Object.entries(I18N.languages)];
+  $('language-select').replaceWith(
+    themedSelect(languages, config.language, (language) => {
+      config.language = language;
+      // The main process reloads this page in the new language once the config is saved.
+      flushSave();
+      scheduleSave();
+    }),
+  );
 
   $('export-config').addEventListener('click', exportConfig);
   $('import-config').addEventListener('click', importConfig);
@@ -805,33 +892,41 @@ function bindStaticFields() {
 
 function renderSettings() {
   renderHotkey();
+  renderConnectionForm();
   $('close-after').checked = config.closeAfterAction;
   $('login').checked = config.launchAtLogin;
-  $('obs-url').value = config.obs.url;
-  $('obs-password').value = config.obs.password;
 }
 
 (async () => {
-  [config, obsState, icons] = await Promise.all([api.getConfig(), api.obsState(), api.listIcons()]);
+  await loadI18n();
+  document.title = t('editor.windowTitle');
+  [config, streamState, icons] = await Promise.all([api.getConfig(), api.streamState(), api.listIcons()]);
   bindStaticFields();
   renderSettings();
   renderPreview();
   renderInspector();
-  renderObsState();
-  if (obsState.status === 'connected') refreshScenes();
+  renderStreamState();
+  if (streamState.status === 'connected') refreshScenes();
+
+  const firstLaunch =
+    !config[config.software][software().secret] &&
+    streamState.status !== 'connected' &&
+    config.buttons.every((b) => b.action.type === 'none');
   if (pendingSelect !== null) {
     select(Math.min(pendingSelect, config.buttons.length - 1));
-  } else if (!config.obs.password && obsState.status !== 'connected' && config.buttons.every((b) => b.action.type === 'none')) {
-    showView('obs');
+  } else if (sessionStorage.getItem('view')) {
+    showView(sessionStorage.getItem('view'));
+  } else if (firstLaunch) {
+    showView('connection');
   }
 
-  api.onObsState((state) => {
-    const changed = state.status !== obsState.status;
-    obsState = state;
-    renderObsState();
+  api.onStreamState((state) => {
+    const changed = state.status !== streamState.status;
+    streamState = state;
+    renderStreamState();
     if (changed && state.status === 'connected') refreshScenes();
-    // Update the "OBS not connected" callout without stealing focus from a field being edited.
-    if (changed && isObsAction(current().action.type) && !$('action-fields').contains(document.activeElement)) {
+    // Update the "not connected" callout without stealing focus from a field being edited.
+    if (changed && isStreamAction(current().action.type) && !$('action-fields').contains(document.activeElement)) {
       renderActionFields();
     }
   });

@@ -1,14 +1,17 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { t } = require('./i18n');
 
-const FORMAT = 'streamdeck-virtuel/backup';
+const FORMAT = 'virtualdeck/backup';
+// Format id used before the app was renamed to VirtualDeck.
+const LEGACY_FORMATS = ['streamdeck-virtuel/backup'];
 const VERSION = 1;
 const MEDIA_PREFIX = 'media:';
 const MEDIA_ID = /^[a-f0-9]{16}$/;
 
 // Bundles the config with the sounds and images it references, so the deck can be
-// restored on another PC. The OBS password is deliberately left out.
+// restored on another PC. Connection settings (and their secrets) are deliberately left out.
 function exportBundle(cfg) {
   const media = {};
   const missing = [];
@@ -42,7 +45,6 @@ function exportBundle(cfg) {
       hotkey: cfg.hotkey,
       closeAfterAction: cfg.closeAfterAction,
       grid: cfg.grid,
-      obs: { url: cfg.obs.url },
       buttons,
     },
     media,
@@ -57,12 +59,9 @@ function parseBundle(raw) {
   } catch {
     bundle = null;
   }
-  if (bundle?.format !== FORMAT || !Array.isArray(bundle.config?.buttons)) {
-    throw new Error("Ce fichier n'est pas une sauvegarde de l'app.");
-  }
-  if (bundle.version > VERSION) {
-    throw new Error("Cette sauvegarde vient d'une version plus récente de l'app : mets-la à jour pour l'importer.");
-  }
+  const knownFormat = bundle?.format === FORMAT || LEGACY_FORMATS.includes(bundle?.format);
+  if (!knownFormat || !Array.isArray(bundle.config?.buttons)) throw new Error(t('error.backupInvalid'));
+  if (bundle.version > VERSION) throw new Error(t('error.backupTooNew'));
   return bundle;
 }
 
@@ -96,7 +95,6 @@ function restoreBundle(bundle, mediaDir) {
     hotkey: bundle.config.hotkey,
     closeAfterAction: bundle.config.closeAfterAction,
     grid: bundle.config.grid,
-    obsUrl: bundle.config.obs?.url,
     buttons,
   };
 }

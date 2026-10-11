@@ -1,3 +1,4 @@
+/* global t -- from shared/i18n.js */
 /* eslint-disable no-unused-vars -- these helpers are used by deck.js and editor.js */
 
 // Both deck/ and editor/ pages live two levels below the project root.
@@ -63,20 +64,23 @@ function createKey(button, index) {
     el.append(label);
   }
 
-  el.setAttribute('aria-label', button.label || `Bouton ${index + 1}`);
+  el.setAttribute('aria-label', button.label || t('editor.buttonN', { n: index + 1 }));
   return el;
 }
 
 // Fills the small status line at the top of the deck panel.
-function renderDeckHeader(statusEl, obsState) {
-  statusEl.className = `deck-status ${obsState.status}`;
+// streamState: { status, currentScene, label } where label is "OBS" or "Streamlabs".
+function renderDeckHeader(statusEl, streamState) {
+  statusEl.className = `deck-status ${streamState.status}`;
   const dot = document.createElement('span');
   dot.className = 'status-dot';
-  if (obsState.status === 'connected') {
+  const software = streamState.label || 'OBS';
+  if (streamState.status === 'connected') {
     const scene = document.createElement('strong');
-    scene.textContent = obsState.currentScene || '—';
-    statusEl.replaceChildren(dot, 'OBS · ', scene);
+    scene.textContent = streamState.currentScene || '—';
+    statusEl.replaceChildren(dot, `${software} · `, scene);
   } else {
-    statusEl.replaceChildren(dot, obsState.status === 'connecting' ? 'Connexion à OBS…' : 'OBS hors ligne');
+    const key = streamState.status === 'connecting' ? 'status.connectingTo' : 'status.offline';
+    statusEl.replaceChildren(dot, t(key, { software }));
   }
 }

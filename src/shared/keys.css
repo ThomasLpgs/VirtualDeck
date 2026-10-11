@@ -12,6 +12,11 @@
   --font: 'Inter Variable', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
 }
 
+/* Hidden until shared/i18n.js has translated the page, to avoid a flash of untranslated keys. */
+.i18n-pending {
+  visibility: hidden;
+}
+
 /* ---------- Panel ---------- */
 
 .deck-panel {

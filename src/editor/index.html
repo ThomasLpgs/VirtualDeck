@@ -1,35 +1,35 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' file: data:; media-src file:"
     />
-    <title>Stream Deck virtuel — Configuration</title>
+    <title>VirtualDeck</title>
     <link rel="stylesheet" href="../shared/keys.css" />
     <link rel="stylesheet" href="editor.css" />
   </head>
-  <body>
+  <body class="i18n-pending">
     <header class="titlebar">
       <div class="brand">
         <span class="brand-mark"><span id="brand-glyph"></span></span>
-        <span class="brand-name">Stream Deck <span>virtuel</span></span>
+        <span class="brand-name">VirtualDeck</span>
       </div>
       <nav class="tabs" role="tablist">
-        <button class="tab active" type="button" role="tab" data-view="buttons">Boutons</button>
-        <button class="tab" type="button" role="tab" data-view="obs">OBS</button>
-        <button class="tab" type="button" role="tab" data-view="settings">Réglages</button>
+        <button class="tab active" type="button" role="tab" data-view="buttons" data-i18n="tab.buttons"></button>
+        <button class="tab" type="button" role="tab" data-view="connection" data-i18n="tab.connection"></button>
+        <button class="tab" type="button" role="tab" data-view="settings" data-i18n="tab.settings"></button>
       </nav>
       <div class="titlebar-right">
         <span id="save-status" class="save-status" aria-live="polite"></span>
-        <button id="obs-pill" class="pill" type="button" title="Connexion OBS">
-          <span class="status-dot"></span><span id="obs-pill-text">OBS hors ligne</span>
+        <button id="stream-pill" class="pill" type="button">
+          <span class="status-dot"></span><span id="stream-pill-text"></span>
         </button>
       </div>
     </header>
 
-    <!-- ===================== Boutons ===================== -->
+    <!-- ===================== Buttons ===================== -->
     <main id="view-buttons" class="view view-buttons">
       <section class="canvas">
         <div class="canvas-inner">
@@ -43,257 +43,211 @@
 
           <div class="canvas-toolbar">
             <div class="stepper" data-axis="cols">
-              <span class="stepper-label">Colonnes</span>
-              <button type="button" data-step="-1" aria-label="Retirer une colonne">−</button>
+              <span class="stepper-label" data-i18n="grid.columns"></span>
+              <button type="button" data-step="-1" data-i18n-aria-label="grid.removeColumn">−</button>
               <output id="cols-value"></output>
-              <button type="button" data-step="1" aria-label="Ajouter une colonne">+</button>
+              <button type="button" data-step="1" data-i18n-aria-label="grid.addColumn">+</button>
             </div>
             <div class="stepper" data-axis="rows">
-              <span class="stepper-label">Lignes</span>
-              <button type="button" data-step="-1" aria-label="Retirer une ligne">−</button>
+              <span class="stepper-label" data-i18n="grid.rows"></span>
+              <button type="button" data-step="-1" data-i18n-aria-label="grid.removeRow">−</button>
               <output id="rows-value"></output>
-              <button type="button" data-step="1" aria-label="Ajouter une ligne">+</button>
+              <button type="button" data-step="1" data-i18n-aria-label="grid.addRow">+</button>
             </div>
           </div>
-          <p class="canvas-hint">Clique sur un bouton pour le modifier · Glisse-dépose pour réorganiser</p>
+          <p class="canvas-hint" data-i18n="grid.hint"></p>
         </div>
       </section>
 
       <aside class="inspector">
         <div class="inspector-head">
           <div>
-            <p class="eyebrow">Bouton <span id="button-number">1</span></p>
-            <h2 id="button-title">Sans titre</h2>
+            <p id="button-number" class="eyebrow"></p>
+            <h2 id="button-title"></h2>
           </div>
-          <button id="clear-button" class="icon-btn danger" type="button" title="Vider ce bouton"></button>
+          <button id="clear-button" class="icon-btn danger" type="button" data-i18n-title="editor.clearButton"></button>
         </div>
 
         <section class="group">
-          <h3>Apparence</h3>
+          <h3 data-i18n="editor.appearance"></h3>
           <div class="field">
-            <label for="label">Texte</label>
-            <input id="label" maxlength="40" placeholder="ex. Jingle, Pause, Caméra…" />
+            <label for="label" data-i18n="editor.text"></label>
+            <input id="label" maxlength="40" data-i18n-placeholder="editor.textPlaceholder" />
           </div>
 
           <div class="field">
-            <label for="icon-search">Icône</label>
+            <label for="icon-search" data-i18n="editor.icon"></label>
             <div class="icon-picker">
               <div class="search">
                 <span id="search-glyph"></span>
-                <input id="icon-search" type="search" placeholder="Rechercher (en anglais : mic, music, star…)" />
+                <input id="icon-search" type="search" data-i18n-placeholder="editor.iconSearch" />
               </div>
-              <div id="icon-grid" class="icon-grid" role="listbox" aria-label="Icônes"></div>
+              <div id="icon-grid" class="icon-grid" role="listbox" data-i18n-aria-label="editor.icon"></div>
             </div>
           </div>
 
           <div class="field-row">
             <div class="field">
-              <label for="emoji">Ou un emoji</label>
-              <input id="emoji" maxlength="8" placeholder="Aucun" />
+              <label for="emoji" data-i18n="editor.emoji"></label>
+              <input id="emoji" maxlength="8" data-i18n-placeholder="common.none" />
             </div>
             <div class="field">
-              <label>Ou une image</label>
+              <label data-i18n="editor.image"></label>
               <div class="inline">
-                <button id="image-pick" class="btn" type="button">Choisir…</button>
-                <button id="image-clear" class="btn ghost" type="button" hidden>Retirer</button>
+                <button id="image-pick" class="btn" type="button"></button>
+                <button id="image-clear" class="btn ghost" type="button" data-i18n="common.remove" hidden></button>
               </div>
             </div>
           </div>
 
           <div class="field">
-            <label>Couleur</label>
+            <label data-i18n="editor.color"></label>
             <div id="swatches" class="swatches"></div>
           </div>
         </section>
 
         <section class="group">
-          <h3>Action</h3>
-          <div id="action-tiles" class="action-tiles" role="radiogroup" aria-label="Action"></div>
+          <h3 data-i18n="editor.action"></h3>
+          <div id="action-tiles" class="action-tiles" role="radiogroup" data-i18n-aria-label="editor.action"></div>
           <div id="action-fields" class="action-fields"></div>
         </section>
       </aside>
     </main>
 
-    <!-- ===================== OBS ===================== -->
-    <main id="view-obs" class="view view-page" hidden>
+    <!-- ===================== Connection ===================== -->
+    <main id="view-connection" class="view view-page" hidden>
       <div class="page">
         <header class="page-head">
-          <h1>Connecter OBS Studio</h1>
-          <p>À faire une seule fois, ça prend 2 minutes. L'app se reconnecte ensuite toute seule à chaque lancement d'OBS.</p>
+          <h1 data-i18n="conn.title"></h1>
+          <p data-i18n="conn.subtitle"></p>
         </header>
+
+        <div id="software-switch" class="software-switch" role="radiogroup" data-i18n-aria-label="conn.software">
+          <button type="button" data-software="obs">
+            <strong>OBS Studio</strong><span data-i18n="conn.obsHint"></span>
+          </button>
+          <button type="button" data-software="streamlabs">
+            <strong>Streamlabs Desktop</strong><span data-i18n="conn.streamlabsHint"></span>
+          </button>
+        </div>
 
         <section class="card connection">
           <div class="connection-status">
-            <span id="obs-big-status" class="big-status"><span class="status-dot"></span><span id="obs-big-text"></span></span>
-            <p id="obs-detail" class="muted"></p>
+            <span id="conn-big-status" class="big-status"><span class="status-dot"></span><span id="conn-big-text"></span></span>
+            <p id="conn-detail" class="muted"></p>
           </div>
           <div class="field-row">
             <div class="field grow">
-              <label for="obs-url">Adresse du serveur</label>
-              <input id="obs-url" spellcheck="false" />
+              <label for="conn-url" data-i18n="conn.address"></label>
+              <input id="conn-url" spellcheck="false" />
             </div>
             <div class="field grow">
-              <label for="obs-password">Mot de passe du serveur</label>
-              <input id="obs-password" type="password" autocomplete="off" placeholder="Copié depuis OBS" />
+              <label for="conn-secret" id="conn-secret-label"></label>
+              <input id="conn-secret" type="password" autocomplete="off" />
             </div>
           </div>
           <div class="inline end">
-            <button id="obs-connect" class="btn primary" type="button">Se connecter</button>
+            <button id="conn-connect" class="btn primary" type="button" data-i18n="conn.connect"></button>
           </div>
         </section>
 
-        <h2 class="section-title">Configuration d'OBS</h2>
+        <section data-guide="obs">
+          <h2 class="section-title" data-i18n="guide.obs.title"></h2>
+          <ol class="steps">
+            <li class="step"><h3 data-i18n="guide.obs.s1.title"></h3><p data-i18n-html="guide.obs.s1.body"></p></li>
+            <li class="step"><h3 data-i18n="guide.obs.s2.title"></h3><p data-i18n-html="guide.obs.s2.body"></p></li>
+            <li class="step"><h3 data-i18n="guide.obs.s3.title"></h3><p data-i18n-html="guide.obs.s3.body"></p></li>
+            <li class="step"><h3 data-i18n="guide.connect.title"></h3><p data-i18n-html="guide.connect.body"></p></li>
+          </ol>
+        </section>
+
+        <section data-guide="streamlabs">
+          <h2 class="section-title" data-i18n="guide.sl.title"></h2>
+          <ol class="steps">
+            <li class="step"><h3 data-i18n="guide.sl.s1.title"></h3><p data-i18n-html="guide.sl.s1.body"></p></li>
+            <li class="step"><h3 data-i18n="guide.sl.s2.title"></h3><p data-i18n-html="guide.sl.s2.body"></p></li>
+            <li class="step"><h3 data-i18n="guide.sl.s3.title"></h3><p data-i18n-html="guide.sl.s3.body"></p></li>
+            <li class="step"><h3 data-i18n="guide.connect.title"></h3><p data-i18n-html="guide.connect.body"></p></li>
+          </ol>
+        </section>
+
+        <h2 class="section-title" data-i18n="guide.anim.title"></h2>
         <ol class="steps">
-          <li class="step">
-            <h3>Vérifie ta version d'OBS</h3>
-            <p>
-              Le serveur WebSocket est intégré à OBS depuis la <strong>version 28</strong>. Regarde ta version dans
-              <span class="menu">Aide</span> → <span class="menu">À propos</span>. Si elle est plus ancienne, installe la
-              dernière depuis obsproject.com.
-            </p>
-          </li>
-          <li class="step">
-            <h3>Active le serveur WebSocket</h3>
-            <p>
-              Dans OBS, ouvre <span class="menu">Outils</span> → <span class="menu">Paramètres du serveur WebSocket</span>,
-              puis coche <strong>Activer le serveur WebSocket</strong>. Laisse le port sur <code>4455</code>.
-            </p>
-          </li>
-          <li class="step">
-            <h3>Copie le mot de passe</h3>
-            <p>
-              Si <strong>Activer l'authentification</strong> est coché (recommandé), clique sur
-              <span class="menu">Afficher les informations de connexion</span> puis sur <strong>Copier</strong> à côté du
-              mot de passe du serveur.
-            </p>
-          </li>
-          <li class="step">
-            <h3>Colle-le ici et connecte-toi</h3>
-            <p>
-              Colle le mot de passe dans le champ ci-dessus et clique sur <strong>Se connecter</strong>. Quand la pastille
-              passe au <span class="ok">vert</span>, c'est bon : les noms de tes scènes et sources apparaîtront dans les
-              listes de l'onglet Boutons.
-            </p>
-          </li>
+          <li class="step"><h3 data-i18n="guide.anim.s1.title"></h3><p data-i18n-html="guide.anim.s1.body"></p></li>
+          <li class="step"><h3 data-i18n="guide.anim.s2.title"></h3><p data-i18n-html="guide.anim.s2.body"></p></li>
+          <li class="step"><h3 data-i18n="guide.anim.s3.title"></h3><p data-i18n-html="guide.anim.s3.body"></p></li>
         </ol>
 
-        <h2 class="section-title">Créer un bouton « animation »</h2>
-        <ol class="steps">
-          <li class="step">
-            <h3>Ajoute la vidéo dans OBS</h3>
-            <p>
-              Dans ta scène, clique sur <span class="menu">+</span> → <span class="menu">Source média</span> et choisis ta
-              vidéo (idéalement un <code>.webm</code> avec fond transparent). Coche
-              <strong>Redémarrer la lecture quand la source devient active</strong> et laisse <strong>Boucle</strong>
-              décoché.
-            </p>
-          </li>
-          <li class="step">
-            <h3>Masque la source</h3>
-            <p>Clique sur l'icône en forme d'œil à côté de la source pour la cacher. C'est le bouton qui la fera apparaître.</p>
-          </li>
-          <li class="step">
-            <h3>Configure le bouton</h3>
-            <p>
-              Dans l'onglet Boutons, choisis l'action <strong>Source / animation</strong>, sélectionne ta source, garde le
-              comportement <strong>Animation</strong> et règle la durée sur celle de ta vidéo. La source s'affiche, se joue,
-              puis se masque toute seule.
-            </p>
-          </li>
-        </ol>
-
-        <h2 class="section-title">Ça ne marche pas ?</h2>
+        <h2 class="section-title" data-i18n="faq.title"></h2>
         <div class="faq">
-          <details>
-            <summary>La pastille reste grise « OBS hors ligne »</summary>
-            <p>
-              Vérifie qu'OBS est bien ouvert et que le serveur WebSocket est activé (étape 2). L'adresse doit être
-              <code>ws://127.0.0.1:4455</code> si OBS tourne sur ce PC.
-            </p>
-          </details>
-          <details>
-            <summary>« Authentication failed » / mot de passe refusé</summary>
-            <p>
-              Recopie le mot de passe depuis <span class="menu">Afficher les informations de connexion</span>. Si tu as
-              cliqué sur « Générer un mot de passe » dans OBS, l'ancien ne marche plus : il faut coller le nouveau ici.
-            </p>
-          </details>
-          <details>
-            <summary>OBS tourne sur un autre PC</summary>
-            <p>
-              Remplace <code>127.0.0.1</code> par l'adresse IP affichée dans les informations de connexion d'OBS, et
-              autorise OBS dans le pare-feu Windows de l'autre PC.
-            </p>
-          </details>
-          <details>
-            <summary>Le bouton ne change pas de scène</summary>
-            <p>
-              Le nom doit correspondre exactement (majuscules, espaces, accents). Une fois connecté, choisis la scène dans
-              la liste proposée plutôt que de la taper.
-            </p>
-          </details>
+          <details><summary data-i18n="faq.offline.q"></summary><p data-i18n-html="faq.offline.a"></p></details>
+          <details><summary data-i18n="faq.auth.q"></summary><p data-i18n-html="faq.auth.a"></p></details>
+          <details><summary data-i18n="faq.remote.q"></summary><p data-i18n-html="faq.remote.a"></p></details>
+          <details><summary data-i18n="faq.scene.q"></summary><p data-i18n-html="faq.scene.a"></p></details>
         </div>
       </div>
     </main>
 
-    <!-- ===================== Réglages ===================== -->
+    <!-- ===================== Settings ===================== -->
     <main id="view-settings" class="view view-page" hidden>
       <div class="page">
         <header class="page-head">
-          <h1>Réglages</h1>
+          <h1 data-i18n="tab.settings"></h1>
         </header>
 
         <section class="card rows">
           <div class="setting">
             <div class="setting-text">
-              <p class="setting-title">Raccourci d'ouverture</p>
-              <p id="hotkey-hint" class="muted">
-                Clique puis appuie sur ta combinaison. Les touches F13 à F24 (souris ou claviers programmables) marchent
-                aussi seules.
-              </p>
+              <p class="setting-title" data-i18n="settings.language"></p>
+              <p class="muted" data-i18n="settings.languageHint"></p>
+            </div>
+            <div id="language-select"></div>
+          </div>
+          <div class="setting">
+            <div class="setting-text">
+              <p class="setting-title" data-i18n="settings.hotkey"></p>
+              <p id="hotkey-hint" class="muted" data-i18n="settings.hotkeyHint"></p>
             </div>
             <button id="hotkey" class="hotkey" type="button"></button>
           </div>
           <div class="setting">
             <div class="setting-text">
-              <p class="setting-title">Fermer le deck après une action</p>
-              <p class="muted">Sinon il reste ouvert jusqu'à Échap ou un clic à côté.</p>
+              <p class="setting-title" data-i18n="settings.closeAfter"></p>
+              <p class="muted" data-i18n="settings.closeAfterHint"></p>
             </div>
             <label class="switch"><input type="checkbox" id="close-after" /><span></span></label>
           </div>
           <div class="setting">
             <div class="setting-text">
-              <p class="setting-title">Lancer au démarrage de Windows</p>
-              <p class="muted">L'app démarre discrètement dans la zone de notification.</p>
+              <p class="setting-title" data-i18n="settings.login"></p>
+              <p class="muted" data-i18n="settings.loginHint"></p>
             </div>
             <label class="switch"><input type="checkbox" id="login" /><span></span></label>
           </div>
         </section>
 
-        <h2 class="section-title">Sauvegarde</h2>
+        <h2 class="section-title" data-i18n="backup.title"></h2>
         <section class="card rows">
           <div class="setting">
             <div class="setting-text">
-              <p class="setting-title">Exporter ma configuration</p>
-              <p class="muted">
-                Crée un fichier avec tes boutons, leurs sons et leurs images. Pratique pour changer de PC ou partager
-                ton deck. Le mot de passe OBS n'est pas inclus.
-              </p>
+              <p class="setting-title" data-i18n="backup.export"></p>
+              <p class="muted" data-i18n="backup.exportHint"></p>
             </div>
-            <button id="export-config" class="btn" type="button">Exporter…</button>
+            <button id="export-config" class="btn" type="button" data-i18n="backup.exportButton"></button>
           </div>
           <div class="setting">
             <div class="setting-text">
-              <p class="setting-title">Importer une configuration</p>
-              <p class="muted">Remplace tes boutons, ta grille et ton raccourci. Ta connexion OBS est conservée.</p>
+              <p class="setting-title" data-i18n="backup.import"></p>
+              <p class="muted" data-i18n="backup.importHint"></p>
             </div>
-            <button id="import-config" class="btn" type="button">Importer…</button>
+            <button id="import-config" class="btn" type="button" data-i18n="backup.importButton"></button>
           </div>
           <p id="backup-status" class="backup-status" aria-live="polite" hidden></p>
         </section>
       </div>
     </main>
 
+    <script src="../shared/i18n.js"></script>
     <script src="../shared/keys.js"></script>
     <script src="editor.js"></script>
   </body>

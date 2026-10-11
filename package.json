@@ -1,7 +1,7 @@
 {
-  "name": "streamdeck-virtuel",
-  "version": "0.1.0",
-  "description": "Stream Deck virtuel pour Windows : une grille de boutons qui s'ouvre au raccourci clavier et pilote OBS, des sons et des programmes.",
+  "name": "virtualdeck",
+  "version": "0.2.0",
+  "description": "VirtualDeck : un Stream Deck virtuel pour Windows. Une grille de boutons qui s'ouvre au raccourci clavier et pilote OBS, Streamlabs, des sons et des programmes.",
   "author": "Thomas Laspougeas",
   "main": "src/main.js",
   "private": true,
@@ -19,8 +19,8 @@
     "electron-builder": "^26.15.3"
   },
   "build": {
-    "appId": "com.streamdeckvirtuel.app",
-    "productName": "Stream Deck virtuel",
+    "appId": "com.virtualdeck.app",
+    "productName": "VirtualDeck",
     "directories": {
       "output": "release"
     },
@@ -47,13 +47,13 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Stream Deck virtuel",
+      "shortcutName": "VirtualDeck",
       "installerLanguages": [
         "fr_FR"
       ],
       "language": "1036",
       "runAfterFinish": true,
-      "artifactName": "StreamDeckVirtuel-Setup-${version}.${ext}"
+      "artifactName": "VirtualDeck-Setup-${version}.${ext}"
     }
   }
 }
