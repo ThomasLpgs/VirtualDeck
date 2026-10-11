@@ -94,6 +94,24 @@ body {
   transition: background 150ms, color 150ms;
 }
 
+/* Page switcher, shown when there is more than one page. */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pager[hidden] {
+  display: none;
+}
+
+.pager .deck-icon-btn {
+  margin-right: 0;
+}
+
 .deck-icon-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.9);

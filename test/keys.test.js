@@ -22,9 +22,10 @@ test('vertical keys are flagged when Aitum Vertical is missing', () => {
     { action: { type: 'obs-replay', target: 'vertical' } },
     { action: { type: 'obs-stream', target: 'both' } },
     { action: { type: 'obs-record' } },
+    { action: { type: 'multi', steps: [{ action: { type: 'obs-scene', verticalScene: 'V' } }] } },
     { action: { type: 'obs-scene', scene: 'Game' } },
   ];
-  assert.equal(keys.countVerticalIssues(buttons, connected({ verticalAvailable: false })), 4);
+  assert.equal(keys.countVerticalIssues(buttons, connected({ verticalAvailable: false })), 5);
   assert.equal(keys.countVerticalIssues(buttons, connected({ verticalAvailable: true })), 0);
   // Offline: no warning, the deck already says OBS is offline.
   assert.equal(keys.countVerticalIssues(buttons, { status: 'disconnected' }), 0);

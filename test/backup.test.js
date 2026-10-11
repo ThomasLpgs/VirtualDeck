@@ -84,6 +84,4 @@ test('invalid or newer backups are refused', () => {
   assert.throws(() =>
     backup.parseBundle(JSON.stringify({ format: 'virtualdeck/backup', version: 99, config: { buttons: [] } })),
   );
-  // Backups made before the app was renamed still import.
-  assert.ok(backup.parseBundle(JSON.stringify({ format: 'streamdeck-virtuel/backup', version: 1, config: { buttons: [] } })));
 });

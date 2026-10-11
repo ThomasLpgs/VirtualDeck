@@ -1,4 +1,4 @@
-/* global api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader, markKeys, countVerticalIssues, hasRunningTimer
+/* global PAGE_SIZE, api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader, markKeys, countVerticalIssues, hasRunningTimer
    -- api comes from preload.js, t/I18N/loadI18n from shared/i18n.js, the rest from shared/keys.js */
 const $ = (id) => document.getElementById(id);
 
@@ -41,7 +41,12 @@ const ACTIONS = [
   { type: 'obs-stream', icon: 'radio', defaults: {} },
   { type: 'sound', icon: 'volume-2', defaults: { file: '', volume: 1 } },
   { type: 'open', icon: 'external-link', defaults: { target: '' } },
+  { type: 'page', icon: 'files', defaults: { page: 'next' } },
+  { type: 'multi', icon: 'list-ordered', defaults: { steps: [] } },
 ];
+
+// What a step of a multi-action can do: any action but "none" and another multi-action.
+const STEP_ACTIONS = ACTIONS.filter((action) => !['none', 'multi'].includes(action.type));
 
 const SOURCE_MODES = ['flash', 'toggle', 'show', 'hide'];
 // Canvases a stream / record / clip key can act on (action.target).
@@ -56,6 +61,11 @@ const SOFTWARE = {
 
 let config = null;
 let selected = 0;
+// Page shown in the preview (0-based); `selected` is an index in config.buttons.
+let page = 0;
+const MAX_PAGES = 10;
+const pageStart = () => page * PAGE_SIZE;
+const perPage = () => config.grid.cols * config.grid.rows;
 let streamState = { status: 'disconnected' };
 let icons = { names: [], tags: {} };
 let saveTimer = null;
@@ -64,6 +74,8 @@ let dragFrom = null;
 const streamLists = { scenes: [], verticalScenes: [], sources: [], verticalSources: [], inputs: [] };
 // A button the main process asked us to select (from the deck) before config finished loading.
 let pendingSelect = null;
+// Keys whose own hotkey couldn't be registered, as reported by the last save.
+let failedKeyHotkeys = [];
 
 api.onEditorSelect((index) => {
   if (!config) {
@@ -77,6 +89,9 @@ api.onEditorSelect((index) => {
 const current = () => config.buttons[selected];
 const fileName = (p) => (p ? p.split(/[\\/]/).pop() : '');
 const isStreamAction = (type) => type.startsWith('obs-');
+// Whether an action (or one of its steps) needs OBS / Streamlabs.
+const usesStream = (action) =>
+  isStreamAction(action.type) || (action.steps || []).some((step) => isStreamAction(step.action?.type || ''));
 const software = () => SOFTWARE[config.software];
 
 function emptyButton() {
@@ -134,6 +149,8 @@ async function save() {
     setStatus(t('save.error', { error: result.error }), true);
     return;
   }
+  failedKeyHotkeys = result.failedKeyHotkeys || [];
+  renderKeyHotkeyHint();
   const hint = $('hotkey-hint');
   if (result.hotkeyOk) {
     setStatus(t('save.saved'));
@@ -158,16 +175,18 @@ function showView(name) {
 // ---------- Preview ----------
 
 function renderPreview() {
-  const { cols, rows } = config.grid;
+  const { cols } = config.grid;
   const preview = $('preview');
   preview.style.gridTemplateColumns = `repeat(${cols}, var(--key-size))`;
+  renderPageTabs();
   preview.replaceChildren(
-    ...config.buttons.slice(0, cols * rows).map((button, i) => {
+    ...config.buttons.slice(pageStart(), pageStart() + perPage()).map((button, i) => {
       const key = createKey(button, i);
-      key.classList.toggle('selected', i === selected);
+      const index = pageStart() + i;
+      key.classList.toggle('selected', index === selected);
       key.draggable = true;
-      key.addEventListener('click', () => select(i));
-      key.addEventListener('dragstart', () => (dragFrom = i));
+      key.addEventListener('click', () => select(index));
+      key.addEventListener('dragstart', () => (dragFrom = index));
       key.addEventListener('dragover', (e) => {
         e.preventDefault();
         key.classList.add('drop-target');
@@ -175,19 +194,62 @@ function renderPreview() {
       key.addEventListener('dragleave', () => key.classList.remove('drop-target'));
       key.addEventListener('drop', (e) => {
         e.preventDefault();
-        swap(dragFrom, i);
+        swap(dragFrom, index);
       });
       return key;
     }),
   );
   markLiveScene();
   $('cols-value').value = cols;
-  $('rows-value').value = rows;
+  $('rows-value').value = config.grid.rows;
   $('preview-hotkey').textContent = formatHotkey(config.hotkey).join(' + ');
 }
 
+// Page tabs above the preview: one per page, "+" to add one, "×" to delete the page shown.
+function renderPageTabs() {
+  const tabs = [];
+  for (let p = 0; p < config.pageCount; p++) {
+    const tab = el('button', { type: 'button', className: 'page-tab', textContent: String(p + 1), title: t('page.n', { n: p + 1 }) });
+    tab.classList.toggle('selected', p === page);
+    tab.addEventListener('click', () => select(p * PAGE_SIZE));
+    tabs.push(tab);
+  }
+  if (config.pageCount < MAX_PAGES) {
+    const add = el('button', { type: 'button', className: 'page-tab', title: t('page.add') }, createGlyph('plus'));
+    add.addEventListener('click', addPage);
+    tabs.push(add);
+  }
+  if (config.pageCount > 1) {
+    const remove = el('button', { type: 'button', className: 'page-tab', title: t('page.remove') }, createGlyph('x'));
+    remove.addEventListener('click', removePage);
+    tabs.push(remove);
+  }
+  $('page-tabs').replaceChildren(...tabs);
+}
+
+// Pads the buttons so every page but the last is full (see PAGE_SIZE in config.js).
+function padPages() {
+  while (config.buttons.length < (config.pageCount - 1) * PAGE_SIZE + perPage()) config.buttons.push(emptyButton());
+}
+
+function addPage() {
+  config.pageCount += 1;
+  padPages();
+  select((config.pageCount - 1) * PAGE_SIZE);
+  scheduleSave();
+}
+
+function removePage() {
+  if (!window.confirm(t('page.removeConfirm', { n: page + 1 }))) return;
+  config.buttons.splice(pageStart(), PAGE_SIZE);
+  config.pageCount -= 1;
+  padPages();
+  select(Math.min(page, config.pageCount - 1) * PAGE_SIZE);
+  scheduleSave();
+}
+
 function markLiveScene() {
-  const buttons = config.buttons.slice(0, config.grid.cols * config.grid.rows);
+  const buttons = config.buttons.slice(pageStart(), pageStart() + perPage());
   markKeys($('preview').children, buttons, streamState);
   const state = { ...streamState, label: software().label };
   renderDeckHeader($('preview-status'), state, countVerticalIssues(buttons, streamState));
@@ -195,6 +257,7 @@ function markLiveScene() {
 
 function select(index) {
   selected = index;
+  page = Math.floor(index / PAGE_SIZE);
   renderPreview();
   renderInspector();
 }
@@ -211,9 +274,8 @@ function swap(from, to) {
 function stepGrid(axis, delta) {
   const max = axis === 'cols' ? 8 : 6;
   config.grid[axis] = Math.min(max, Math.max(1, config.grid[axis] + delta));
-  const count = config.grid.cols * config.grid.rows;
-  while (config.buttons.length < count) config.buttons.push(emptyButton());
-  if (selected >= count) selected = count - 1;
+  padPages();
+  if (selected - pageStart() >= perPage()) selected = pageStart() + perPage() - 1;
   renderPreview();
   renderInspector();
   scheduleSave();
@@ -235,7 +297,8 @@ function updateAction(patch) {
 }
 
 function renderHead() {
-  $('button-number').textContent = t('editor.buttonN', { n: selected + 1 });
+  const number = t('editor.buttonN', { n: (selected % PAGE_SIZE) + 1 });
+  $('button-number').textContent = config.pageCount > 1 ? `${t('page.n', { n: page + 1 })} · ${number}` : number;
   $('button-title').textContent = current().label || t('editor.untitled');
 }
 
@@ -487,7 +550,7 @@ function segmented(options, value, onChange) {
 
 // Output picker of stream / record / clip keys: horizontal (OBS), vertical (Aitum) or both.
 // Only offered with the plugin (or once a vertical target was chosen, so it can be undone).
-function outputField(action) {
+function outputField(action, update, rerender) {
   const target = action.target || 'horizontal';
   if (!streamState.verticalAvailable && target === 'horizontal') return [];
   // Says which software is behind each choice; for vertical clips, also that the Backtrack is used.
@@ -501,13 +564,87 @@ function outputField(action) {
         OUTPUT_TARGETS.map((value) => [value, t(`output.${value}`, { software: software().label })]),
         target,
         (value) => {
-          updateAction({ target: value });
-          renderActionFields();
+          update({ target: value });
+          rerender();
         },
       ),
       hint,
     ),
   ];
+}
+
+// Steps of a multi-action: each one is a regular action, run in order after an optional wait.
+function renderSteps(container, action, update, rerender) {
+  const steps = action.steps || (action.steps = []);
+  // Saves, and redraws the list (order, count or a step's type changed).
+  const changed = () => {
+    update({});
+    rerender();
+  };
+  steps.forEach((step, i) => {
+    const typePicker = themedSelect(
+      STEP_ACTIONS.map((a) => [a.type, t(`action.${a.type}`)]),
+      step.action.type,
+      (type) => {
+        step.action = { type, ...structuredClone(ACTIONS.find((a) => a.type === type).defaults) };
+        changed();
+      },
+    );
+    const move = (delta) => {
+      [steps[i], steps[i + delta]] = [steps[i + delta], steps[i]];
+      changed();
+    };
+    const tools = el(
+      'div',
+      { className: 'multi-step-tools' },
+      iconButton('chevron-up', t('multi.moveUp'), () => move(-1), i === 0),
+      iconButton('chevron-down', t('multi.moveDown'), () => move(1), i === steps.length - 1),
+      iconButton('trash-2', t('common.remove'), () => {
+        steps.splice(i, 1);
+        changed();
+      }),
+    );
+
+    const delay = el('input', { type: 'number', min: 0, max: 600, step: 0.5, value: step.delay ?? 0 });
+    delay.addEventListener('input', () => {
+      step.delay = Math.max(0, Number(delay.value) || 0);
+      update({});
+    });
+
+    const body = el('div', { className: 'multi-step-body' });
+    const stepUpdate = (patch) => {
+      Object.assign(step.action, patch);
+      update({});
+    };
+    fillActionFields(body, step.action, stepUpdate, rerender);
+
+    container.append(
+      el(
+        'div',
+        { className: 'multi-step' },
+        el('div', { className: 'multi-step-head' }, el('span', { className: 'multi-step-number', textContent: String(i + 1) }), typePicker, tools),
+        field(t('field.stepDelay'), delay),
+        body,
+      ),
+    );
+  });
+  container.append(
+    button(
+      t('multi.addStep'),
+      () => {
+        steps.push({ delay: 0, action: { type: 'obs-scene', scene: '' } });
+        changed();
+      },
+      'btn add-step',
+    ),
+  );
+}
+
+function iconButton(icon, title, onClick, disabled = false) {
+  const b = el('button', { type: 'button', className: 'multi-step-btn', title, disabled }, createGlyph(icon));
+  b.setAttribute('aria-label', title);
+  b.addEventListener('click', onClick);
+  return b;
 }
 
 function offlineCallout() {
@@ -525,8 +662,18 @@ function renderActionFields() {
   const container = $('action-fields');
   container.replaceChildren();
 
-  if (isStreamAction(action.type) && streamState.status !== 'connected') container.append(offlineCallout());
+  if (usesStream(action) && streamState.status !== 'connected') container.append(offlineCallout());
+  fillActionFields(container, action, updateAction, renderActionFields);
 
+  if (action.type !== 'none') {
+    container.append(keyHotkeyField());
+    renderKeyHotkeyHint();
+  }
+}
+
+// Fields of one action. update(patch) changes it and saves; rerender() redraws the fields after a
+// change that alters them. Used for a key's action and for each step of a multi-action.
+function fillActionFields(container, action, update, rerender) {
   switch (action.type) {
     case 'obs-scene': {
       // The vertical field only exists with OBS + Aitum Vertical. It also stays visible while it
@@ -535,7 +682,7 @@ function renderActionFields() {
       container.append(
         field(
           t(showVertical ? 'field.horizontalScene' : 'field.scene'),
-          textInput(action.scene, (scene) => updateAction({ scene }), {
+          textInput(action.scene, (scene) => update({ scene }), {
             options: () => streamLists.scenes,
             placeholder: t(showVertical ? 'field.horizontalPlaceholder' : 'field.scenePlaceholder'),
           }),
@@ -545,7 +692,7 @@ function renderActionFields() {
         container.append(
           field(
             t('field.verticalScene'),
-            textInput(action.verticalScene, (verticalScene) => updateAction({ verticalScene }), {
+            textInput(action.verticalScene, (verticalScene) => update({ verticalScene }), {
               options: () => streamLists.verticalScenes,
               placeholder: t('field.verticalPlaceholder'),
             }),
@@ -564,12 +711,12 @@ function renderActionFields() {
       const sceneInput = textInput(
         action.scene,
         (scene) => {
-          updateAction({ scene });
+          update({ scene });
           refreshSources(scene);
         },
         { options: () => streamLists.scenes, placeholder: t('field.currentScenePlaceholder') },
       );
-      const sourceInput = textInput(action.source, (source) => updateAction({ source }), {
+      const sourceInput = textInput(action.source, (source) => update({ source }), {
         options: () => streamLists.sources,
         placeholder: t(showVertical ? 'field.horizontalSourcePlaceholder' : 'field.sourcePlaceholder'),
       });
@@ -582,12 +729,12 @@ function renderActionFields() {
         const verticalSceneInput = textInput(
           action.verticalScene,
           (verticalScene) => {
-            updateAction({ verticalScene });
+            update({ verticalScene });
             refreshVerticalSources(verticalScene);
           },
           { options: () => streamLists.verticalScenes, placeholder: t('field.currentVerticalScenePlaceholder') },
         );
-        const verticalSourceInput = textInput(action.verticalSource, (verticalSource) => updateAction({ verticalSource }), {
+        const verticalSourceInput = textInput(action.verticalSource, (verticalSource) => update({ verticalSource }), {
           options: () => streamLists.verticalSources,
           placeholder: t('field.verticalSourcePlaceholder'),
         });
@@ -603,7 +750,7 @@ function renderActionFields() {
       }
 
       const duration = el('input', { type: 'number', min: 0.5, max: 600, step: 0.5, value: action.duration ?? 5 });
-      duration.addEventListener('input', () => updateAction({ duration: Number(duration.value) || 5 }));
+      duration.addEventListener('input', () => update({ duration: Number(duration.value) || 5 }));
       const durationField = field(t('field.duration'), duration, t('field.durationHint'));
       durationField.hidden = action.mode !== 'flash';
 
@@ -614,7 +761,7 @@ function renderActionFields() {
             SOURCE_MODES.map((mode) => [mode, t(`mode.${mode}`)]),
             action.mode || 'toggle',
             (mode) => {
-              updateAction({ mode });
+              update({ mode });
               durationField.hidden = mode !== 'flash';
             },
           ),
@@ -629,7 +776,7 @@ function renderActionFields() {
       container.append(
         field(
           t('field.input'),
-          textInput(action.input, (input) => updateAction({ input }), {
+          textInput(action.input, (input) => update({ input }), {
             options: () => streamLists.inputs,
             placeholder: t('field.inputPlaceholder'),
           }),
@@ -640,7 +787,7 @@ function renderActionFields() {
           segmented(
             MUTE_MODES.map((mode) => [mode, t(`muteMode.${mode}`)]),
             action.mode || 'toggle',
-            (mode) => updateAction({ mode }),
+            (mode) => update({ mode }),
           ),
         ),
       );
@@ -653,7 +800,7 @@ function renderActionFields() {
     case 'obs-stream':
       container.append(
         el('p', { className: 'muted', textContent: t(`action.${action.type}.hint`, { software: software().label }) }),
-        ...outputField(action),
+        ...outputField(action, update, rerender),
       );
       break;
 
@@ -663,7 +810,7 @@ function renderActionFields() {
       const volumeValue = el('span', { className: 'range-value', textContent: `${volume.value} %` });
       volume.addEventListener('input', () => {
         volumeValue.textContent = `${volume.value} %`;
-        updateAction({ volume: Number(volume.value) / 100 });
+        update({ volume: Number(volume.value) / 100 });
       });
       container.append(
         field(
@@ -674,7 +821,7 @@ function renderActionFields() {
               const picked = await api.pickFile('sound');
               if (!picked) return;
               name.textContent = fileName(picked.path);
-              updateAction({ file: picked.path });
+              update({ file: picked.path });
             }),
           ),
           t('field.soundHint'),
@@ -685,7 +832,7 @@ function renderActionFields() {
     }
 
     case 'open': {
-      const target = textInput(action.target, (value) => updateAction({ target: value }), {
+      const target = textInput(action.target, (value) => update({ target: value }), {
         placeholder: t('field.targetPlaceholder'),
       });
       container.append(
@@ -697,7 +844,7 @@ function renderActionFields() {
               const picked = await api.pickFile('program');
               if (!picked) return;
               target.value = picked.path;
-              updateAction({ target: picked.path });
+              update({ target: picked.path });
             }),
           ),
           t('field.targetHint'),
@@ -706,11 +853,31 @@ function renderActionFields() {
       break;
     }
 
+    case 'page': {
+      const pages = Array.from({ length: config.pageCount }, (_, p) => [String(p + 1), t('page.n', { n: p + 1 })]);
+      container.append(
+        el('p', { className: 'muted', textContent: t('action.page.hint') }),
+        field(
+          t('field.page'),
+          themedSelect(
+            [['next', t('page.next')], ['prev', t('page.prev')], ...pages],
+            String(action.page || 'next'),
+            (value) => update({ page: value }),
+          ),
+        ),
+      );
+      break;
+    }
+
+    case 'multi':
+      container.append(el('p', { className: 'muted', textContent: t('action.multi.hint') }));
+      renderSteps(container, action, update, rerender);
+      break;
+
     default:
       break;
   }
 }
-
 async function refreshScenes() {
   [streamLists.scenes, streamLists.verticalScenes, streamLists.inputs] = await Promise.all([
     api.streamScenes(),
@@ -781,42 +948,84 @@ function formatHotkey(acc) {
   return acc.split('+').map((part) => ARROWS[part] || (I18N.strings[`key.${part}`] ? t(`key.${part}`) : part));
 }
 
-function renderHotkey() {
-  const parts = formatHotkey(config.hotkey);
+// Fills a .hotkey element with the keys of an accelerator ("Ctrl + Maj + Espace").
+function renderAccelerator(target, accelerator) {
   const nodes = [];
-  parts.forEach((part, i) => {
+  formatHotkey(accelerator).forEach((part, i) => {
     if (i) nodes.push(el('span', { className: 'plus', textContent: '+' }));
     nodes.push(el('kbd', { textContent: part }));
   });
-  $('hotkey').replaceChildren(...nodes);
+  target.replaceChildren(...nodes);
 }
 
-function setupHotkeyField() {
-  const hotkeyButton = $('hotkey');
+function renderHotkey() {
+  renderAccelerator($('hotkey'), config.hotkey);
+}
+
+// Makes a .hotkey button record the next key combination. onPick(accelerator) gets the result;
+// the global hotkeys are paused meanwhile so the combination reaches the page.
+function captureHotkey(target, render, onPick) {
   let capturing = false;
   const stop = () => {
     if (!capturing) return;
     capturing = false;
-    hotkeyButton.classList.remove('capturing');
-    renderHotkey();
+    target.classList.remove('capturing');
+    render();
     api.pauseHotkey(false);
   };
-  hotkeyButton.addEventListener('click', () => {
+  target.addEventListener('click', () => {
     if (capturing) return;
     capturing = true;
     api.pauseHotkey(true);
-    hotkeyButton.classList.add('capturing');
-    hotkeyButton.textContent = t('settings.hotkeyCapture');
+    target.classList.add('capturing');
+    target.textContent = t('settings.hotkeyCapture');
   });
-  hotkeyButton.addEventListener('blur', stop);
-  hotkeyButton.addEventListener('keydown', (e) => {
+  target.addEventListener('blur', stop);
+  target.addEventListener('keydown', (e) => {
     if (!capturing) return;
     e.preventDefault();
     if (e.key === 'Escape') return stop();
     const acc = acceleratorFromEvent(e);
     if (!acc) return;
-    config.hotkey = acc;
+    onPick(acc);
     stop();
+  });
+}
+
+// Hotkey of the selected key: runs it from anywhere, without opening the deck.
+function keyHotkeyField() {
+  const key = current();
+  const capture = el('button', { type: 'button', className: 'hotkey' });
+  const render = () => renderAccelerator(capture, key.hotkey);
+  render();
+  captureHotkey(capture, render, (acc) => {
+    key.hotkey = acc;
+    clear.hidden = false;
+    scheduleSave();
+  });
+  const clear = button(t('common.remove'), () => {
+    key.hotkey = '';
+    clear.hidden = true;
+    render();
+    scheduleSave();
+  });
+  clear.hidden = !key.hotkey;
+  const wrap = field(t('field.keyHotkey'), inline(capture, clear), ' ');
+  wrap.lastChild.id = 'key-hotkey-hint';
+  return wrap;
+}
+
+function renderKeyHotkeyHint() {
+  const hint = $('key-hotkey-hint');
+  if (!hint) return;
+  const taken = Boolean(current().hotkey) && failedKeyHotkeys.includes(selected);
+  hint.textContent = t(taken ? 'field.keyHotkeyTaken' : 'field.keyHotkeyHint');
+  hint.classList.toggle('warn', taken);
+}
+
+function setupHotkeyField() {
+  captureHotkey($('hotkey'), renderHotkey, (acc) => {
+    config.hotkey = acc;
     renderPreview();
     scheduleSave();
   });
@@ -1097,7 +1306,7 @@ function renderSettings() {
 
   // Stream / recording timers on the preview keys.
   setInterval(() => {
-    if (hasRunningTimer(streamState)) markLiveScene();
+    if (!document.hidden && hasRunningTimer(streamState)) markLiveScene();
   }, 1000);
 
   api.onStreamState((state) => {

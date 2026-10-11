@@ -239,7 +239,7 @@
   "settings.deckScaleReset": "100 %",
   "deck.resize": "Drag to enlarge or shrink the deck",
 
-  "action.obs-mute": "Sound",
+  "action.obs-mute": "Mute",
   "action.obs-replay": "Clip",
   "action.obs-replay.hint": "Saves the last seconds to a video file, while streaming, recording or neither. The replay buffer must be running in {software} (in OBS: “Start Replay Buffer” button, once enabled in Settings › Output).",
   "field.input": "Audio source",
@@ -260,5 +260,28 @@
   "output.vertical": "Vertical",
   "output.both": "Both",
   "error.replayNotStarted": "Replay buffer not started in {software}.",
-  "error.verticalReplayNotStarted": "Aitum Vertical's Backtrack not started."
+  "error.verticalReplayNotStarted": "Aitum Vertical's Backtrack not started.",
+
+  "field.keyHotkey": "Hotkey",
+  "field.keyHotkeyHint": "Runs this button from anywhere, without opening the deck. F13 to F24 keys work on their own.",
+  "field.keyHotkeyTaken": "This hotkey is already used (by another app, the deck or another button): pick another one.",
+
+  "action.multi": "Multi",
+  "action.multi.hint": "Runs several actions in order, with an optional wait before each one. If a step fails, the next ones still run.",
+  "field.stepDelay": "Wait before (seconds)",
+  "multi.addStep": "Add a step",
+  "multi.moveUp": "Move up",
+  "multi.moveDown": "Move down",
+  "error.multiEmpty": "This button has no steps.",
+  "error.multiStep": "Step {n}: {error}",
+
+  "action.page": "Page",
+  "action.page.hint": "Changes the deck's page, without closing it. With its hotkey, this button opens the deck on that page.",
+  "field.page": "Go to",
+  "page.next": "Next page",
+  "page.prev": "Previous page",
+  "page.n": "Page {n}",
+  "page.add": "Add a page",
+  "page.remove": "Delete this page",
+  "page.removeConfirm": "Delete page {n} and all its buttons?"
 }

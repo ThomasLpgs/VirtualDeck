@@ -4,8 +4,6 @@ const path = require('path');
 const { t } = require('./i18n');
 
 const FORMAT = 'virtualdeck/backup';
-// Format id used before the app was renamed to VirtualDeck.
-const LEGACY_FORMATS = ['streamdeck-virtuel/backup'];
 const VERSION = 1;
 const MEDIA_PREFIX = 'media:';
 const MEDIA_ID = /^[a-f0-9]{16}$/;
@@ -34,6 +32,9 @@ function exportBundle(cfg) {
     const copy = structuredClone(button);
     copy.image = embed(copy.image);
     if (copy.action.type === 'sound') copy.action.file = embed(copy.action.file);
+    for (const step of copy.action.type === 'multi' ? copy.action.steps || [] : []) {
+      if (step.action?.type === 'sound') step.action.file = embed(step.action.file);
+    }
     return copy;
   });
 
@@ -45,6 +46,7 @@ function exportBundle(cfg) {
       hotkey: cfg.hotkey,
       closeAfterAction: cfg.closeAfterAction,
       grid: cfg.grid,
+      pageCount: cfg.pageCount,
       buttons,
     },
     media,
@@ -59,8 +61,7 @@ function parseBundle(raw) {
   } catch {
     bundle = null;
   }
-  const knownFormat = bundle?.format === FORMAT || LEGACY_FORMATS.includes(bundle?.format);
-  if (!knownFormat || !Array.isArray(bundle.config?.buttons)) throw new Error(t('error.backupInvalid'));
+  if (bundle?.format !== FORMAT || !Array.isArray(bundle.config?.buttons)) throw new Error(t('error.backupInvalid'));
   if (bundle.version > VERSION) throw new Error(t('error.backupTooNew'));
   return bundle;
 }
@@ -90,6 +91,11 @@ function restoreBundle(bundle, mediaDir) {
     const copy = { ...button, action: { type: 'none', ...button?.action } };
     copy.image = restore(copy.image);
     if (copy.action.type === 'sound') copy.action.file = restore(copy.action.file);
+    if (copy.action.type === 'multi' && Array.isArray(copy.action.steps)) {
+      copy.action.steps = copy.action.steps.map((step) =>
+        step?.action?.type === 'sound' ? { ...step, action: { ...step.action, file: restore(step.action.file) } } : step,
+      );
+    }
     return copy;
   });
 
@@ -97,6 +103,7 @@ function restoreBundle(bundle, mediaDir) {
     hotkey: bundle.config.hotkey,
     closeAfterAction: bundle.config.closeAfterAction,
     grid: bundle.config.grid,
+    pageCount: bundle.config.pageCount,
     buttons,
   };
 }

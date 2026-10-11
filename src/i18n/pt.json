@@ -238,7 +238,7 @@
   "settings.deckScaleReset": "100 %",
   "deck.resize": "Arraste para aumentar ou diminuir o deck",
 
-  "action.obs-mute": "Som",
+  "action.obs-mute": "Mudo",
   "action.obs-replay": "Clipe",
   "action.obs-replay.hint": "Salva os últimos segundos em um arquivo de vídeo, em live, gravando ou sem nenhum dos dois. O buffer de replay precisa estar iniciado no {software} (no OBS: botão “Iniciar buffer de replay”, depois de ativá-lo em Configurações › Saída).",
   "field.input": "Fonte de áudio",
@@ -259,5 +259,28 @@
   "output.vertical": "Vertical",
   "output.both": "Ambas",
   "error.replayNotStarted": "Buffer de replay não iniciado no {software}.",
-  "error.verticalReplayNotStarted": "Backtrack do Aitum Vertical não iniciado."
+  "error.verticalReplayNotStarted": "Backtrack do Aitum Vertical não iniciado.",
+
+  "field.keyHotkey": "Atalho",
+  "field.keyHotkeyHint": "Aciona este botão de qualquer lugar, sem abrir o deck. As teclas F13 a F24 funcionam sozinhas.",
+  "field.keyHotkeyTaken": "Este atalho já está em uso (por outro app, pelo deck ou por outro botão): escolha outro.",
+
+  "action.multi": "Multi",
+  "action.multi.hint": "Executa várias ações em ordem, com uma espera opcional antes de cada uma. Se uma etapa falhar, as seguintes rodam mesmo assim.",
+  "field.stepDelay": "Esperar antes (segundos)",
+  "multi.addStep": "Adicionar uma etapa",
+  "multi.moveUp": "Subir",
+  "multi.moveDown": "Descer",
+  "error.multiEmpty": "Este botão não tem etapas.",
+  "error.multiStep": "Etapa {n}: {error}",
+
+  "action.page": "Página",
+  "action.page.hint": "Muda a página do deck, sem fechá-lo. Com o atalho, este botão abre o deck nessa página.",
+  "field.page": "Ir para",
+  "page.next": "Próxima página",
+  "page.prev": "Página anterior",
+  "page.n": "Página {n}",
+  "page.add": "Adicionar uma página",
+  "page.remove": "Excluir esta página",
+  "page.removeConfirm": "Excluir a página {n} e todos os seus botões?"
 }

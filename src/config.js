@@ -5,12 +5,14 @@ const path = require('path');
 
 const MAX_COLS = 8;
 const MAX_ROWS = 6;
+// Pages of keys. Page p holds buttons[p * PAGE_SIZE ...]: one slot per possible grid cell, so
+// resizing the grid never moves a key to another page. Must match PAGE_SIZE in shared/keys.js.
+const PAGE_SIZE = MAX_COLS * MAX_ROWS;
+const MAX_PAGES = 10;
 // Size of the deck relative to its default size (1 = 100 %).
 const MIN_DECK_SCALE = 0.6;
 const MAX_DECK_SCALE = 1.6;
 const DEFAULT_COLOR = '#8b8d98';
-// Dark grey used as the key background by v0.1; the color is now an accent and would be invisible.
-const LEGACY_DEFAULT_COLOR = '#2a2f3a';
 const SOFTWARES = ['obs', 'streamlabs'];
 
 // Secret field of each streaming software's settings, stored encrypted on disk.
@@ -26,6 +28,8 @@ function defaultButton() {
     icon: '',
     image: '',
     color: DEFAULT_COLOR,
+    // Global hotkey running this key without opening the deck ('' for none).
+    hotkey: '',
     action: { type: 'none' },
   };
 }
@@ -37,6 +41,7 @@ function defaults() {
     closeAfterAction: true,
     launchAtLogin: false,
     grid: { cols: 3, rows: 2 },
+    pageCount: 1,
     // Top-left corner where the user dragged the deck, or null to open it under the mouse.
     deckPosition: null,
     deckScale: 1,
@@ -45,6 +50,14 @@ function defaults() {
     streamlabs: { url: 'ws://127.0.0.1:59650/api/websocket', token: '' },
     buttons: Array.from({ length: 6 }, defaultButton),
   };
+}
+
+// Steps of a multi-action: { delay (seconds), action }. No multi-action inside a multi-action.
+function normalizeSteps(steps) {
+  return (Array.isArray(steps) ? steps : [])
+    .filter((step) => step?.action && typeof step.action === 'object' && typeof step.action.type === 'string')
+    .filter((step) => step.action.type !== 'multi')
+    .map((step) => ({ delay: clamp(step.delay, 0, 600, 0), action: { ...step.action } }));
 }
 
 const clamp = (n, min, max, fallback) =>
@@ -77,14 +90,17 @@ function normalize(raw) {
     const action = rest.action && typeof rest.action === 'object' ? rest.action : {};
     const button = { ...defaultButton(), ...rest, action: { type: 'none', ...action } };
     // The renderers call string methods on these: never let a hand-edited or imported file break them.
-    for (const field of ['id', 'label', 'symbol', 'icon', 'image', 'color']) {
+    for (const field of ['id', 'label', 'symbol', 'icon', 'image', 'color', 'hotkey']) {
       if (typeof button[field] !== 'string') button[field] = defaultButton()[field];
     }
     if (typeof button.action.type !== 'string') button.action.type = 'none';
-    if (button.color === LEGACY_DEFAULT_COLOR) button.color = DEFAULT_COLOR;
+    if (button.action.type === 'multi') button.action.steps = normalizeSteps(button.action.steps);
     return button;
   });
-  while (cfg.buttons.length < cfg.grid.cols * cfg.grid.rows) cfg.buttons.push(defaultButton());
+  cfg.pageCount = clamp(raw?.pageCount, 1, MAX_PAGES, base.pageCount);
+  // Every page but the last is full, so a page always starts at its own PAGE_SIZE boundary.
+  const needed = (cfg.pageCount - 1) * PAGE_SIZE + cfg.grid.cols * cfg.grid.rows;
+  while (cfg.buttons.length < needed) cfg.buttons.push(defaultButton());
   return cfg;
 }
 
@@ -134,4 +150,14 @@ function save(next) {
   return cfg;
 }
 
-module.exports = { load, save, normalize, defaultButton, configPath, SOFTWARES, MIN_DECK_SCALE, MAX_DECK_SCALE };
+module.exports = {
+  load,
+  save,
+  normalize,
+  defaultButton,
+  configPath,
+  SOFTWARES,
+  MIN_DECK_SCALE,
+  MAX_DECK_SCALE,
+  PAGE_SIZE,
+};

@@ -238,7 +238,7 @@
   "settings.deckScaleReset": "100 %",
   "deck.resize": "Ziehen, um das Deck zu vergrößern oder zu verkleinern",
 
-  "action.obs-mute": "Ton",
+  "action.obs-mute": "Stumm",
   "action.obs-replay": "Clip",
   "action.obs-replay.hint": "Speichert die letzten Sekunden als Videodatei, beim Streamen, Aufnehmen oder ohne beides. Der Wiederholungspuffer muss in {software} laufen (in OBS: Schaltfläche „Wiederholungspuffer starten“, nachdem er unter Einstellungen › Ausgabe aktiviert wurde).",
   "field.input": "Audioquelle",
@@ -259,5 +259,28 @@
   "output.vertical": "Vertikal",
   "output.both": "Beide",
   "error.replayNotStarted": "Wiederholungspuffer in {software} nicht gestartet.",
-  "error.verticalReplayNotStarted": "Backtrack von Aitum Vertical nicht gestartet."
+  "error.verticalReplayNotStarted": "Backtrack von Aitum Vertical nicht gestartet.",
+
+  "field.keyHotkey": "Tastenkürzel",
+  "field.keyHotkeyHint": "Löst diese Taste von überall aus, ohne das Deck zu öffnen. F13 bis F24 funktionieren auch allein.",
+  "field.keyHotkeyTaken": "Dieses Tastenkürzel wird bereits verwendet (von einer anderen App, dem Deck oder einer anderen Taste): Wähle ein anderes.",
+
+  "action.multi": "Multi",
+  "action.multi.hint": "Führt mehrere Aktionen nacheinander aus, mit optionaler Wartezeit vor jeder. Schlägt ein Schritt fehl, laufen die nächsten trotzdem.",
+  "field.stepDelay": "Vorher warten (Sekunden)",
+  "multi.addStep": "Schritt hinzufügen",
+  "multi.moveUp": "Nach oben",
+  "multi.moveDown": "Nach unten",
+  "error.multiEmpty": "Diese Taste hat keine Schritte.",
+  "error.multiStep": "Schritt {n}: {error}",
+
+  "action.page": "Seite",
+  "action.page.hint": "Wechselt die Seite des Decks, ohne es zu schließen. Mit ihrem Tastenkürzel öffnet diese Taste das Deck auf dieser Seite.",
+  "field.page": "Gehe zu",
+  "page.next": "Nächste Seite",
+  "page.prev": "Vorherige Seite",
+  "page.n": "Seite {n}",
+  "page.add": "Seite hinzufügen",
+  "page.remove": "Diese Seite löschen",
+  "page.removeConfirm": "Seite {n} mit allen Tasten löschen?"
 }

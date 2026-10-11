@@ -222,6 +222,43 @@ code {
   background-position: center;
 }
 
+/* ---------- Page tabs ---------- */
+
+.page-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-tab {
+  min-width: 32px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.page-tab:hover {
+  color: var(--text);
+}
+
+.page-tab.selected {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 40%, transparent);
+  color: var(--text);
+}
+
+.page-tab .glyph {
+  width: 13px;
+  height: 13px;
+}
+
 .canvas-inner {
   min-height: 100%;
   min-width: max-content;
@@ -809,6 +846,90 @@ input[type='search']::-webkit-search-cancel-button {
 
 .action-fields .muted {
   margin-top: 14px;
+}
+
+/* ---------- Multi-action steps ---------- */
+
+.multi-step {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.multi-step-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.multi-step-head .combo {
+  flex: 1;
+  min-width: 0;
+}
+
+.multi-step-number {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.multi-step-tools {
+  flex: none;
+  display: flex;
+  gap: 4px;
+}
+
+.multi-step-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.multi-step-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.multi-step-btn:disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.multi-step-btn .glyph {
+  width: 14px;
+  height: 14px;
+}
+
+.add-step {
+  width: 100%;
+  margin-top: 14px;
+}
+
+/* A few seconds: no need for a full-width field. */
+.multi-step input[type='number'] {
+  max-width: 120px;
+}
+
+/* The action hint of a step sits under its header, like the fields below it. */
+.multi-step-body > .muted:first-child {
+  margin-top: 12px;
 }
 
 .segmented {
