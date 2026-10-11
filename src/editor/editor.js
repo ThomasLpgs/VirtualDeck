@@ -952,6 +952,17 @@ function bindStaticFields() {
   );
 
   $('deck-position-reset').addEventListener('click', () => api.resetDeckPosition());
+  // Saved by the main process (like the corner grip of the deck), not by the editor's autosave.
+  $('deck-scale').addEventListener('input', (e) => {
+    config.deckScale = Number(e.target.value) / 100;
+    renderDeckScale();
+    api.setDeckScale(config.deckScale);
+  });
+  $('deck-scale-reset').addEventListener('click', () => {
+    config.deckScale = 1;
+    renderDeckScale();
+    api.setDeckScale(1);
+  });
   $('export-config').addEventListener('click', exportConfig);
   $('import-config').addEventListener('click', importConfig);
 
@@ -964,8 +975,16 @@ function renderDeckPosition() {
   $('deck-position-reset').disabled = !saved;
 }
 
+function renderDeckScale() {
+  const percent = Math.round((config.deckScale ?? 1) * 100);
+  $('deck-scale').value = percent;
+  $('deck-scale-value').textContent = `${percent} %`;
+  $('deck-scale-reset').disabled = percent === 100;
+}
+
 function renderSettings() {
   renderDeckPosition();
+  renderDeckScale();
   renderHotkey();
   renderConnectionForm();
   $('close-after').checked = config.closeAfterAction;
@@ -989,10 +1008,12 @@ function renderSettings() {
   renderStreamState();
   renderUpdate(update);
   api.onUpdate(renderUpdate);
-  // The deck position is changed by dragging the deck, outside this page.
+  // The deck position and size are changed from the deck itself, outside this page.
   api.onConfig((next) => {
     config.deckPosition = next.deckPosition;
+    config.deckScale = next.deckScale;
     renderDeckPosition();
+    renderDeckScale();
   });
   if (streamState.status === 'connected') refreshScenes();
 

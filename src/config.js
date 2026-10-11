@@ -5,6 +5,9 @@ const path = require('path');
 
 const MAX_COLS = 8;
 const MAX_ROWS = 6;
+// Size of the deck relative to its default size (1 = 100 %).
+const MIN_DECK_SCALE = 0.6;
+const MAX_DECK_SCALE = 1.6;
 const DEFAULT_COLOR = '#8b8d98';
 // Dark grey used as the key background by v0.1; the color is now an accent and would be invisible.
 const LEGACY_DEFAULT_COLOR = '#2a2f3a';
@@ -36,6 +39,7 @@ function defaults() {
     grid: { cols: 3, rows: 2 },
     // Top-left corner where the user dragged the deck, or null to open it under the mouse.
     deckPosition: null,
+    deckScale: 1,
     software: 'obs',
     obs: { url: 'ws://127.0.0.1:4455', password: '' },
     streamlabs: { url: 'ws://127.0.0.1:59650/api/websocket', token: '' },
@@ -62,6 +66,8 @@ function normalize(raw) {
   const pos = raw?.deckPosition;
   cfg.deckPosition =
     pos && Number.isFinite(pos.x) && Number.isFinite(pos.y) ? { x: Math.round(pos.x), y: Math.round(pos.y) } : null;
+  const scale = Number(raw?.deckScale);
+  cfg.deckScale = Number.isFinite(scale) ? Math.min(MAX_DECK_SCALE, Math.max(MIN_DECK_SCALE, scale)) : base.deckScale;
   cfg.closeAfterAction = cfg.closeAfterAction !== false;
   cfg.launchAtLogin = cfg.launchAtLogin === true;
 
@@ -128,4 +134,4 @@ function save(next) {
   return cfg;
 }
 
-module.exports = { load, save, normalize, defaultButton, configPath, SOFTWARES };
+module.exports = { load, save, normalize, defaultButton, configPath, SOFTWARES, MIN_DECK_SCALE, MAX_DECK_SCALE };

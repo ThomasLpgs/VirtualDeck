@@ -232,5 +232,9 @@
   "field.verticalSourcePlaceholder": "Vide : rien ne s'anime à la verticale",
   "deck.verticalIssue": "Vertical indisponible · {count}",
   "deck.verticalIssueHint": "{count} bouton(s) utilisent le vertical, mais le plugin Aitum Vertical n'est pas détecté dans OBS : ils ne changent que la partie horizontale.",
-  "deck.verticalIssueKey": "Plugin Aitum Vertical non détecté : seule la partie horizontale de ce bouton fonctionne."
+  "deck.verticalIssueKey": "Plugin Aitum Vertical non détecté : seule la partie horizontale de ce bouton fonctionne.",
+  "settings.deckScale": "Taille du deck",
+  "settings.deckScaleHint": "Tu peux aussi tirer le coin en bas à droite du deck.",
+  "settings.deckScaleReset": "100 %",
+  "deck.resize": "Tire pour agrandir ou réduire le deck"
 }

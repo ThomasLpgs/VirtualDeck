@@ -233,5 +233,9 @@
   "field.verticalSourcePlaceholder": "Empty: nothing animates on the vertical canvas",
   "deck.verticalIssue": "Vertical unavailable · {count}",
   "deck.verticalIssueHint": "{count} button(s) use the vertical canvas, but the Aitum Vertical plugin isn't found in OBS: they only change the horizontal part.",
-  "deck.verticalIssueKey": "Aitum Vertical plugin not found: only the horizontal part of this button works."
+  "deck.verticalIssueKey": "Aitum Vertical plugin not found: only the horizontal part of this button works.",
+  "settings.deckScale": "Deck size",
+  "settings.deckScaleHint": "You can also drag the bottom-right corner of the deck.",
+  "settings.deckScaleReset": "100 %",
+  "deck.resize": "Drag to enlarge or shrink the deck"
 }

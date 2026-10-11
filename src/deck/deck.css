@@ -26,6 +26,31 @@ body {
   -webkit-app-region: no-drag;
 }
 
+/* Corner grip to resize the deck (deck.js / onDeckResize in main.js). */
+.deck-panel {
+  position: relative;
+}
+
+.resize-grip {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 16px;
+  height: 16px;
+  border-bottom-right-radius: 18px;
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 150ms;
+  background:
+    linear-gradient(135deg, transparent 52%, rgba(255, 255, 255, 0.35) 52%, rgba(255, 255, 255, 0.35) 60%, transparent 60%),
+    linear-gradient(135deg, transparent 72%, rgba(255, 255, 255, 0.35) 72%, rgba(255, 255, 255, 0.35) 80%, transparent 80%);
+}
+
+.deck-panel:hover .resize-grip,
+.resize-grip.dragging {
+  opacity: 1;
+}
+
 .deck-panel.opening {
   animation: panel-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
