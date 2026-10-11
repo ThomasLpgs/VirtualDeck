@@ -44,7 +44,9 @@
 
 ## Installation
 
-1. Télécharge `VirtualDeck-Setup-x.y.z.exe` (dossier `release/` après un build, ou la page *Releases*).
+Pas besoin de Node.js ni de npm : l'installateur contient tout.
+
+1. Va sur la [dernière version](https://github.com/ThomasLpgs/VirtualDeck/releases/latest) et télécharge `VirtualDeck-Setup-x.y.z.exe` dans la section **Assets**.
 2. Lance-le et suis l'installateur. Windows SmartScreen peut afficher « Windows a protégé votre ordinateur » car l'app n'est pas signée par un éditeur reconnu : clique sur **Informations complémentaires** puis **Exécuter quand même**.
 3. VirtualDeck s'ouvre sur l'éditeur. Ensuite, il vit dans la zone de notification (à côté de l'horloge).
 
