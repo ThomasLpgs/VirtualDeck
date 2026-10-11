@@ -221,6 +221,7 @@ function createDeckWindow() {
     deckWin.webContents.send('deck:page', deckPage);
   });
   deckWin.on('blur', hideIfFocusLeft);
+  deckWin.on('move', followDeck);
   deckWin.on('moved', () => {
     const [x, y] = deckWin.getPosition();
     if (placedAt && placedAt.x === x && placedAt.y === y) return;
@@ -271,6 +272,8 @@ function goToPage(target, origin = null) {
 function createPopupWindow() {
   popupWin = new BrowserWindow({
     ...deckSize(),
+    // Owned by the deck: Windows keeps it above the deck, whichever was clicked last.
+    parent: deckWin,
     show: false,
     frame: false,
     transparent: true,
@@ -296,6 +299,8 @@ function createPopupWindow() {
 // Shows the page `deckPage` as a bubble above the key that opened it, its pointer reaching into
 // that key, like a genie out of its lamp. Below the key when there is no room above it.
 async function showPopupPage(origin) {
+  // The key that opened the bubble closes it: it is a temporary deck.
+  if (origin?.win === deckWin && popupOpen() && popupLayout?.fromIndex === origin.index) return closePopup();
   if (!popupWin || popupWin.isDestroyed()) await createPopupWindow();
   const scale = liveScale ?? cfg.deckScale;
   const { width, height } = deckSize();
@@ -317,12 +322,30 @@ async function showPopupPage(origin) {
     const x = Math.round(Math.min(Math.max(centerX - width / 2, area.x - margin), area.x + area.width - width + margin));
     // Pointer position in the page's CSS pixels, kept away from the rounded corners.
     const tailX = Math.min(Math.max((centerX - x) / scale, SHADOW_MARGIN + 26), width / scale - SHADOW_MARGIN - 26);
-    popupLayout = { page: deckPage, tailX, below, bounds: { x, y, width, height } };
+    popupLayout = {
+      page: deckPage,
+      tailX,
+      below,
+      bounds: { x, y, width, height },
+      // To close it from that key again, and to follow the deck when it is dragged.
+      fromIndex: origin?.win === deckWin ? origin.index : null,
+      deckBounds: deckWin.getBounds(),
+    };
   }
   popupWin.setBounds(popupLayout.bounds);
   popupWin.webContents.send('deck:popup', { page: popupLayout.page, tailX: popupLayout.tailX, below: popupLayout.below });
   // Without taking the focus: the keyboard (Esc, 1-9) keeps going to the deck.
   if (!popupWin.isVisible()) popupWin.showInactive();
+}
+
+const popupOpen = () => Boolean(popupWin && !popupWin.isDestroyed() && popupWin.isVisible());
+
+// The bubble moves with the deck while the deck is dragged.
+function followDeck() {
+  if (!popupOpen() || !popupLayout) return;
+  const deck = deckWin.getBounds();
+  const { bounds, deckBounds } = popupLayout;
+  popupWin.setBounds({ ...bounds, x: bounds.x + deck.x - deckBounds.x, y: bounds.y + deck.y - deckBounds.y });
 }
 
 function closePopup() {
@@ -581,12 +604,17 @@ function registerIpc() {
 
   // rect: where the pressed key is in its window, for a popup page to grow out of it.
   ipcMain.handle('deck:press', (e, index, rect) =>
-    runKey(index, { fromDeck: true, origin: rect ? { win: BrowserWindow.fromWebContents(e.sender), rect } : null }),
+    runKey(index, { fromDeck: true, origin: rect ? { win: BrowserWindow.fromWebContents(e.sender), rect, index } : null }),
   );
 
   ipcMain.on('deck:hide', hideDeck);
   ipcMain.on('deck:resetPosition', () => saveDeckPosition(null));
   ipcMain.on('deck:turnPage', (_e, delta) => goToPage(delta < 0 ? 'prev' : 'next'));
+  // A click on the deck's keys closes the bubble, except on the key that opened it (that key
+  // toggles it when its press arrives).
+  ipcMain.on('deck:pointer', (_e, index) => {
+    if (popupOpen() && index !== popupLayout?.fromIndex) closePopup();
+  });
   ipcMain.on('deck:closePopup', () => {
     closePopup();
     if (deckWin.isVisible()) deckWin.focus();
