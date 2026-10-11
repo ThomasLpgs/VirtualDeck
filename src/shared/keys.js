@@ -17,6 +17,11 @@ function createGlyph(name, className = 'glyph') {
 // Page p holds config.buttons[p * PAGE_SIZE ...]. Must match PAGE_SIZE in config.js.
 const PAGE_SIZE = 48;
 
+// Grid ({ cols, rows }) of a page (0-based): pages can have their own number of columns / rows.
+function pageGrid(config, page) {
+  return config.pageGrids?.[page] || config.grid;
+}
+
 // Keys that drive an output, on the horizontal canvas and/or the vertical one (action.target).
 const OUTPUT_ACTIONS = ['obs-stream', 'obs-record', 'obs-replay'];
 

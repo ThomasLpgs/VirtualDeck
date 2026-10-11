@@ -81,6 +81,17 @@ test('pages: each one starts at its own 48-key boundary, whatever the grid size'
   assert.equal(normalize({}).pageCount, 1);
 });
 
+test('each page has its own grid; older configs give every page the main grid', () => {
+  const old = normalize({ grid: { cols: 4, rows: 2 }, pageCount: 2 });
+  assert.deepEqual(old.pageGrids, [{ cols: 4, rows: 2 }, { cols: 4, rows: 2 }]);
+
+  const cfg = normalize({ grid: { cols: 3, rows: 2 }, pageCount: 2, pageGrids: [{ cols: 5, rows: 1 }, { cols: 2, rows: 9 }] });
+  assert.deepEqual(cfg.pageGrids, [{ cols: 5, rows: 1 }, { cols: 2, rows: 6 }]);
+  // `grid` follows page 1, and the last page is padded to its own grid.
+  assert.deepEqual(cfg.grid, { cols: 5, rows: 1 });
+  assert.equal(cfg.buttons.length, 48 + 2 * 6);
+});
+
 test('the renderer-only image URL is never saved', () => {
   const cfg = normalize({ buttons: [{ image: 'C:\\a.png', imageUrl: 'file:///C:/a.png' }] });
   assert.equal('imageUrl' in cfg.buttons[0], false);

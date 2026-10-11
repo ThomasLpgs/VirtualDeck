@@ -144,8 +144,9 @@ function activateStream() {
 // ---------- Deck window ----------
 
 // The deck page is scaled with CSS zoom (deck.js), so the whole window scales with it.
-function deckSize() {
-  const { cols, rows } = cfg.grid;
+// page: whose grid to fit (pages have their own grid); by default the one the deck shows.
+function deckSize(page = cfg.pageMode === 'popup' ? 0 : deckPage) {
+  const { cols, rows } = config.gridOf(cfg, page);
   const scale = liveScale ?? cfg.deckScale;
   return {
     width: Math.round(scale * (cols * KEY_SIZE + (cols - 1) * KEY_GAP + 2 * PANEL_PADDING + 2 * SHADOW_MARGIN)),
@@ -266,7 +267,12 @@ function goToPage(target, origin = null) {
   if (target === 'next') deckPage = (deckPage + 1) % count;
   else if (target === 'prev') deckPage = (deckPage - 1 + count) % count;
   else deckPage = Math.min(count, Math.max(1, Number(target) || 1)) - 1;
-  if (cfg.pageMode !== 'popup') return deckWin.webContents.send('deck:page', deckPage);
+  if (cfg.pageMode !== 'popup') {
+    deckWin.webContents.send('deck:page', deckPage);
+    // Pages can have their own grid: fit the deck to the page now shown.
+    if (deckWin.isVisible()) resizeDeckWindow();
+    return;
+  }
   // Popup mode: page 1 is the deck itself, any other page opens in the bubble.
   if (deckPage === 0) closePopup();
   else showPopupPage(origin);
@@ -306,10 +312,15 @@ async function showPopupPage(origin) {
   if (origin?.win === deckWin && popupOpen() && popupLayout?.fromIndex === origin.index) return closePopup();
   if (!popupWin || popupWin.isDestroyed()) await createPopupWindow();
   const scale = liveScale ?? cfg.deckScale;
-  const { width, height } = deckSize();
+  const { width, height } = deckSize(deckPage);
   if (origin?.win === popupWin && popupLayout) {
-    // A page key inside the bubble: the bubble stays where it is.
-    popupLayout = { ...popupLayout, page: deckPage };
+    // A page key inside the bubble: it stays where it is, resized to the new page's grid.
+    popupLayout = {
+      ...popupLayout,
+      page: deckPage,
+      bounds: { ...popupLayout.bounds, width, height },
+      tailX: Math.min(popupLayout.tailX, width / scale - SHADOW_MARGIN - 26),
+    };
   } else {
     const base = (origin?.win ?? deckWin).getBounds();
     // Without a key (hotkey, arrow keys), the bubble rises from the top of the deck.
@@ -438,10 +449,11 @@ function registerHotkey() {
   const deckOk = cfg.hotkey ? register(cfg.hotkey, toggleDeck) : false;
   failedKeyHotkeys = [];
   const used = new Set([cfg.hotkey]);
-  const perPage = cfg.grid.cols * cfg.grid.rows;
   cfg.buttons.forEach((button, index) => {
-    // Only keys that can be seen in the deck: within the grid, on an existing page.
-    if (index % config.PAGE_SIZE >= perPage || index >= cfg.pageCount * config.PAGE_SIZE) return;
+    // Only keys that can be seen in the deck: on an existing page, within that page's grid.
+    const keyPage = Math.floor(index / config.PAGE_SIZE);
+    const { cols, rows } = config.gridOf(cfg, keyPage);
+    if (keyPage >= cfg.pageCount || index % config.PAGE_SIZE >= cols * rows) return;
     if (!button.hotkey || button.action.type === 'none') return;
     if (used.has(button.hotkey) || !register(button.hotkey, () => runKey(index))) failedKeyHotkeys.push(index);
     used.add(button.hotkey);
@@ -596,6 +608,7 @@ function registerIpc() {
         closeAfterAction: imported.closeAfterAction !== false,
         grid: imported.grid,
         pageCount: imported.pageCount,
+        pageGrids: imported.pageGrids,
         // Same rule as the deck hotkey: an imported key can't grab Ctrl+C or Alt+Tab system-wide.
         buttons: imported.buttons.map((b) => (isImportableHotkey(b?.hotkey) ? b : { ...b, hotkey: '' })),
       });

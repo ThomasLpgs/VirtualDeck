@@ -1,4 +1,4 @@
-/* global PAGE_SIZE, createKey, createGlyph, isEmptyButton, markKeys, countVerticalIssues, hasRunningTimer, renderDeckHeader, loadI18n */
+/* global PAGE_SIZE, pageGrid, createKey, createGlyph, isEmptyButton, markKeys, countVerticalIssues, hasRunningTimer, renderDeckHeader, loadI18n */
 const panel = document.getElementById('panel');
 const grid = document.getElementById('grid');
 const statusEl = document.getElementById('deck-status');
@@ -22,7 +22,8 @@ let audio = null;
 const pageStart = () => page * PAGE_SIZE;
 
 function visibleButtons() {
-  return config.buttons.slice(pageStart(), pageStart() + config.grid.cols * config.grid.rows);
+  const { cols, rows } = pageGrid(config, page);
+  return config.buttons.slice(pageStart(), pageStart() + cols * rows);
 }
 
 // The whole page is zoomed; main.js sizes the window to match.
@@ -32,7 +33,7 @@ function applyScale(scale) {
 
 function render() {
   applyScale(config.deckScale);
-  grid.style.gridTemplateColumns = `repeat(${config.grid.cols}, var(--key-size))`;
+  grid.style.gridTemplateColumns = `repeat(${pageGrid(config, page).cols}, var(--key-size))`;
   grid.replaceChildren(
     ...visibleButtons().map((button, i) => {
       const key = createKey(button, i);

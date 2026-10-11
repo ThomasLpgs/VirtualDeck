@@ -1,4 +1,4 @@
-/* global PAGE_SIZE, api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader, markKeys, countVerticalIssues, hasRunningTimer
+/* global PAGE_SIZE, pageGrid, api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader, markKeys, countVerticalIssues, hasRunningTimer
    -- api comes from preload.js, t/I18N/loadI18n from shared/i18n.js, the rest from shared/keys.js */
 const $ = (id) => document.getElementById(id);
 
@@ -65,7 +65,9 @@ let selected = 0;
 let page = 0;
 const MAX_PAGES = 10;
 const pageStart = () => page * PAGE_SIZE;
-const perPage = () => config.grid.cols * config.grid.rows;
+// Grid of the page shown: each page has its own (config.pageGrids, see config.js).
+const currentGrid = () => pageGrid(config, page);
+const perPage = () => currentGrid().cols * currentGrid().rows;
 let streamState = { status: 'disconnected' };
 let icons = { names: [], tags: {} };
 let saveTimer = null;
@@ -175,7 +177,7 @@ function showView(name) {
 // ---------- Preview ----------
 
 function renderPreview() {
-  const { cols } = config.grid;
+  const { cols, rows } = currentGrid();
   const preview = $('preview');
   preview.style.gridTemplateColumns = `repeat(${cols}, var(--key-size))`;
   renderPageTabs();
@@ -201,7 +203,7 @@ function renderPreview() {
   );
   markLiveScene();
   $('cols-value').value = cols;
-  $('rows-value').value = config.grid.rows;
+  $('rows-value').value = rows;
   $('preview-hotkey').textContent = formatHotkey(config.hotkey).join(' + ');
 }
 
@@ -229,10 +231,13 @@ function renderPageTabs() {
 
 // Pads the buttons so every page but the last is full (see PAGE_SIZE in config.js).
 function padPages() {
-  while (config.buttons.length < (config.pageCount - 1) * PAGE_SIZE + perPage()) config.buttons.push(emptyButton());
+  const last = pageGrid(config, config.pageCount - 1);
+  while (config.buttons.length < (config.pageCount - 1) * PAGE_SIZE + last.cols * last.rows) config.buttons.push(emptyButton());
 }
 
+// The new page starts with the grid of the page shown.
 function addPage() {
+  config.pageGrids.push({ ...currentGrid() });
   config.pageCount += 1;
   padPages();
   select((config.pageCount - 1) * PAGE_SIZE);
@@ -242,6 +247,8 @@ function addPage() {
 function removePage() {
   if (!window.confirm(t('page.removeConfirm', { n: page + 1 }))) return;
   config.buttons.splice(pageStart(), PAGE_SIZE);
+  config.pageGrids.splice(page, 1);
+  config.grid = { ...config.pageGrids[0] };
   config.pageCount -= 1;
   padPages();
   select(Math.min(page, config.pageCount - 1) * PAGE_SIZE);
@@ -271,9 +278,13 @@ function swap(from, to) {
   scheduleSave();
 }
 
+// Changes the grid of the page shown only.
 function stepGrid(axis, delta) {
   const max = axis === 'cols' ? 8 : 6;
-  config.grid[axis] = Math.min(max, Math.max(1, config.grid[axis] + delta));
+  const grid = currentGrid();
+  grid[axis] = Math.min(max, Math.max(1, grid[axis] + delta));
+  // Page 1's grid is also `grid` (see config.js).
+  config.grid = { ...config.pageGrids[0] };
   padPages();
   if (selected - pageStart() >= perPage()) selected = pageStart() + perPage() - 1;
   renderPreview();
