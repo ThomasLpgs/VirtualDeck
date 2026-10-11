@@ -1,6 +1,8 @@
 const { shell } = require('electron');
 const { t } = require('./i18n');
 
+const MAX_STEP_DELAY_S = 600;
+
 // Anything that looks like "scheme:" (https:, spotify:, steam:...) but not a drive letter like "C:".
 const URI_RE = /^[a-z][a-z0-9+.-]+:/i;
 
@@ -24,9 +26,11 @@ function outputTargets(action, stream) {
 
 // stream: the active streaming software client (ObsManager or StreamlabsManager).
 // Resolves to { warning } when only part of the key could run (vertical part without the plugin),
-// and/or { notice } to confirm something the user can't see (a saved clip).
+// and/or { notice } to confirm something the user can't see (a saved clip), and/or { page } for the
+// deck to show ('next', 'prev' or a page number, handled by main.js).
 // Action type ids keep their historical "obs-" prefix so existing configs stay valid.
-async function runAction(action, { stream, playSound }) {
+async function runAction(action, context) {
+  const { stream, playSound } = context;
   switch (action?.type) {
     case 'obs-scene': {
       // Each filled field switches its canvas: the regular one and/or the Aitum Vertical one.
@@ -97,9 +101,40 @@ async function runAction(action, { stream, playSound }) {
       }
       return;
     }
+    case 'page':
+      return { page: action.page || 'next' };
+    case 'multi':
+      return runSteps(action.steps, context);
     default:
       return;
   }
+}
+
+// Steps of a multi-action, in order, each after its optional wait. A failing step doesn't stop
+// the others (a "Pause" key should still switch the scene if the music fails); failures are
+// reported together at the end.
+async function runSteps(steps, context) {
+  if (!Array.isArray(steps) || !steps.length) throw new Error(t('error.multiEmpty'));
+  const errors = [];
+  let warning = null;
+  let notice = null;
+  let page = null;
+  for (const [index, step] of steps.entries()) {
+    const delay = Math.min(MAX_STEP_DELAY_S, Math.max(0, Number(step?.delay) || 0));
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay * 1000));
+    // No multi-action inside a multi-action: it could loop forever.
+    if (step?.action?.type === 'multi') continue;
+    try {
+      const result = await runAction(step?.action, context);
+      warning ??= result?.warning ?? null;
+      notice ??= result?.notice ?? null;
+      page = result?.page ?? page;
+    } catch (err) {
+      errors.push(t('error.multiStep', { n: index + 1, error: err.message }));
+    }
+  }
+  if (errors.length) throw new Error(errors.join('\n'));
+  return { warning, notice, page };
 }
 
 module.exports = { runAction };

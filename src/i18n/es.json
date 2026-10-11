@@ -238,7 +238,7 @@
   "settings.deckScaleReset": "100 %",
   "deck.resize": "Arrastra para agrandar o reducir el deck",
 
-  "action.obs-mute": "Sonido",
+  "action.obs-mute": "Silenciar",
   "action.obs-replay": "Clip",
   "action.obs-replay.hint": "Guarda los últimos segundos en un archivo de vídeo, en directo, grabando o sin ninguno de los dos. El búfer de repetición debe estar iniciado en {software} (en OBS: botón «Iniciar búfer de repetición», tras activarlo en Ajustes › Salida).",
   "field.input": "Fuente de audio",
@@ -259,5 +259,28 @@
   "output.vertical": "Vertical",
   "output.both": "Ambas",
   "error.replayNotStarted": "Búfer de repetición no iniciado en {software}.",
-  "error.verticalReplayNotStarted": "Backtrack de Aitum Vertical no iniciado."
+  "error.verticalReplayNotStarted": "Backtrack de Aitum Vertical no iniciado.",
+
+  "field.keyHotkey": "Atajo",
+  "field.keyHotkeyHint": "Activa este botón desde cualquier sitio, sin abrir el deck. Las teclas F13 a F24 funcionan solas.",
+  "field.keyHotkeyTaken": "Este atajo ya está en uso (por otra aplicación, el deck u otro botón): elige otro.",
+
+  "action.multi": "Multi",
+  "action.multi.hint": "Encadena varias acciones en orden, con una espera opcional antes de cada una. Si un paso falla, los siguientes se ejecutan igualmente.",
+  "field.stepDelay": "Esperar antes (segundos)",
+  "multi.addStep": "Añadir un paso",
+  "multi.moveUp": "Subir",
+  "multi.moveDown": "Bajar",
+  "error.multiEmpty": "Este botón no tiene pasos.",
+  "error.multiStep": "Paso {n}: {error}",
+
+  "action.page": "Página",
+  "action.page.hint": "Cambia la página del deck, sin cerrarlo. Con su atajo, este botón abre el deck en esa página.",
+  "field.page": "Ir a",
+  "page.next": "Página siguiente",
+  "page.prev": "Página anterior",
+  "page.n": "Página {n}",
+  "page.add": "Añadir una página",
+  "page.remove": "Eliminar esta página",
+  "page.removeConfirm": "¿Eliminar la página {n} y todos sus botones?"
 }

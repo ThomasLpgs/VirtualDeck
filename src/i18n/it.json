@@ -238,7 +238,7 @@
   "settings.deckScaleReset": "100 %",
   "deck.resize": "Trascina per ingrandire o ridurre il deck",
 
-  "action.obs-mute": "Audio",
+  "action.obs-mute": "Muto",
   "action.obs-replay": "Clip",
   "action.obs-replay.hint": "Salva gli ultimi secondi in un file video, in diretta, in registrazione o senza nessuno dei due. Il buffer di replay deve essere avviato in {software} (in OBS: pulsante «Avvia buffer di replay», dopo averlo attivato in Impostazioni › Uscita).",
   "field.input": "Fonte audio",
@@ -259,5 +259,28 @@
   "output.vertical": "Verticale",
   "output.both": "Entrambe",
   "error.replayNotStarted": "Buffer di replay non avviato in {software}.",
-  "error.verticalReplayNotStarted": "Backtrack di Aitum Vertical non avviato."
+  "error.verticalReplayNotStarted": "Backtrack di Aitum Vertical non avviato.",
+
+  "field.keyHotkey": "Scorciatoia",
+  "field.keyHotkeyHint": "Attiva questo pulsante da qualsiasi punto, senza aprire il deck. I tasti da F13 a F24 funzionano da soli.",
+  "field.keyHotkeyTaken": "Questa scorciatoia è già usata (da un'altra app, dal deck o da un altro pulsante): scegline un'altra.",
+
+  "action.multi": "Multi",
+  "action.multi.hint": "Esegue più azioni in ordine, con un'attesa facoltativa prima di ciascuna. Se un passaggio fallisce, i successivi vengono eseguiti comunque.",
+  "field.stepDelay": "Attendi prima (secondi)",
+  "multi.addStep": "Aggiungi un passaggio",
+  "multi.moveUp": "Sposta su",
+  "multi.moveDown": "Sposta giù",
+  "error.multiEmpty": "Questo pulsante non ha passaggi.",
+  "error.multiStep": "Passaggio {n}: {error}",
+
+  "action.page": "Pagina",
+  "action.page.hint": "Cambia la pagina del deck, senza chiuderlo. Con la sua scorciatoia, questo pulsante apre il deck su quella pagina.",
+  "field.page": "Vai a",
+  "page.next": "Pagina successiva",
+  "page.prev": "Pagina precedente",
+  "page.n": "Pagina {n}",
+  "page.add": "Aggiungi una pagina",
+  "page.remove": "Elimina questa pagina",
+  "page.removeConfirm": "Eliminare la pagina {n} e tutti i suoi pulsanti?"
 }

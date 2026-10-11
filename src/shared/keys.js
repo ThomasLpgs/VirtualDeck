@@ -14,11 +14,15 @@ function createGlyph(name, className = 'glyph') {
   return glyph;
 }
 
+// Page p holds config.buttons[p * PAGE_SIZE ...]. Must match PAGE_SIZE in config.js.
+const PAGE_SIZE = 48;
+
 // Keys that drive an output, on the horizontal canvas and/or the vertical one (action.target).
 const OUTPUT_ACTIONS = ['obs-stream', 'obs-record', 'obs-replay'];
 
 // Whether a key uses the vertical canvas (Aitum Vertical): scene, source, or output target.
 function usesVertical(action) {
+  if (action.type === 'multi') return (action.steps || []).some((step) => step?.action && usesVertical(step.action));
   return (
     (action.type === 'obs-scene' && Boolean(action.verticalScene)) ||
     (action.type === 'obs-source' && Boolean(action.verticalSource)) ||

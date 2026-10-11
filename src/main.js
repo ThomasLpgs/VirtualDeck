@@ -30,8 +30,6 @@ const APP_ICON = path.join(__dirname, 'assets', 'icon.png');
 const APP_ID = 'com.virtualdeck.app';
 const LUCIDE_DIR = path.join(__dirname, '..', 'node_modules', 'lucide-static');
 const BACKUP_EXT = 'vdeck';
-// Backups made before the rename used .svdeck.
-const BACKUP_IMPORT_EXTS = ['vdeck', 'svdeck'];
 // Shape of the hotkeys the editor records: modifiers + a key, or a lone function key.
 // Anything else in an imported file is ignored, so it can't grab Ctrl+C or Alt+Tab system-wide.
 const IMPORTABLE_HOTKEY = /^(?:(?:Control|Alt|Shift|Super)\+)+[A-Za-z0-9]+$|^F\d{1,2}$/;
@@ -56,33 +54,12 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 // Only when untouched, so test runs can still point userData elsewhere.
 if (app.getPath('userData') === path.join(app.getPath('appData'), app.getName())) {
   app.setPath('userData', path.join(app.getPath('appData'), 'VirtualDeck'));
-  migrateLegacyUserData();
-}
-
-// Before the rename, the config lived in %APPDATA%\streamdeck-virtuel. Copies what matters:
-// the config, the imported media, and "Local State", which holds the key that encrypts the
-// connection password. The old folder is left as is.
-function migrateLegacyUserData() {
-  const appData = app.getPath('appData');
-  const from = path.join(appData, 'streamdeck-virtuel');
-  const to = app.getPath('userData');
-  if (fs.existsSync(path.join(to, 'config.json')) || !fs.existsSync(path.join(from, 'config.json'))) return;
-  try {
-    fs.mkdirSync(to, { recursive: true });
-    for (const name of ['Local State', 'media']) {
-      if (fs.existsSync(path.join(from, name))) fs.cpSync(path.join(from, name), path.join(to, name), { recursive: true });
-    }
-    // Imported media are referenced by absolute path.
-    const escaped = (dir) => JSON.stringify(dir + path.sep).slice(1, -1);
-    const raw = fs.readFileSync(path.join(from, 'config.json'), 'utf8');
-    fs.writeFileSync(path.join(to, 'config.json'), raw.split(escaped(from)).join(escaped(to)));
-  } catch (err) {
-    console.error('Migration of the old config folder failed:', err);
-  }
 }
 
 let cfg;
 let deckWin = null;
+// Page shown by the deck (0-based). Not saved: the deck starts on the first page.
+let deckPage = 0;
 // Where showDeck() last put the deck, to tell its own moves from the user's drags.
 let placedAt = null;
 // While the corner grip is dragged: the scale shown (saved on release) and where the drag began.
@@ -230,6 +207,8 @@ function createDeckWindow() {
   // Stay above borderless-fullscreen games and OBS projectors.
   deckWin.setAlwaysOnTop(true, 'screen-saver');
   deckWin.loadFile(path.join(__dirname, 'deck', 'index.html'));
+  // Also after the reload that follows a language change.
+  deckWin.webContents.on('did-finish-load', () => deckWin.webContents.send('deck:page', deckPage));
   deckWin.on('blur', hideDeck);
   deckWin.on('moved', () => {
     const [x, y] = deckWin.getPosition();
@@ -265,8 +244,20 @@ function showDeck() {
   deckWin.focus();
 }
 
+// target: 'next' / 'prev' (wrapping around) or a page number (1-based).
+function goToPage(target) {
+  const count = cfg.pageCount;
+  if (target === 'next') deckPage = (deckPage + 1) % count;
+  else if (target === 'prev') deckPage = (deckPage - 1 + count) % count;
+  else deckPage = Math.min(count, Math.max(1, Number(target) || 1)) - 1;
+  deckWin.webContents.send('deck:page', deckPage);
+}
+
 function hideDeck() {
-  if (deckWin && !deckWin.isDestroyed() && deckWin.isVisible()) deckWin.hide();
+  if (!deckWin || deckWin.isDestroyed() || !deckWin.isVisible()) return;
+  deckWin.hide();
+  // The page stays loaded (instant opening): tell it to stop refreshing what nobody sees.
+  deckWin.webContents.send('deck:hidden');
 }
 
 function toggleDeck() {
@@ -316,13 +307,54 @@ function openEditor(buttonIndex) {
 
 // ---------- Hotkey & tray ----------
 
+// Keys whose own hotkey couldn't be registered (taken by another app, the deck or another key).
+let failedKeyHotkeys = [];
+
+// Registers the deck hotkey and the hotkey of each key. Returns whether the deck hotkey worked.
 function registerHotkey() {
   globalShortcut.unregisterAll();
-  if (!cfg.hotkey) return false;
+  const register = (accelerator, callback) => {
+    try {
+      return globalShortcut.register(accelerator, callback);
+    } catch {
+      return false;
+    }
+  };
+  const deckOk = cfg.hotkey ? register(cfg.hotkey, toggleDeck) : false;
+  failedKeyHotkeys = [];
+  const used = new Set([cfg.hotkey]);
+  const perPage = cfg.grid.cols * cfg.grid.rows;
+  cfg.buttons.forEach((button, index) => {
+    // Only keys that can be seen in the deck: within the grid, on an existing page.
+    if (index % config.PAGE_SIZE >= perPage || index >= cfg.pageCount * config.PAGE_SIZE) return;
+    if (!button.hotkey || button.action.type === 'none') return;
+    if (used.has(button.hotkey) || !register(button.hotkey, () => runKey(index))) failedKeyHotkeys.push(index);
+    used.add(button.hotkey);
+  });
+  return deckOk;
+}
+
+// Runs a key, from the deck or from its own hotkey. When the deck isn't on screen (closed after
+// the action, or never opened), errors and confirmations are shown as notifications.
+async function runKey(index, { fromDeck = false } = {}) {
+  const button = cfg.buttons[index];
+  if (!button) return { ok: false, error: t('error.buttonNotFound') };
+  // A page key changes what the deck shows: it must not close it.
+  const closes = fromDeck && cfg.closeAfterAction && button.action.type !== 'page';
+  if (closes) hideDeck();
+  const unseen = !fromDeck || closes;
   try {
-    return globalShortcut.register(cfg.hotkey, toggleDeck);
-  } catch {
-    return false;
+    const result = await runAction(button.action, { stream: activeStream(), playSound });
+    if (result?.page) {
+      goToPage(result.page);
+      // From a hotkey (or after the deck closed), open the deck on that page.
+      if (!deckWin.isVisible()) showDeck();
+    }
+    if (unseen && result?.notice) notify(result.notice);
+    return { ok: true, warning: result?.warning, notice: result?.notice };
+  } catch (err) {
+    if (unseen) notify(err.message);
+    return { ok: false, error: err.message };
   }
 }
 
@@ -353,6 +385,7 @@ function createTray() {
 function applyConfig(next) {
   const previousLanguage = i18n.bundle().lang;
   cfg = config.save(next);
+  if (deckPage >= cfg.pageCount) goToPage(1);
   const hotkeyOk = registerHotkey();
   app.setLoginItemSettings({ openAtLogin: cfg.launchAtLogin });
   activateStream();
@@ -379,7 +412,7 @@ function registerIpc() {
     try {
       // Position and size are set from the deck itself (see saveDeckPosition / saveDeckScale).
       const hotkeyOk = applyConfig({ ...next, deckPosition: cfg.deckPosition, deckScale: cfg.deckScale });
-      return { ok: true, hotkeyOk };
+      return { ok: true, hotkeyOk, failedKeyHotkeys };
     } catch (err) {
       return { ok: false, error: err.message };
     }
@@ -406,7 +439,7 @@ function registerIpc() {
     const { canceled, filePaths } = await dialog.showOpenDialog(editorWin, {
       title: t('backup.importTitle'),
       properties: ['openFile'],
-      filters: [{ name: t('backup.fileType', { app: t('app.name') }), extensions: BACKUP_IMPORT_EXTS }],
+      filters: [{ name: t('backup.fileType', { app: t('app.name') }), extensions: [BACKUP_EXT] }],
     });
     if (canceled || !filePaths[0]) return null;
 
@@ -418,7 +451,9 @@ function registerIpc() {
     }
 
     // An imported deck may come from someone else: point out buttons that launch things.
-    const openCount = bundle.config.buttons.filter((b) => b?.action?.type === 'open').length;
+    const opens = (action) =>
+      action?.type === 'open' ? 1 : (Array.isArray(action?.steps) ? action.steps : []).filter((s) => s?.action?.type === 'open').length;
+    const openCount = bundle.config.buttons.reduce((count, b) => count + opens(b?.action), 0);
     const { response } = await dialog.showMessageBox(editorWin, {
       type: 'question',
       buttons: [t('backup.importConfirm'), t('common.cancel')],
@@ -438,7 +473,9 @@ function registerIpc() {
         hotkey: isImportableHotkey(imported.hotkey) ? imported.hotkey : cfg.hotkey,
         closeAfterAction: imported.closeAfterAction !== false,
         grid: imported.grid,
-        buttons: imported.buttons,
+        pageCount: imported.pageCount,
+        // Same rule as the deck hotkey: an imported key can't grab Ctrl+C or Alt+Tab system-wide.
+        buttons: imported.buttons.map((b) => (isImportableHotkey(b?.hotkey) ? b : { ...b, hotkey: '' })),
       });
       return { ok: true, hotkeyOk, config: forRenderer(cfg), buttonCount: imported.buttons.length };
     } catch (err) {
@@ -446,23 +483,11 @@ function registerIpc() {
     }
   });
 
-  ipcMain.handle('deck:press', async (_e, index) => {
-    const button = cfg.buttons[index];
-    if (!button) return { ok: false, error: t('error.buttonNotFound') };
-    if (cfg.closeAfterAction) hideDeck();
-    try {
-      const result = await runAction(button.action, { stream: activeStream(), playSound });
-      // The deck is gone: confirm what the key did (e.g. "Clip saved!").
-      if (cfg.closeAfterAction && result?.notice) notify(result.notice);
-      return { ok: true, warning: result?.warning, notice: result?.notice };
-    } catch (err) {
-      if (cfg.closeAfterAction) notify(err.message);
-      return { ok: false, error: err.message };
-    }
-  });
+  ipcMain.handle('deck:press', (_e, index) => runKey(index, { fromDeck: true }));
 
   ipcMain.on('deck:hide', hideDeck);
   ipcMain.on('deck:resetPosition', () => saveDeckPosition(null));
+  ipcMain.on('deck:turnPage', (_e, delta) => goToPage(delta < 0 ? 'prev' : 'next'));
   ipcMain.on('deck:resize', (_e, phase) => onDeckResize(phase));
   ipcMain.on('deck:setScale', (_e, scale) => {
     if (Number.isFinite(scale)) saveDeckScale(Math.min(config.MAX_DECK_SCALE, Math.max(config.MIN_DECK_SCALE, scale)));
@@ -486,13 +511,17 @@ function registerIpc() {
     return { path: filePaths[0], url: fileUrl(filePaths[0]) };
   });
 
+  // About 1,600 icons: read once, then kept for the next times the editor opens.
+  let icons = null;
   ipcMain.handle('icons:list', () => {
+    if (icons) return icons;
     const names = fs
       .readdirSync(path.join(LUCIDE_DIR, 'icons'))
       .filter((f) => f.endsWith('.svg'))
       .map((f) => f.slice(0, -4));
     const tags = JSON.parse(fs.readFileSync(path.join(LUCIDE_DIR, 'tags.json'), 'utf8'));
-    return { names, tags };
+    icons = { names, tags };
+    return icons;
   });
 
   ipcMain.handle('update:get', () => update);

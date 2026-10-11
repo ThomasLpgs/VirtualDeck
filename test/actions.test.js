@@ -321,3 +321,72 @@ test.describe('other keys', () => {
     await assert.rejects(run({ type: 'open', target: 'C:\\missing.exe' }, null), /File not found/);
   });
 });
+
+test.describe('multi-action keys', () => {
+  test('runs the steps in order, waiting before the ones that ask for it', async () => {
+    const { obs, calls } = await connectedObs();
+    const played = [];
+    const started = Date.now();
+    await run(
+      {
+        type: 'multi',
+        steps: [
+          { delay: 0, action: { type: 'obs-scene', scene: 'Pause' } },
+          { delay: 0.05, action: { type: 'sound', file: 'music.mp3', volume: 1 } },
+        ],
+      },
+      obs,
+      { playSound: (file) => played.push([file, Date.now() - started]) },
+    );
+    assert.deepEqual(requests(calls, 'SetCurrentProgramScene').map(([, d]) => d.sceneName), ['Pause']);
+    assert.equal(played[0][0], 'music.mp3');
+    assert.ok(played[0][1] >= 45, `the sound waited ${played[0][1]} ms`);
+  });
+
+  test('a failing step does not stop the next ones, and is reported', async () => {
+    const { obs, calls } = await connectedObs();
+    await assert.rejects(
+      run(
+        {
+          type: 'multi',
+          steps: [
+            { action: { type: 'obs-mute', input: 'Nope' } },
+            { action: { type: 'obs-scene', scene: 'Pause' } },
+          ],
+        },
+        obs,
+      ),
+      /Step 1: .*Nope/,
+    );
+    assert.equal(requests(calls, 'SetCurrentProgramScene').length, 1);
+  });
+
+  test('passes on the confirmation of a step (e.g. a saved clip)', async () => {
+    const { obs } = await connectedObs({ GetReplayBufferStatus: () => ({ outputActive: true }) });
+    const result = await run({ type: 'multi', steps: [{ action: { type: 'obs-replay' } }] }, obs);
+    assert.match(result.notice, /saved/i);
+  });
+
+  test('an empty multi-action is reported; nested ones are skipped', async () => {
+    const { obs } = await connectedObs();
+    await assert.rejects(run({ type: 'multi', steps: [] }, obs), /no steps/);
+    const result = await run({ type: 'multi', steps: [{ action: { type: 'multi', steps: [] } }] }, obs);
+    assert.deepEqual(result, { warning: null, notice: null, page: null });
+  });
+});
+
+test.describe('page keys', () => {
+  test('ask the deck to change page (next by default)', async () => {
+    assert.deepEqual(await run({ type: 'page' }, null), { page: 'next' });
+    assert.deepEqual(await run({ type: 'page', page: '3' }, null), { page: '3' });
+  });
+
+  test('a multi-action can end on a page', async () => {
+    const { obs } = await connectedObs();
+    const result = await run(
+      { type: 'multi', steps: [{ action: { type: 'obs-scene', scene: 'Pause' } }, { action: { type: 'page', page: '2' } }] },
+      obs,
+    );
+    assert.equal(result.page, '2');
+  });
+});

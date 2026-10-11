@@ -238,7 +238,7 @@
   "settings.deckScaleReset": "100 %",
   "deck.resize": "Tire pour agrandir ou réduire le deck",
 
-  "action.obs-mute": "Son",
+  "action.obs-mute": "Muet",
   "action.obs-replay": "Clip",
   "action.obs-replay.hint": "Sauvegarde les dernières secondes dans un fichier vidéo, en live, en enregistrement ou sans les deux. Le tampon de relecture doit être démarré dans {software} (dans OBS : bouton « Démarrer le tampon de relecture », après l'avoir activé dans Paramètres › Sortie).",
   "field.input": "Source audio",
@@ -259,5 +259,28 @@
   "output.vertical": "Vertical",
   "output.both": "Les deux",
   "error.replayNotStarted": "Tampon de relecture non démarré dans {software}.",
-  "error.verticalReplayNotStarted": "Backtrack d'Aitum Vertical non démarré."
+  "error.verticalReplayNotStarted": "Backtrack d'Aitum Vertical non démarré.",
+
+  "field.keyHotkey": "Raccourci",
+  "field.keyHotkeyHint": "Déclenche ce bouton de n'importe où, sans ouvrir le deck. Les touches F13 à F24 marchent seules.",
+  "field.keyHotkeyTaken": "Ce raccourci est déjà utilisé (par une autre application, le deck ou un autre bouton) : choisis-en un autre.",
+
+  "action.multi": "Multi",
+  "action.multi.hint": "Enchaîne plusieurs actions dans l'ordre, avec une attente possible avant chacune. Si une étape échoue, les suivantes s'exécutent quand même.",
+  "field.stepDelay": "Attendre avant (secondes)",
+  "multi.addStep": "Ajouter une étape",
+  "multi.moveUp": "Monter",
+  "multi.moveDown": "Descendre",
+  "error.multiEmpty": "Ce bouton n'a aucune étape.",
+  "error.multiStep": "Étape {n} : {error}",
+
+  "action.page": "Page",
+  "action.page.hint": "Change la page du deck, sans le fermer. Avec son raccourci, ce bouton ouvre le deck sur la bonne page.",
+  "field.page": "Aller à",
+  "page.next": "Page suivante",
+  "page.prev": "Page précédente",
+  "page.n": "Page {n}",
+  "page.add": "Ajouter une page",
+  "page.remove": "Supprimer cette page",
+  "page.removeConfirm": "Supprimer la page {n} et tous ses boutons ?"
 }
