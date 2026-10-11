@@ -51,6 +51,7 @@ class ObsManager extends EventEmitter {
   async stop() {
     this.generation++;
     clearTimeout(this.retryTimer);
+    this.clearFlashTimers();
     this.settings = null;
     this.setState({ status: 'disconnected', currentScene: null, error: null, authFailed: false });
     try {
@@ -63,6 +64,7 @@ class ObsManager extends EventEmitter {
   async reconnect() {
     const generation = ++this.generation;
     clearTimeout(this.retryTimer);
+    this.clearFlashTimers();
     this.setState({ status: 'connecting', error: null });
     try {
       await this.ws.disconnect();
@@ -93,6 +95,12 @@ class ObsManager extends EventEmitter {
     }
   }
 
+  // A pending "hide again" must not hit a later session (item ids may differ after a reconnect).
+  clearFlashTimers() {
+    for (const timer of this.flashTimers.values()) clearTimeout(timer);
+    this.flashTimers.clear();
+  }
+
   scheduleRetry() {
     clearTimeout(this.retryTimer);
     this.retryTimer = setTimeout(() => this.connect(), RETRY_MS);
@@ -121,7 +129,11 @@ class ObsManager extends EventEmitter {
   }
 
   async setScene(sceneName) {
+    const generation = this.generation;
     await this.call('SetCurrentProgramScene', { sceneName });
+    // OBS only sends CurrentProgramSceneChanged once the transition has finished:
+    // show the new scene as live as soon as OBS has accepted the switch.
+    if (generation === this.generation && this.state.status === 'connected') this.setState({ currentScene: sceneName });
   }
 
   async toggleRecord() {
@@ -143,11 +155,13 @@ class ObsManager extends EventEmitter {
       // Hide first so a media source restarts even if it was left visible.
       await setEnabled(false);
       await setEnabled(true);
-      clearTimeout(this.flashTimers.get(sceneItemId));
+      // Scene item ids are only unique within a scene.
+      const timerKey = `${scene}\n${sceneItemId}`;
+      clearTimeout(this.flashTimers.get(timerKey));
       this.flashTimers.set(
-        sceneItemId,
+        timerKey,
         setTimeout(() => {
-          this.flashTimers.delete(sceneItemId);
+          this.flashTimers.delete(timerKey);
           Promise.resolve()
             .then(() => setEnabled(false))
             .catch(() => {});

@@ -56,13 +56,20 @@ function normalize(raw) {
   cfg.software = SOFTWARES.includes(raw?.software) ? raw.software : base.software;
   for (const software of SOFTWARES) cfg[software] = { ...base[software], ...raw?.[software] };
   cfg.language = typeof raw?.language === 'string' ? raw.language : base.language;
+  cfg.hotkey = typeof raw?.hotkey === 'string' ? raw.hotkey : base.hotkey;
   cfg.closeAfterAction = cfg.closeAfterAction !== false;
   cfg.launchAtLogin = cfg.launchAtLogin === true;
 
   const buttons = Array.isArray(raw?.buttons) ? raw.buttons : [];
   cfg.buttons = buttons.map((b) => {
-    const { imageUrl, ...rest } = b || {};
-    const button = { ...defaultButton(), ...rest, action: { type: 'none', ...rest.action } };
+    const { imageUrl, ...rest } = b && typeof b === 'object' ? b : {};
+    const action = rest.action && typeof rest.action === 'object' ? rest.action : {};
+    const button = { ...defaultButton(), ...rest, action: { type: 'none', ...action } };
+    // The renderers call string methods on these: never let a hand-edited or imported file break them.
+    for (const field of ['id', 'label', 'symbol', 'icon', 'image', 'color']) {
+      if (typeof button[field] !== 'string') button[field] = defaultButton()[field];
+    }
+    if (typeof button.action.type !== 'string') button.action.type = 'none';
     if (button.color === LEGACY_DEFAULT_COLOR) button.color = DEFAULT_COLOR;
     return button;
   });
