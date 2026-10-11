@@ -14,7 +14,13 @@ function visibleButtons() {
   return config.buttons.slice(0, config.grid.cols * config.grid.rows);
 }
 
+// The whole page is zoomed; main.js sizes the window to match.
+function applyScale(scale) {
+  document.documentElement.style.zoom = String(scale || 1);
+}
+
 function render() {
+  applyScale(config.deckScale);
   grid.style.gridTemplateColumns = `repeat(${config.grid.cols}, var(--key-size))`;
   grid.replaceChildren(
     ...visibleButtons().map((button, i) => {
@@ -78,6 +84,27 @@ document.body.addEventListener('mousedown', (e) => {
   if (e.target === document.body) window.api.hideDeck();
 });
 
+// Corner grip: main.js follows the mouse in screen pixels while the button is held.
+const grip = document.getElementById('resize-grip');
+let resizeFrame = 0;
+grip.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  grip.setPointerCapture(e.pointerId);
+  grip.classList.add('dragging');
+  window.api.resizeDeck('start');
+});
+grip.addEventListener('pointermove', () => {
+  if (!grip.classList.contains('dragging') || resizeFrame) return;
+  resizeFrame = requestAnimationFrame(() => {
+    resizeFrame = 0;
+    window.api.resizeDeck('move');
+  });
+});
+grip.addEventListener('lostpointercapture', () => {
+  grip.classList.remove('dragging');
+  window.api.resizeDeck('end');
+});
+
 const openEditorButton = document.getElementById('open-editor');
 openEditorButton.append(createGlyph('settings'));
 openEditorButton.addEventListener('click', () => window.api.openEditor());
@@ -101,6 +128,7 @@ window.api.onStreamState((state) => {
   renderObs();
 });
 window.api.onAudio(toggleAudio);
+window.api.onDeckScale(applyScale);
 
 (async () => {
   await loadI18n();

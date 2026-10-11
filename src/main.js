@@ -85,6 +85,9 @@ let cfg;
 let deckWin = null;
 // Where showDeck() last put the deck, to tell its own moves from the user's drags.
 let placedAt = null;
+// While the corner grip is dragged: the scale shown (saved on release) and where the drag began.
+let liveScale = null;
+let resizeStart = null;
 let editorWin = null;
 let tray = null;
 // { version, url } of a newer GitHub release, once one has been found.
@@ -155,12 +158,55 @@ function activateStream() {
 
 // ---------- Deck window ----------
 
+// The deck page is scaled with CSS zoom (deck.js), so the whole window scales with it.
 function deckSize() {
   const { cols, rows } = cfg.grid;
+  const scale = liveScale ?? cfg.deckScale;
   return {
-    width: cols * KEY_SIZE + (cols - 1) * KEY_GAP + 2 * PANEL_PADDING + 2 * SHADOW_MARGIN,
-    height: HEADER_HEIGHT + rows * KEY_SIZE + (rows - 1) * KEY_GAP + PANEL_PADDING + 2 * SHADOW_MARGIN,
+    width: Math.round(scale * (cols * KEY_SIZE + (cols - 1) * KEY_GAP + 2 * PANEL_PADDING + 2 * SHADOW_MARGIN)),
+    height: Math.round(scale * (HEADER_HEIGHT + rows * KEY_SIZE + (rows - 1) * KEY_GAP + PANEL_PADDING + 2 * SHADOW_MARGIN)),
   };
+}
+
+// Resizes the open deck around its top-left corner.
+function resizeDeckWindow() {
+  if (!deckWin || deckWin.isDestroyed()) return;
+  const [x, y] = deckWin.getPosition();
+  placedAt = { x, y };
+  deckWin.setBounds({ x, y, ...deckSize() });
+}
+
+function saveDeckScale(deckScale) {
+  liveScale = null;
+  cfg = config.save({ ...cfg, deckScale });
+  if (deckWin.isVisible()) resizeDeckWindow();
+  broadcast('config:changed', forRenderer(cfg));
+}
+
+// Corner grip of the deck: the scale follows the mouse, measured here in screen pixels.
+function onDeckResize(phase) {
+  if (phase === 'start') {
+    resizeStart = { cursor: screen.getCursorScreenPoint(), scale: cfg.deckScale, size: deckSize() };
+    return;
+  }
+  if (!resizeStart) return;
+  if (phase === 'end') {
+    const scale = liveScale ?? resizeStart.scale;
+    resizeStart = null;
+    saveDeckScale(scale);
+    return;
+  }
+  const cursor = screen.getCursorScreenPoint();
+  const { size } = resizeStart;
+  // Whichever direction moved the most, so dragging along either edge works.
+  const ratio = Math.max(
+    (size.width + cursor.x - resizeStart.cursor.x) / size.width,
+    (size.height + cursor.y - resizeStart.cursor.y) / size.height,
+  );
+  const scale = Math.min(config.MAX_DECK_SCALE, Math.max(config.MIN_DECK_SCALE, resizeStart.scale * ratio));
+  liveScale = Math.round(scale * 100) / 100;
+  deckWin.webContents.send('deck:scale', liveScale);
+  resizeDeckWindow();
 }
 
 function createDeckWindow() {
@@ -331,7 +377,9 @@ function registerIpc() {
 
   ipcMain.handle('config:save', (_e, next) => {
     try {
-      return { ok: true, hotkeyOk: applyConfig({ ...next, deckPosition: cfg.deckPosition }) };
+      // Position and size are set from the deck itself (see saveDeckPosition / saveDeckScale).
+      const hotkeyOk = applyConfig({ ...next, deckPosition: cfg.deckPosition, deckScale: cfg.deckScale });
+      return { ok: true, hotkeyOk };
     } catch (err) {
       return { ok: false, error: err.message };
     }
@@ -413,6 +461,10 @@ function registerIpc() {
 
   ipcMain.on('deck:hide', hideDeck);
   ipcMain.on('deck:resetPosition', () => saveDeckPosition(null));
+  ipcMain.on('deck:resize', (_e, phase) => onDeckResize(phase));
+  ipcMain.on('deck:setScale', (_e, scale) => {
+    if (Number.isFinite(scale)) saveDeckScale(Math.min(config.MAX_DECK_SCALE, Math.max(config.MIN_DECK_SCALE, scale)));
+  });
   ipcMain.on('editor:open', (_e, buttonIndex) => {
     hideDeck();
     openEditor(buttonIndex);

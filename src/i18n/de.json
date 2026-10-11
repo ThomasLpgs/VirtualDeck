@@ -232,5 +232,9 @@
   "field.verticalSourcePlaceholder": "Leer: vertikal wird nichts animiert",
   "deck.verticalIssue": "Vertikal nicht verfügbar · {count}",
   "deck.verticalIssueHint": "{count} Taste(n) nutzen vertikal, aber das Plugin Aitum Vertical wurde in OBS nicht gefunden: Sie ändern nur den horizontalen Teil.",
-  "deck.verticalIssueKey": "Plugin Aitum Vertical nicht gefunden: Nur der horizontale Teil dieser Taste funktioniert."
+  "deck.verticalIssueKey": "Plugin Aitum Vertical nicht gefunden: Nur der horizontale Teil dieser Taste funktioniert.",
+  "settings.deckScale": "Größe des Decks",
+  "settings.deckScaleHint": "Du kannst auch die untere rechte Ecke des Decks ziehen.",
+  "settings.deckScaleReset": "100 %",
+  "deck.resize": "Ziehen, um das Deck zu vergrößern oder zu verkleinern"
 }
