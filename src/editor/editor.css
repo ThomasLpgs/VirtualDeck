@@ -431,6 +431,12 @@ input[type='search']::-webkit-search-cancel-button {
   transition: background 150ms;
 }
 
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
+}
+
 .btn:hover {
   background: rgba(255, 255, 255, 0.11);
 }

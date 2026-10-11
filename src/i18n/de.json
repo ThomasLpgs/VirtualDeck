@@ -209,5 +209,28 @@
 
   "update.pill": "Update {version} verfügbar",
   "update.pillTitle": "Öffnet die Download-Seite",
-  "update.tray": "Update {version} herunterladen"
+  "update.tray": "Update {version} herunterladen",
+
+  "field.horizontalScene": "Horizontale Szene",
+  "field.verticalScene": "Vertikale Szene",
+  "field.verticalMissing": "Plugin Aitum Vertical in OBS nicht gefunden: Nur der horizontale Teil dieser Taste funktioniert.",
+  "error.verticalMissing": "Plugin Aitum Vertical in OBS nicht gefunden.",
+  "error.verticalUnsupported": "Vertikale Szenen funktionieren nur mit OBS und dem Plugin Aitum Vertical.",
+  "field.horizontalPlaceholder": "Leer: die horizontale Szene bleibt",
+  "field.verticalPlaceholder": "Leer: die vertikale Szene bleibt",
+  "field.currentVerticalScenePlaceholder": "Leer = aktuelle vertikale Szene",
+  "field.verticalSourcesHint": "Quellen vertikaler Szenen erfordern OBS 32 oder neuer.",
+  "error.verticalSourcesObs32": "Quellen vertikaler Szenen erfordern OBS 32 oder neuer.",
+
+  "settings.deckPosition": "Position des Decks",
+  "settings.deckPositionCursor": "Das Deck öffnet sich unter der Maus. Zieh es an der oberen Leiste, um es an einer Stelle festzulegen.",
+  "settings.deckPositionSaved": "Das Deck öffnet sich immer dort, wo du es hingezogen hast.",
+  "settings.deckPositionReset": "Unter der Maus öffnen",
+  "field.horizontalSource": "Horizontale Quelle",
+  "field.verticalSource": "Vertikale Quelle",
+  "field.horizontalSourcePlaceholder": "Leer: horizontal wird nichts animiert",
+  "field.verticalSourcePlaceholder": "Leer: vertikal wird nichts animiert",
+  "deck.verticalIssue": "Vertikal nicht verfügbar · {count}",
+  "deck.verticalIssueHint": "{count} Taste(n) nutzen vertikal, aber das Plugin Aitum Vertical wurde in OBS nicht gefunden: Sie ändern nur den horizontalen Teil.",
+  "deck.verticalIssueKey": "Plugin Aitum Vertical nicht gefunden: Nur der horizontale Teil dieser Taste funktioniert."
 }

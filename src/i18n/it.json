@@ -209,5 +209,28 @@
 
   "update.pill": "Aggiornamento {version} disponibile",
   "update.pillTitle": "Apre la pagina di download",
-  "update.tray": "Scarica l'aggiornamento {version}"
+  "update.tray": "Scarica l'aggiornamento {version}",
+
+  "field.horizontalScene": "Scena orizzontale",
+  "field.verticalScene": "Scena verticale",
+  "field.verticalMissing": "Plugin Aitum Vertical non trovato in OBS: funzionerà solo la parte orizzontale di questo pulsante.",
+  "error.verticalMissing": "Plugin Aitum Vertical non trovato in OBS.",
+  "error.verticalUnsupported": "Le scene verticali funzionano solo con OBS e il plugin Aitum Vertical.",
+  "field.horizontalPlaceholder": "Vuoto: la scena orizzontale non cambia",
+  "field.verticalPlaceholder": "Vuoto: la scena verticale non cambia",
+  "field.currentVerticalScenePlaceholder": "Vuoto = scena verticale attuale",
+  "field.verticalSourcesHint": "Le fonti delle scene verticali richiedono OBS 32 o successivo.",
+  "error.verticalSourcesObs32": "Le fonti delle scene verticali richiedono OBS 32 o successivo.",
+
+  "settings.deckPosition": "Posizione del deck",
+  "settings.deckPositionCursor": "Il deck si apre sotto il mouse. Trascinalo dalla barra in alto per fissarlo in un punto.",
+  "settings.deckPositionSaved": "Il deck si apre sempre dove lo hai spostato.",
+  "settings.deckPositionReset": "Apri sotto il mouse",
+  "field.horizontalSource": "Fonte orizzontale",
+  "field.verticalSource": "Fonte verticale",
+  "field.horizontalSourcePlaceholder": "Vuoto: niente si anima in orizzontale",
+  "field.verticalSourcePlaceholder": "Vuoto: niente si anima in verticale",
+  "deck.verticalIssue": "Verticale non disponibile · {count}",
+  "deck.verticalIssueHint": "{count} pulsante/i usano il verticale, ma il plugin Aitum Vertical non è stato trovato in OBS: cambiano solo la parte orizzontale.",
+  "deck.verticalIssueKey": "Plugin Aitum Vertical non trovato: funziona solo la parte orizzontale di questo pulsante."
 }

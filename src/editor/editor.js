@@ -1,4 +1,4 @@
-/* global api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader
+/* global api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader, markKeys, countVerticalIssues
    -- api comes from preload.js, t/I18N/loadI18n from shared/i18n.js, the rest from shared/keys.js */
 const $ = (id) => document.getElementById(id);
 
@@ -56,7 +56,7 @@ let icons = { names: [], tags: {} };
 let saveTimer = null;
 let dragFrom = null;
 // Scene / source names fetched from the streaming software, offered as suggestions.
-const streamLists = { scenes: [], sources: [] };
+const streamLists = { scenes: [], verticalScenes: [], sources: [], verticalSources: [] };
 // A button the main process asked us to select (from the deck) before config finished loading.
 let pendingSelect = null;
 
@@ -182,13 +182,10 @@ function renderPreview() {
 }
 
 function markLiveScene() {
-  [...$('preview').children].forEach((key, i) => {
-    const action = config.buttons[i].action;
-    key.classList.toggle(
-      'active',
-      streamState.status === 'connected' && action.type === 'obs-scene' && action.scene === streamState.currentScene,
-    );
-  });
+  const buttons = config.buttons.slice(0, config.grid.cols * config.grid.rows);
+  markKeys($('preview').children, buttons, streamState);
+  const state = { ...streamState, label: software().label };
+  renderDeckHeader($('preview-status'), state, countVerticalIssues(buttons, streamState));
 }
 
 function select(index) {
@@ -501,20 +498,39 @@ function renderActionFields() {
   if (isStreamAction(action.type) && streamState.status !== 'connected') container.append(offlineCallout());
 
   switch (action.type) {
-    case 'obs-scene':
+    case 'obs-scene': {
+      // The vertical field only exists with OBS + Aitum Vertical. It also stays visible while it
+      // holds a value, so a vertical scene set earlier can still be seen and cleared.
+      const showVertical = streamState.verticalAvailable || Boolean(action.verticalScene);
       container.append(
         field(
-          t('field.scene'),
+          t(showVertical ? 'field.horizontalScene' : 'field.scene'),
           textInput(action.scene, (scene) => updateAction({ scene }), {
             options: () => streamLists.scenes,
-            placeholder: t('field.scenePlaceholder'),
+            placeholder: t(showVertical ? 'field.horizontalPlaceholder' : 'field.scenePlaceholder'),
           }),
-          t('field.sceneHint'),
         ),
       );
+      if (showVertical) {
+        container.append(
+          field(
+            t('field.verticalScene'),
+            textInput(action.verticalScene, (verticalScene) => updateAction({ verticalScene }), {
+              options: () => streamLists.verticalScenes,
+              placeholder: t('field.verticalPlaceholder'),
+            }),
+            streamState.verticalAvailable ? '' : t('field.verticalMissing'),
+          ),
+        );
+      }
+      container.append(el('p', { className: 'muted', textContent: t('field.sceneHint') }));
       break;
+    }
 
     case 'obs-source': {
+      // Same idea as scene keys: with Aitum Vertical, a horizontal and a vertical pair, each one
+      // acting only when its source is filled. Kept visible while a vertical value is set.
+      const showVertical = streamState.verticalAvailable || Boolean(action.verticalScene || action.verticalSource);
       const sceneInput = textInput(
         action.scene,
         (scene) => {
@@ -525,8 +541,36 @@ function renderActionFields() {
       );
       const sourceInput = textInput(action.source, (source) => updateAction({ source }), {
         options: () => streamLists.sources,
-        placeholder: t('field.sourcePlaceholder'),
+        placeholder: t(showVertical ? 'field.horizontalSourcePlaceholder' : 'field.sourcePlaceholder'),
       });
+      container.append(
+        field(t(showVertical ? 'field.horizontalScene' : 'field.scene'), sceneInput),
+        field(t(showVertical ? 'field.horizontalSource' : 'field.source'), sourceInput),
+      );
+
+      if (showVertical) {
+        const verticalSceneInput = textInput(
+          action.verticalScene,
+          (verticalScene) => {
+            updateAction({ verticalScene });
+            refreshVerticalSources(verticalScene);
+          },
+          { options: () => streamLists.verticalScenes, placeholder: t('field.currentVerticalScenePlaceholder') },
+        );
+        const verticalSourceInput = textInput(action.verticalSource, (verticalSource) => updateAction({ verticalSource }), {
+          options: () => streamLists.verticalSources,
+          placeholder: t('field.verticalSourcePlaceholder'),
+        });
+        container.append(
+          field(t('field.verticalScene'), verticalSceneInput),
+          field(
+            t('field.verticalSource'),
+            verticalSourceInput,
+            t(streamState.verticalAvailable ? 'field.verticalSourcesHint' : 'field.verticalMissing'),
+          ),
+        );
+        refreshVerticalSources(action.verticalScene);
+      }
 
       const duration = el('input', { type: 'number', min: 0.5, max: 600, step: 0.5, value: action.duration ?? 5 });
       duration.addEventListener('input', () => updateAction({ duration: Number(duration.value) || 5 }));
@@ -534,8 +578,6 @@ function renderActionFields() {
       durationField.hidden = action.mode !== 'flash';
 
       container.append(
-        field(t('field.scene'), sceneInput),
-        field(t('field.source'), sourceInput),
         field(
           t('field.behavior'),
           segmented(
@@ -613,11 +655,15 @@ function renderActionFields() {
 }
 
 async function refreshScenes() {
-  streamLists.scenes = await api.streamScenes();
+  [streamLists.scenes, streamLists.verticalScenes] = await Promise.all([api.streamScenes(), api.streamVerticalScenes()]);
 }
 
 async function refreshSources(scene) {
-  streamLists.sources = await api.streamSources(scene);
+  streamLists.sources = await api.streamSources(scene, false);
+}
+
+async function refreshVerticalSources(scene) {
+  streamLists.verticalSources = await api.streamSources(scene, true);
 }
 
 // ---------- Hotkey ----------
@@ -758,7 +804,6 @@ function renderStreamState() {
     detail.textContent = t('conn.followSteps');
   }
 
-  renderDeckHeader($('preview-status'), { ...streamState, label });
   if (config) markLiveScene();
 }
 
@@ -766,7 +811,9 @@ function setSoftware(name) {
   if (config.software === name) return;
   config.software = name;
   streamLists.scenes = [];
+  streamLists.verticalScenes = [];
   streamLists.sources = [];
+  streamLists.verticalSources = [];
   renderConnectionForm();
   renderStreamState();
   renderActionFields();
@@ -904,13 +951,21 @@ function bindStaticFields() {
     }),
   );
 
+  $('deck-position-reset').addEventListener('click', () => api.resetDeckPosition());
   $('export-config').addEventListener('click', exportConfig);
   $('import-config').addEventListener('click', importConfig);
 
   setupHotkeyField();
 }
 
+function renderDeckPosition() {
+  const saved = Boolean(config.deckPosition);
+  $('deck-position-hint').textContent = t(saved ? 'settings.deckPositionSaved' : 'settings.deckPositionCursor');
+  $('deck-position-reset').disabled = !saved;
+}
+
 function renderSettings() {
+  renderDeckPosition();
   renderHotkey();
   renderConnectionForm();
   $('close-after').checked = config.closeAfterAction;
@@ -934,6 +989,11 @@ function renderSettings() {
   renderStreamState();
   renderUpdate(update);
   api.onUpdate(renderUpdate);
+  // The deck position is changed by dragging the deck, outside this page.
+  api.onConfig((next) => {
+    config.deckPosition = next.deckPosition;
+    renderDeckPosition();
+  });
   if (streamState.status === 'connected') refreshScenes();
 
   const firstLaunch =

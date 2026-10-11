@@ -34,6 +34,8 @@ function defaults() {
     closeAfterAction: true,
     launchAtLogin: false,
     grid: { cols: 3, rows: 2 },
+    // Top-left corner where the user dragged the deck, or null to open it under the mouse.
+    deckPosition: null,
     software: 'obs',
     obs: { url: 'ws://127.0.0.1:4455', password: '' },
     streamlabs: { url: 'ws://127.0.0.1:59650/api/websocket', token: '' },
@@ -57,6 +59,9 @@ function normalize(raw) {
   for (const software of SOFTWARES) cfg[software] = { ...base[software], ...raw?.[software] };
   cfg.language = typeof raw?.language === 'string' ? raw.language : base.language;
   cfg.hotkey = typeof raw?.hotkey === 'string' ? raw.hotkey : base.hotkey;
+  const pos = raw?.deckPosition;
+  cfg.deckPosition =
+    pos && Number.isFinite(pos.x) && Number.isFinite(pos.y) ? { x: Math.round(pos.x), y: Math.round(pos.y) } : null;
   cfg.closeAfterAction = cfg.closeAfterAction !== false;
   cfg.launchAtLogin = cfg.launchAtLogin === true;
 

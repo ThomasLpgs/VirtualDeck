@@ -256,6 +256,37 @@ kbd {
   letter-spacing: 0.08em;
 }
 
+/* The vertical part of this key can't run (Aitum Vertical not detected): see markKeys(). */
+.key.vertical-warn {
+  box-shadow: inset 0 0 0 1.5px #f5a524;
+}
+
+.key.vertical-warn::before {
+  content: '!';
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #f5a524;
+  color: #1a1206;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 15px;
+  text-align: center;
+}
+
+.deck-status.warn {
+  color: #f5a524;
+}
+
+.deck-status.warn .glyph {
+  flex: none;
+  width: 13px;
+  height: 13px;
+}
+
 .key.error {
   animation: key-shake 320ms ease;
   box-shadow: inset 0 0 0 1.5px #f5a524;

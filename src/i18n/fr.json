@@ -209,5 +209,28 @@
 
   "update.pill": "Mise à jour {version} disponible",
   "update.pillTitle": "Ouvre la page de téléchargement",
-  "update.tray": "Télécharger la mise à jour {version}"
+  "update.tray": "Télécharger la mise à jour {version}",
+
+  "field.horizontalScene": "Scène horizontale",
+  "field.verticalScene": "Scène verticale",
+  "field.verticalMissing": "Plugin Aitum Vertical non détecté dans OBS : seule la partie horizontale de ce bouton fonctionnera.",
+  "error.verticalMissing": "Plugin Aitum Vertical non détecté dans OBS.",
+  "error.verticalUnsupported": "Les scènes verticales ne marchent qu'avec OBS et le plugin Aitum Vertical.",
+  "field.horizontalPlaceholder": "Vide : la scène horizontale ne change pas",
+  "field.verticalPlaceholder": "Vide : la scène verticale ne change pas",
+  "field.currentVerticalScenePlaceholder": "Vide = scène verticale en cours",
+  "field.verticalSourcesHint": "Les sources des scènes verticales nécessitent OBS 32 ou plus récent.",
+  "error.verticalSourcesObs32": "Les sources des scènes verticales nécessitent OBS 32 ou plus récent.",
+
+  "settings.deckPosition": "Position du deck",
+  "settings.deckPositionCursor": "Le deck s'ouvre sous la souris. Tire-le par sa barre du haut pour le fixer à un endroit.",
+  "settings.deckPositionSaved": "Le deck s'ouvre toujours là où tu l'as déplacé.",
+  "settings.deckPositionReset": "Ouvrir sous la souris",
+  "field.horizontalSource": "Source horizontale",
+  "field.verticalSource": "Source verticale",
+  "field.horizontalSourcePlaceholder": "Vide : rien ne s'anime à l'horizontale",
+  "field.verticalSourcePlaceholder": "Vide : rien ne s'anime à la verticale",
+  "deck.verticalIssue": "Vertical indisponible · {count}",
+  "deck.verticalIssueHint": "{count} bouton(s) utilisent le vertical, mais le plugin Aitum Vertical n'est pas détecté dans OBS : ils ne changent que la partie horizontale.",
+  "deck.verticalIssueKey": "Plugin Aitum Vertical non détecté : seule la partie horizontale de ce bouton fonctionne."
 }
