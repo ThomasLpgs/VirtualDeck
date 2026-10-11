@@ -812,6 +812,16 @@ async function importConfig() {
   );
 }
 
+// ---------- Updates ----------
+
+function renderUpdate(update) {
+  const pill = $('update-pill');
+  pill.hidden = !update;
+  if (!update) return;
+  $('update-pill-text').textContent = t('update.pill', { version: update.version });
+  pill.title = t('update.pillTitle');
+}
+
 // ---------- Wiring ----------
 
 function bindStaticFields() {
@@ -821,6 +831,8 @@ function bindStaticFields() {
 
   document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => showView(tab.dataset.view)));
   $('stream-pill').addEventListener('click', () => showView('connection'));
+  $('update-glyph').replaceWith(createGlyph('download'));
+  $('update-pill').addEventListener('click', () => api.openUpdate());
 
   document.querySelectorAll('.stepper').forEach((stepper) => {
     stepper.querySelectorAll('button').forEach((b) =>
@@ -908,12 +920,20 @@ function renderSettings() {
 (async () => {
   await loadI18n();
   document.title = t('editor.windowTitle');
-  [config, streamState, icons] = await Promise.all([api.getConfig(), api.streamState(), api.listIcons()]);
+  let update;
+  [config, streamState, icons, update] = await Promise.all([
+    api.getConfig(),
+    api.streamState(),
+    api.listIcons(),
+    api.getUpdate(),
+  ]);
   bindStaticFields();
   renderSettings();
   renderPreview();
   renderInspector();
   renderStreamState();
+  renderUpdate(update);
+  api.onUpdate(renderUpdate);
   if (streamState.status === 'connected') refreshScenes();
 
   const firstLaunch =

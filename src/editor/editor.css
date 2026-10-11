@@ -186,6 +186,16 @@ code {
   background: rgba(63, 207, 142, 0.08);
 }
 
+.pill.update {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.pill.update .glyph {
+  width: 13px;
+  height: 13px;
+}
+
 /* ---------- Views ---------- */
 
 .view {

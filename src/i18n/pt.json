@@ -205,5 +205,10 @@
   "backup.exportFailed": "Falha na exportação: {error}",
   "backup.imported": "Configuração importada: {count} botões.",
   "backup.importedHotkeyTaken": "Configuração importada, mas o atalho “{hotkey}” já está em uso: escolha outro acima.",
-  "backup.importFailed": "Falha na importação: {error}"
+  "backup.importFailed": "Falha na importação: {error}",
+
+  "update.pill": "Atualização {version} disponível",
+  "update.pillTitle": "Abre a página de download",
+  "update.notify": "VirtualDeck {version} está disponível. Clique aqui para baixá-lo.",
+  "update.tray": "Baixar a atualização {version}"
 }

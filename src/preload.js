@@ -22,9 +22,12 @@ contextBridge.exposeInMainWorld('api', {
   streamReconnect: () => ipcRenderer.invoke('stream:reconnect'),
   streamScenes: () => ipcRenderer.invoke('stream:scenes'),
   streamSources: (scene) => ipcRenderer.invoke('stream:sources', scene),
+  getUpdate: () => ipcRenderer.invoke('update:get'),
+  openUpdate: () => ipcRenderer.send('update:open'),
   onConfig: listener('config:changed'),
   onStreamState: listener('stream:state'),
   onDeckShow: listener('deck:show'),
   onAudio: listener('audio:toggle'),
   onEditorSelect: listener('editor:select'),
+  onUpdate: listener('update:available'),
 });

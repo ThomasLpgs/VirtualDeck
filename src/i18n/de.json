@@ -205,5 +205,10 @@
   "backup.exportFailed": "Export fehlgeschlagen: {error}",
   "backup.imported": "Konfiguration importiert: {count} Tasten.",
   "backup.importedHotkeyTaken": "Konfiguration importiert, aber das Tastenkürzel „{hotkey}“ ist bereits belegt: Wähle oben ein anderes.",
-  "backup.importFailed": "Import fehlgeschlagen: {error}"
+  "backup.importFailed": "Import fehlgeschlagen: {error}",
+
+  "update.pill": "Update {version} verfügbar",
+  "update.pillTitle": "Öffnet die Download-Seite",
+  "update.notify": "VirtualDeck {version} ist verfügbar. Klicke hier, um es herunterzuladen.",
+  "update.tray": "Update {version} herunterladen"
 }

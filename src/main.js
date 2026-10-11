@@ -9,6 +9,7 @@ const {
   ipcMain,
   nativeImage,
   screen,
+  shell,
 } = require('electron');
 const fs = require('fs');
 const path = require('path');
@@ -19,6 +20,7 @@ const { ObsManager } = require('./obs');
 const { StreamlabsManager } = require('./streamlabs');
 const { runAction } = require('./actions');
 const backup = require('./backup');
+const { checkForUpdate } = require('./updates');
 
 const { t } = i18n;
 
@@ -39,6 +41,7 @@ const KEY_GAP = 10;
 const PANEL_PADDING = 14;
 const HEADER_HEIGHT = 34;
 const SHADOW_MARGIN = 24;
+const UPDATE_CHECK_MS = 6 * 60 * 60 * 1000;
 
 const FILE_EXTENSIONS = {
   image: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico'],
@@ -82,6 +85,9 @@ let cfg;
 let deckWin = null;
 let editorWin = null;
 let tray = null;
+// { version, url } of a newer GitHub release, once one has been found.
+let update = null;
+let notifiedUpdate = null;
 const streams = { obs: new ObsManager(), streamlabs: new StreamlabsManager() };
 const activeStream = () => streams[cfg.software];
 
@@ -115,8 +121,30 @@ function broadcast(channel, data) {
   }
 }
 
-function notify(body) {
-  if (Notification.isSupported()) new Notification({ title: t('app.name'), body }).show();
+function notify(body, onClick) {
+  if (!Notification.isSupported()) return;
+  const notification = new Notification({ title: t('app.name'), body });
+  if (onClick) notification.on('click', onClick);
+  notification.show();
+}
+
+// ---------- Updates ----------
+
+function openUpdatePage() {
+  if (update) shell.openExternal(update.url);
+}
+
+async function checkUpdates() {
+  const found = await checkForUpdate(app.getVersion());
+  if (!found) return;
+  update = found;
+  updateTray();
+  broadcast('update:available', update);
+  // Once per version and per session: the editor pill and tray item stay as reminders.
+  if (notifiedUpdate !== update.version) {
+    notifiedUpdate = update.version;
+    notify(t('update.notify', { version: update.version }), openUpdatePage);
+  }
 }
 
 function applyLanguage() {
@@ -247,6 +275,9 @@ function updateTray() {
   tray.setToolTip(`${t('app.name')} (${cfg.hotkey})`);
   tray.setContextMenu(
     Menu.buildFromTemplate([
+      ...(update
+        ? [{ label: t('update.tray', { version: update.version }), click: openUpdatePage }, { type: 'separator' }]
+        : []),
       { label: t('tray.open'), click: showDeck },
       { label: t('tray.configure'), click: () => openEditor() },
       { type: 'separator' },
@@ -400,6 +431,9 @@ function registerIpc() {
     return { names, tags };
   });
 
+  ipcMain.handle('update:get', () => update);
+  ipcMain.on('update:open', openUpdatePage);
+
   ipcMain.handle('stream:state', () => streamState());
   ipcMain.handle('stream:reconnect', () => activeStream().reconnect());
   ipcMain.handle('stream:scenes', () => activeStream().getScenes().catch(() => []));
@@ -435,6 +469,10 @@ if (!app.requestSingleInstanceLock()) {
     createDeckWindow();
     createTray();
     activateStream();
+
+    // A short delay keeps the check off the startup path (the app may start with Windows, before the network).
+    setTimeout(checkUpdates, 15000);
+    setInterval(checkUpdates, UPDATE_CHECK_MS);
 
     const hotkeyOk = registerHotkey();
     if (loaded.firstRun) {

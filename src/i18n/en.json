@@ -206,5 +206,10 @@
   "backup.exportFailed": "Export failed: {error}",
   "backup.imported": "Setup imported: {count} buttons.",
   "backup.importedHotkeyTaken": "Setup imported, but the shortcut “{hotkey}” is already taken: pick another one above.",
-  "backup.importFailed": "Import failed: {error}"
+  "backup.importFailed": "Import failed: {error}",
+
+  "update.pill": "Update {version} available",
+  "update.pillTitle": "Opens the download page",
+  "update.notify": "VirtualDeck {version} is available. Click here to download it.",
+  "update.tray": "Download update {version}"
 }

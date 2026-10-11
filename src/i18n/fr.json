@@ -205,5 +205,10 @@
   "backup.exportFailed": "Échec de l'export : {error}",
   "backup.imported": "Configuration importée : {count} boutons.",
   "backup.importedHotkeyTaken": "Configuration importée, mais le raccourci « {hotkey} » est déjà pris : choisis-en un autre ci-dessus.",
-  "backup.importFailed": "Échec de l'import : {error}"
+  "backup.importFailed": "Échec de l'import : {error}",
+
+  "update.pill": "Mise à jour {version} disponible",
+  "update.pillTitle": "Ouvre la page de téléchargement",
+  "update.notify": "VirtualDeck {version} est disponible. Clique ici pour le télécharger.",
+  "update.tray": "Télécharger la mise à jour {version}"
 }

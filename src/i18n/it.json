@@ -205,5 +205,10 @@
   "backup.exportFailed": "Esportazione non riuscita: {error}",
   "backup.imported": "Configurazione importata: {count} pulsanti.",
   "backup.importedHotkeyTaken": "Configurazione importata, ma la scorciatoia “{hotkey}” è già occupata: scegline un'altra qui sopra.",
-  "backup.importFailed": "Importazione non riuscita: {error}"
+  "backup.importFailed": "Importazione non riuscita: {error}",
+
+  "update.pill": "Aggiornamento {version} disponibile",
+  "update.pillTitle": "Apre la pagina di download",
+  "update.notify": "VirtualDeck {version} è disponibile. Clicca qui per scaricarlo.",
+  "update.tray": "Scarica l'aggiornamento {version}"
 }
