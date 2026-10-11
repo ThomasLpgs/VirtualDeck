@@ -114,6 +114,14 @@ async function flushSave() {
   await save();
 }
 
+// Closing the editor (or the reload after a language change) would drop a save still waiting for its debounce.
+window.addEventListener('pagehide', () => {
+  if (!saveTimer) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  api.saveConfig(config);
+});
+
 async function save() {
   saveTimer = null;
   const result = await api.saveConfig(config);

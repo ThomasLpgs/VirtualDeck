@@ -40,6 +40,7 @@ class StreamlabsManager extends EventEmitter {
   stop() {
     this.generation++;
     clearTimeout(this.retryTimer);
+    this.clearFlashTimers();
     this.settings = null;
     this.closeSocket();
     this.setState({ status: 'disconnected', currentScene: null, error: null, authFailed: false });
@@ -47,6 +48,7 @@ class StreamlabsManager extends EventEmitter {
 
   reconnect() {
     this.generation++;
+    this.clearFlashTimers();
     this.closeSocket();
     this.connect();
   }
@@ -56,6 +58,12 @@ class StreamlabsManager extends EventEmitter {
     this.ws = null;
     this.rejectPending(new Error(t('error.notConnected', { software: this.label })));
     if (ws && ws.readyState <= WebSocket.OPEN) ws.close();
+  }
+
+  // A pending "hide again" must not hit a later session (item ids may differ after a reconnect).
+  clearFlashTimers() {
+    for (const timer of this.flashTimers.values()) clearTimeout(timer);
+    this.flashTimers.clear();
   }
 
   rejectPending(error) {
@@ -85,7 +93,10 @@ class StreamlabsManager extends EventEmitter {
     }
     this.ws = ws;
 
-    ws.addEventListener('message', (event) => this.handleMessage(event.data));
+    ws.addEventListener('message', (event) => {
+      // Frames from a socket being closed must not touch the new session's state.
+      if (generation === this.generation) this.handleMessage(event.data);
+    });
     ws.addEventListener('open', () => {
       if (generation === this.generation) this.handshake(generation);
     });
@@ -105,7 +116,9 @@ class StreamlabsManager extends EventEmitter {
       await this.request('TcpServerService', 'auth', this.settings.token || '');
     } catch (err) {
       if (generation !== this.generation) return;
-      this.setState({ status: 'disconnected', currentScene: null, error: err.message, authFailed: true });
+      // Only a refusal from Streamlabs means a wrong token; a timeout or a dropped socket is retried.
+      if (err.rpc) this.setState({ status: 'disconnected', currentScene: null, error: err.message, authFailed: true });
+      else this.setState({ error: err.message });
       this.ws?.close();
       return;
     }
@@ -153,7 +166,9 @@ class StreamlabsManager extends EventEmitter {
       if (!pending) continue;
       this.pending.delete(message.id);
       clearTimeout(pending.timer);
-      if (message.error) pending.reject(new Error(message.error.message || 'Streamlabs error'));
+      if (message.error) {
+        pending.reject(Object.assign(new Error(message.error.message || 'Streamlabs error'), { rpc: true }));
+      }
       else pending.resolve(result);
     }
   }
@@ -207,8 +222,11 @@ class StreamlabsManager extends EventEmitter {
 
   async setScene(sceneName) {
     this.ensureConnected();
+    const generation = this.generation;
     const scene = await this.findScene(sceneName);
     await this.request('ScenesService', 'makeSceneActive', scene.id);
+    // Show the new scene as live without waiting for the end of the transition.
+    if (generation === this.generation && this.state.status === 'connected') this.setState({ currentScene: scene.name });
   }
 
   async toggleRecord() {

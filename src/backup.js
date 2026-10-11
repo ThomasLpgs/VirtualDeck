@@ -70,7 +70,9 @@ function restoreBundle(bundle, mediaDir) {
   fs.mkdirSync(mediaDir, { recursive: true });
   const written = new Map();
   const restore = (ref) => {
-    if (typeof ref !== 'string' || !ref.startsWith(MEDIA_PREFIX)) return typeof ref === 'string' ? ref : '';
+    // Our exports only hold embedded media. Any other path is dropped: a crafted file could
+    // otherwise point at a network share (\\server\...) and leak Windows credentials on load.
+    if (typeof ref !== 'string' || !ref.startsWith(MEDIA_PREFIX)) return '';
     const id = ref.slice(MEDIA_PREFIX.length);
     const item = bundle.media?.[id];
     if (!MEDIA_ID.test(id) || typeof item?.data !== 'string') return '';

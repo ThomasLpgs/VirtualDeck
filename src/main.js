@@ -30,6 +30,9 @@ const LUCIDE_DIR = path.join(__dirname, '..', 'node_modules', 'lucide-static');
 const BACKUP_EXT = 'vdeck';
 // Backups made before the rename used .svdeck.
 const BACKUP_IMPORT_EXTS = ['vdeck', 'svdeck'];
+// Shape of the hotkeys the editor records: modifiers + a key, or a lone function key.
+// Anything else in an imported file is ignored, so it can't grab Ctrl+C or Alt+Tab system-wide.
+const IMPORTABLE_HOTKEY = /^(?:(?:Control|Alt|Shift|Super)\+)+[A-Za-z0-9]+$|^F\d{1,2}$/;
 // Must match the CSS variables in shared/keys.css and the body padding in deck/deck.css.
 const KEY_SIZE = 88;
 const KEY_GAP = 10;
@@ -84,9 +87,22 @@ const activeStream = () => streams[cfg.software];
 
 const fileUrl = (p) => (p ? pathToFileURL(p).href : '');
 
+// Our pages never navigate or open windows: block it so nothing can replace them with remote content.
+app.on('web-contents-created', (_e, contents) => {
+  contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  contents.on('will-navigate', (event) => event.preventDefault());
+});
+
 // Renderers can't build file:// URLs themselves (sandboxed preload), so add them here.
 function forRenderer(c) {
   return { ...c, buttons: c.buttons.map((b) => ({ ...b, imageUrl: fileUrl(b.image) })) };
+}
+
+// Ctrl+C, Ctrl+V… would stop working in every other app.
+const RESERVED_HOTKEYS = ['Control+C', 'Control+V', 'Control+X', 'Control+Z', 'Control+A', 'Control+S', 'Alt+Tab', 'Alt+F4'];
+
+function isImportableHotkey(hotkey) {
+  return typeof hotkey === 'string' && IMPORTABLE_HOTKEY.test(hotkey) && !RESERVED_HOTKEYS.includes(hotkey);
 }
 
 function streamState() {
@@ -331,8 +347,8 @@ function registerIpc() {
       const imported = backup.restoreBundle(bundle, path.join(app.getPath('userData'), 'media'));
       const hotkeyOk = applyConfig({
         ...cfg,
-        hotkey: imported.hotkey || cfg.hotkey,
-        closeAfterAction: imported.closeAfterAction,
+        hotkey: isImportableHotkey(imported.hotkey) ? imported.hotkey : cfg.hotkey,
+        closeAfterAction: imported.closeAfterAction !== false,
         grid: imported.grid,
         buttons: imported.buttons,
       });
