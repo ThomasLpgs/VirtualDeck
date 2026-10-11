@@ -162,6 +162,8 @@ function resizeDeckWindow() {
 }
 
 function saveDeckScale(deckScale) {
+  // A popup page is sized and placed for the old size: close it rather than distort it.
+  closePopup();
   liveScale = null;
   cfg = config.save({ ...cfg, deckScale });
   if (deckWin.isVisible()) resizeDeckWindow();
@@ -171,6 +173,7 @@ function saveDeckScale(deckScale) {
 // Corner grip of the deck: the scale follows the mouse, measured here in screen pixels.
 function onDeckResize(phase) {
   if (phase === 'start') {
+    closePopup();
     resizeStart = { cursor: screen.getCursorScreenPoint(), scale: cfg.deckScale, size: deckSize() };
     return;
   }
