@@ -822,7 +822,10 @@ input[type='search']::-webkit-search-cancel-button {
 
 .segmented button {
   flex: 1;
-  height: 28px;
+  /* Grows instead of overflowing when a translation wraps. */
+  min-height: 28px;
+  padding: 4px 6px;
+  line-height: 1.2;
   border: 0;
   border-radius: 6px;
   background: transparent;

@@ -287,6 +287,43 @@ kbd {
   height: 13px;
 }
 
+/* Live state of stream / record / mute keys (markKeys): red ring and a badge with its text. */
+.key.state-on {
+  box-shadow:
+    inset 0 0 0 1.5px var(--live),
+    0 0 0 3px color-mix(in oklab, var(--live) 18%, transparent),
+    0 10px 24px -8px color-mix(in oklab, var(--live) 55%, transparent);
+}
+
+.key.state-on::before {
+  content: attr(data-badge);
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--live);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Brief confirmation, e.g. a saved clip. */
+.key.saved {
+  animation: key-saved 1200ms ease;
+}
+
+@keyframes key-saved {
+  0%,
+  60% {
+    box-shadow:
+      inset 0 0 0 1.5px #3fcf8e,
+      0 0 0 3px rgba(63, 207, 142, 0.25);
+  }
+}
+
 .key.error {
   animation: key-shake 320ms ease;
   box-shadow: inset 0 0 0 1.5px #f5a524;

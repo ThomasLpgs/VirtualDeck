@@ -452,7 +452,9 @@ function registerIpc() {
     if (cfg.closeAfterAction) hideDeck();
     try {
       const result = await runAction(button.action, { stream: activeStream(), playSound });
-      return { ok: true, warning: result?.warning };
+      // The deck is gone: confirm what the key did (e.g. "Clip saved!").
+      if (cfg.closeAfterAction && result?.notice) notify(result.notice);
+      return { ok: true, warning: result?.warning, notice: result?.notice };
     } catch (err) {
       if (cfg.closeAfterAction) notify(err.message);
       return { ok: false, error: err.message };
@@ -499,6 +501,7 @@ function registerIpc() {
   ipcMain.handle('stream:state', () => streamState());
   ipcMain.handle('stream:reconnect', () => activeStream().reconnect());
   ipcMain.handle('stream:scenes', () => activeStream().getScenes().catch(() => []));
+  ipcMain.handle('stream:inputs', () => activeStream().getAudioInputs().catch(() => []));
   ipcMain.handle('stream:verticalScenes', () => activeStream().getVerticalScenes().catch(() => []));
   ipcMain.handle('stream:sources', (_e, scene, vertical) =>
     activeStream().getSources(scene, { vertical: vertical === true }).catch(() => []),

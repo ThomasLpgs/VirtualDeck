@@ -1,4 +1,4 @@
-/* global createKey, createGlyph, isEmptyButton, markKeys, countVerticalIssues, renderDeckHeader, loadI18n */
+/* global createKey, createGlyph, isEmptyButton, markKeys, countVerticalIssues, hasRunningTimer, renderDeckHeader, loadI18n */
 const panel = document.getElementById('panel');
 const grid = document.getElementById('grid');
 const statusEl = document.getElementById('deck-status');
@@ -43,7 +43,7 @@ function renderObs() {
 async function press(index) {
   const key = grid.children[index];
   if (!key) return;
-  key.classList.remove('pressed', 'error');
+  key.classList.remove('pressed', 'error', 'saved');
   void key.offsetWidth; // restart the animation
   key.classList.add('pressed');
   setTimeout(() => key.classList.remove('pressed'), 150);
@@ -54,6 +54,9 @@ async function press(index) {
   if (!result.ok || result.warning) {
     key.classList.add('error');
     key.title = result.error || result.warning;
+  } else if (result.notice) {
+    key.classList.add('saved');
+    key.title = result.notice;
   }
 }
 
@@ -129,6 +132,10 @@ window.api.onStreamState((state) => {
 });
 window.api.onAudio(toggleAudio);
 window.api.onDeckScale(applyScale);
+// Stream / recording timers on the keys.
+setInterval(() => {
+  if (config && hasRunningTimer(streamState)) markKeys(grid.children, visibleButtons(), streamState);
+}, 1000);
 
 (async () => {
   await loadI18n();

@@ -14,9 +14,61 @@ function createGlyph(name, className = 'glyph') {
   return glyph;
 }
 
-// Whether a key switches a vertical scene or animates a vertical source (Aitum Vertical).
+// Keys that drive an output, on the horizontal canvas and/or the vertical one (action.target).
+const OUTPUT_ACTIONS = ['obs-stream', 'obs-record', 'obs-replay'];
+
+// Whether a key uses the vertical canvas (Aitum Vertical): scene, source, or output target.
 function usesVertical(action) {
-  return (action.type === 'obs-scene' && Boolean(action.verticalScene)) || (action.type === 'obs-source' && Boolean(action.verticalSource));
+  return (
+    (action.type === 'obs-scene' && Boolean(action.verticalScene)) ||
+    (action.type === 'obs-source' && Boolean(action.verticalSource)) ||
+    (OUTPUT_ACTIONS.includes(action.type) && Boolean(action.target) && action.target !== 'horizontal')
+  );
+}
+
+// "1:23:45" / "4:05" from a timestamp until now (or until `until`).
+function formatElapsed(since, until = Date.now()) {
+  const total = Math.max(0, Math.floor((until - since) / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor(total / 60) % 60;
+  const s = String(total % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+}
+
+// Badge of keys showing a live state (stream, recording, muted input), or '' when off.
+function keyBadge(action, streamState) {
+  if (streamState.status !== 'connected') return '';
+  // Keys on both canvases show the horizontal output while it runs, else the vertical one.
+  const target = action.target || 'horizontal';
+  const horizontal = target !== 'vertical';
+  const vertical = target !== 'horizontal';
+  switch (action.type) {
+    case 'obs-stream': {
+      const since = (horizontal && streamState.streamingSince) || (vertical && streamState.verticalStreamingSince);
+      return since ? `LIVE ${formatElapsed(since)}` : '';
+    }
+    case 'obs-record':
+      if (horizontal && streamState.recordingSince) {
+        if (streamState.recordingPaused) {
+          return `${t('badge.paused')} ${formatElapsed(streamState.recordingSince, streamState.recordingPausedAt)}`;
+        }
+        return `REC ${formatElapsed(streamState.recordingSince)}`;
+      }
+      return vertical && streamState.verticalRecordingSince ? `REC ${formatElapsed(streamState.verticalRecordingSince)}` : '';
+    case 'obs-mute':
+      return streamState.mutedInputs?.[action.input] ? t('badge.muted') : '';
+    default:
+      return '';
+  }
+}
+
+// Whether a stream / recording timer is running, so the page refreshes the badges every second.
+function hasRunningTimer(streamState) {
+  const { streamingSince, recordingSince, verticalStreamingSince, verticalRecordingSince } = streamState;
+  return (
+    streamState.status === 'connected' &&
+    Boolean(streamingSince || recordingSince || verticalStreamingSince || verticalRecordingSince)
+  );
 }
 
 // Number of keys whose vertical part can't run: connected, but Aitum Vertical isn't detected.
@@ -32,6 +84,10 @@ function markKeys(keys, buttons, streamState) {
     const key = keys[i];
     if (!key) return;
     key.classList.toggle('active', isSceneLive(button.action, streamState));
+    const badge = keyBadge(button.action, streamState);
+    key.classList.toggle('state-on', Boolean(badge));
+    if (badge) key.dataset.badge = badge;
+    else delete key.dataset.badge;
     const warn = blocked && usesVertical(button.action);
     key.classList.toggle('vertical-warn', warn);
     if (warn) key.title = t('deck.verticalIssueKey');

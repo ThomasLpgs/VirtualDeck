@@ -1,4 +1,4 @@
-/* global api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader, markKeys, countVerticalIssues
+/* global api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader, markKeys, countVerticalIssues, hasRunningTimer
    -- api comes from preload.js, t/I18N/loadI18n from shared/i18n.js, the rest from shared/keys.js */
 const $ = (id) => document.getElementById(id);
 
@@ -35,6 +35,8 @@ const ACTIONS = [
   { type: 'none', icon: 'ban', defaults: {} },
   { type: 'obs-scene', icon: 'clapperboard', defaults: { scene: '' } },
   { type: 'obs-source', icon: 'layers', defaults: { scene: '', source: '', mode: 'flash', duration: 5 } },
+  { type: 'obs-mute', icon: 'mic-off', defaults: { input: '', mode: 'toggle' } },
+  { type: 'obs-replay', icon: 'film', defaults: {} },
   { type: 'obs-record', icon: 'circle-dot', defaults: {} },
   { type: 'obs-stream', icon: 'radio', defaults: {} },
   { type: 'sound', icon: 'volume-2', defaults: { file: '', volume: 1 } },
@@ -42,6 +44,9 @@ const ACTIONS = [
 ];
 
 const SOURCE_MODES = ['flash', 'toggle', 'show', 'hide'];
+// Canvases a stream / record / clip key can act on (action.target).
+const OUTPUT_TARGETS = ['horizontal', 'vertical', 'both'];
+const MUTE_MODES = ['toggle', 'mute', 'unmute'];
 
 // Connection form per streaming software: which config field holds the secret.
 const SOFTWARE = {
@@ -56,7 +61,7 @@ let icons = { names: [], tags: {} };
 let saveTimer = null;
 let dragFrom = null;
 // Scene / source names fetched from the streaming software, offered as suggestions.
-const streamLists = { scenes: [], verticalScenes: [], sources: [], verticalSources: [] };
+const streamLists = { scenes: [], verticalScenes: [], sources: [], verticalSources: [], inputs: [] };
 // A button the main process asked us to select (from the deck) before config finished loading.
 let pendingSelect = null;
 
@@ -480,6 +485,31 @@ function segmented(options, value, onChange) {
 
 // ---------- Action fields ----------
 
+// Output picker of stream / record / clip keys: horizontal (OBS), vertical (Aitum) or both.
+// Only offered with the plugin (or once a vertical target was chosen, so it can be undone).
+function outputField(action) {
+  const target = action.target || 'horizontal';
+  if (!streamState.verticalAvailable && target === 'horizontal') return [];
+  // Says which software is behind each choice; for vertical clips, also that the Backtrack is used.
+  let hint = t('field.outputHint', { software: software().label });
+  if (!streamState.verticalAvailable) hint = t('field.verticalMissing');
+  else if (action.type === 'obs-replay' && target !== 'horizontal') hint += ` ${t('field.replayVerticalHint')}`;
+  return [
+    field(
+      t('field.output'),
+      segmented(
+        OUTPUT_TARGETS.map((value) => [value, t(`output.${value}`, { software: software().label })]),
+        target,
+        (value) => {
+          updateAction({ target: value });
+          renderActionFields();
+        },
+      ),
+      hint,
+    ),
+  ];
+}
+
 function offlineCallout() {
   return el(
     'div',
@@ -595,9 +625,36 @@ function renderActionFields() {
       break;
     }
 
+    case 'obs-mute':
+      container.append(
+        field(
+          t('field.input'),
+          textInput(action.input, (input) => updateAction({ input }), {
+            options: () => streamLists.inputs,
+            placeholder: t('field.inputPlaceholder'),
+          }),
+          t('field.muteHint'),
+        ),
+        field(
+          t('field.behavior'),
+          segmented(
+            MUTE_MODES.map((mode) => [mode, t(`muteMode.${mode}`)]),
+            action.mode || 'toggle',
+            (mode) => updateAction({ mode }),
+          ),
+        ),
+      );
+      // An input may have been added in OBS since the editor opened.
+      refreshInputs();
+      break;
+
+    case 'obs-replay':
     case 'obs-record':
     case 'obs-stream':
-      container.append(el('p', { className: 'muted', textContent: t(`action.${action.type}.hint`, { software: software().label }) }));
+      container.append(
+        el('p', { className: 'muted', textContent: t(`action.${action.type}.hint`, { software: software().label }) }),
+        ...outputField(action),
+      );
       break;
 
     case 'sound': {
@@ -655,7 +712,15 @@ function renderActionFields() {
 }
 
 async function refreshScenes() {
-  [streamLists.scenes, streamLists.verticalScenes] = await Promise.all([api.streamScenes(), api.streamVerticalScenes()]);
+  [streamLists.scenes, streamLists.verticalScenes, streamLists.inputs] = await Promise.all([
+    api.streamScenes(),
+    api.streamVerticalScenes(),
+    api.streamInputs(),
+  ]);
+}
+
+async function refreshInputs() {
+  streamLists.inputs = await api.streamInputs();
 }
 
 async function refreshSources(scene) {
@@ -814,6 +879,7 @@ function setSoftware(name) {
   streamLists.verticalScenes = [];
   streamLists.sources = [];
   streamLists.verticalSources = [];
+  streamLists.inputs = [];
   renderConnectionForm();
   renderStreamState();
   renderActionFields();
@@ -1028,6 +1094,11 @@ function renderSettings() {
   } else if (firstLaunch) {
     showView('connection');
   }
+
+  // Stream / recording timers on the preview keys.
+  setInterval(() => {
+    if (hasRunningTimer(streamState)) markLiveScene();
+  }, 1000);
 
   api.onStreamState((state) => {
     const changed = state.status !== streamState.status;
