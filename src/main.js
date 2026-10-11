@@ -64,6 +64,8 @@ let deckWin = null;
 // Popup page mode: a page opens in this window, as a bubble above the key that asked for it.
 let popupWin = null;
 let popupLayout = null;
+// Resolves once popupWin has loaded its page.
+let popupReady = null;
 // Page shown by the deck (0-based). Not saved: the deck starts on the first page.
 // In 'popup' page mode, the deck itself stays on page 1 and this is the page in the bubble.
 let deckPage = 0;
@@ -278,6 +280,11 @@ function goToPage(target, origin = null) {
   else showPopupPage(origin);
 }
 
+// Loads the bubble window ahead of time (popup page mode), so the first bubble opens at once.
+function preparePopupWindow() {
+  if (!popupWin || popupWin.isDestroyed()) popupReady = createPopupWindow();
+}
+
 function createPopupWindow() {
   popupWin = new BrowserWindow({
     ...deckSize(),
@@ -310,7 +317,8 @@ function createPopupWindow() {
 async function showPopupPage(origin) {
   // The key that opened the bubble closes it: it is a temporary deck.
   if (origin?.win === deckWin && popupOpen() && popupLayout?.fromIndex === origin.index) return closePopup();
-  if (!popupWin || popupWin.isDestroyed()) await createPopupWindow();
+  preparePopupWindow();
+  await popupReady;
   const scale = liveScale ?? cfg.deckScale;
   const { width, height } = deckSize(deckPage);
   if (origin?.win === popupWin && popupLayout) {
@@ -435,10 +443,19 @@ function openEditor(buttonIndex) {
 
 // Keys whose own hotkey couldn't be registered (taken by another app, the deck or another key).
 let failedKeyHotkeys = [];
+// What the registered hotkeys were built from, so a save that doesn't touch them skips the
+// (slow-ish) unregister / register round trip with Windows.
+let registeredHotkeys = null;
+let deckHotkeyOk = false;
+let loginItemSet = null;
+
+const hotkeySignature = () =>
+  JSON.stringify([cfg.hotkey, cfg.pageCount, cfg.pageGrids, cfg.buttons.map((b) => (b.action.type === 'none' ? '' : b.hotkey))]);
 
 // Registers the deck hotkey and the hotkey of each key. Returns whether the deck hotkey worked.
 function registerHotkey() {
   globalShortcut.unregisterAll();
+  registeredHotkeys = hotkeySignature();
   const register = (accelerator, callback) => {
     try {
       return globalShortcut.register(accelerator, callback);
@@ -458,6 +475,7 @@ function registerHotkey() {
     if (used.has(button.hotkey) || !register(button.hotkey, () => runKey(index))) failedKeyHotkeys.push(index);
     used.add(button.hotkey);
   });
+  deckHotkeyOk = deckOk;
   return deckOk;
 }
 
@@ -519,9 +537,14 @@ function applyConfig(next) {
     deckWin.webContents.send('deck:page', 0);
   }
   lastPageMode = cfg.pageMode;
+  if (cfg.pageMode === 'popup') preparePopupWindow();
   if (deckPage >= cfg.pageCount) goToPage(1);
-  const hotkeyOk = registerHotkey();
-  app.setLoginItemSettings({ openAtLogin: cfg.launchAtLogin });
+  const hotkeyOk = registeredHotkeys === hotkeySignature() ? deckHotkeyOk : registerHotkey();
+  // Writes to the registry: only when the setting changes.
+  if (loginItemSet !== cfg.launchAtLogin) {
+    app.setLoginItemSettings({ openAtLogin: cfg.launchAtLogin });
+    loginItemSet = cfg.launchAtLogin;
+  }
   activateStream();
 
   if (applyLanguage() !== previousLanguage) {
@@ -636,8 +659,17 @@ function registerIpc() {
     if (deckWin.isVisible()) deckWin.focus();
   });
   ipcMain.on('deck:resize', (_e, phase) => onDeckResize(phase));
+  const clampScale = (scale) => Math.min(config.MAX_DECK_SCALE, Math.max(config.MIN_DECK_SCALE, scale));
   ipcMain.on('deck:setScale', (_e, scale) => {
-    if (Number.isFinite(scale)) saveDeckScale(Math.min(config.MAX_DECK_SCALE, Math.max(config.MIN_DECK_SCALE, scale)));
+    if (Number.isFinite(scale)) saveDeckScale(clampScale(scale));
+  });
+  // While the slider moves: resize the open deck only; deck:setScale saves on release.
+  ipcMain.on('deck:previewScale', (_e, scale) => {
+    if (!Number.isFinite(scale)) return;
+    closePopup();
+    liveScale = clampScale(scale);
+    deckWin.webContents.send('deck:scale', liveScale);
+    if (deckWin.isVisible()) resizeDeckWindow();
   });
   ipcMain.on('editor:open', (_e, buttonIndex) => {
     hideDeck();
@@ -646,8 +678,12 @@ function registerIpc() {
 
   // The editor's hotkey field needs to receive the combo instead of the global shortcut.
   ipcMain.on('hotkey:pause', (_e, paused) => {
-    if (paused) globalShortcut.unregisterAll();
-    else registerHotkey();
+    if (paused) {
+      globalShortcut.unregisterAll();
+      registeredHotkeys = null;
+    } else {
+      registerHotkey();
+    }
   });
 
   ipcMain.handle('dialog:pick', async (_e, kind) => {
@@ -712,6 +748,7 @@ if (!app.requestSingleInstanceLock()) {
 
     registerIpc();
     createDeckWindow();
+    if (cfg.pageMode === 'popup') preparePopupWindow();
     createTray();
     activateStream();
 
