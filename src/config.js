@@ -8,6 +8,10 @@ const MAX_ROWS = 6;
 const DEFAULT_COLOR = '#8b8d98';
 // Dark grey used as the key background by v0.1; the color is now an accent and would be invisible.
 const LEGACY_DEFAULT_COLOR = '#2a2f3a';
+const SOFTWARES = ['obs', 'streamlabs'];
+
+// Secret field of each streaming software's settings, stored encrypted on disk.
+const SECRETS = { obs: 'password', streamlabs: 'token' };
 
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
 
@@ -25,11 +29,14 @@ function defaultButton() {
 
 function defaults() {
   return {
+    language: 'auto',
     hotkey: 'Control+Shift+Space',
     closeAfterAction: true,
     launchAtLogin: false,
     grid: { cols: 3, rows: 2 },
+    software: 'obs',
     obs: { url: 'ws://127.0.0.1:4455', password: '' },
+    streamlabs: { url: 'ws://127.0.0.1:59650/api/websocket', token: '' },
     buttons: Array.from({ length: 6 }, defaultButton),
   };
 }
@@ -46,7 +53,9 @@ function normalize(raw) {
     cols: clamp(raw?.grid?.cols, 1, MAX_COLS, base.grid.cols),
     rows: clamp(raw?.grid?.rows, 1, MAX_ROWS, base.grid.rows),
   };
-  cfg.obs = { ...base.obs, ...raw?.obs };
+  cfg.software = SOFTWARES.includes(raw?.software) ? raw.software : base.software;
+  for (const software of SOFTWARES) cfg[software] = { ...base[software], ...raw?.[software] };
+  cfg.language = typeof raw?.language === 'string' ? raw.language : base.language;
   cfg.closeAfterAction = cfg.closeAfterAction !== false;
   cfg.launchAtLogin = cfg.launchAtLogin === true;
 
@@ -61,15 +70,14 @@ function normalize(raw) {
   return cfg;
 }
 
-function encryptPassword(password) {
-  if (!password || !safeStorage.isEncryptionAvailable()) return null;
-  return safeStorage.encryptString(password).toString('base64');
+function encrypt(secret) {
+  if (!secret || !safeStorage.isEncryptionAvailable()) return null;
+  return safeStorage.encryptString(secret).toString('base64');
 }
 
-function decryptPassword(obs) {
-  if (!obs?.passwordEnc) return obs?.password || '';
+function decrypt(encrypted) {
   try {
-    return safeStorage.decryptString(Buffer.from(obs.passwordEnc, 'base64'));
+    return safeStorage.decryptString(Buffer.from(encrypted, 'base64'));
   } catch {
     return '';
   }
@@ -80,21 +88,26 @@ function load() {
   try {
     raw = JSON.parse(fs.readFileSync(configPath(), 'utf8'));
   } catch (err) {
-    if (err.code !== 'ENOENT') console.error('Config illisible, valeurs par défaut utilisées :', err);
+    if (err.code !== 'ENOENT') console.error('Unreadable config, using defaults:', err);
     return { config: defaults(), firstRun: err.code === 'ENOENT' };
   }
-  raw.obs = { ...raw.obs, password: decryptPassword(raw.obs) };
-  delete raw.obs.passwordEnc;
+  for (const [software, field] of Object.entries(SECRETS)) {
+    const settings = raw[software];
+    if (!settings?.[`${field}Enc`]) continue;
+    settings[field] = decrypt(settings[`${field}Enc`]);
+    delete settings[`${field}Enc`];
+  }
   return { config: normalize(raw), firstRun: false };
 }
 
 function save(next) {
   const cfg = normalize(next);
   const onDisk = structuredClone(cfg);
-  const enc = encryptPassword(cfg.obs.password);
-  if (enc) {
-    onDisk.obs.passwordEnc = enc;
-    delete onDisk.obs.password;
+  for (const [software, field] of Object.entries(SECRETS)) {
+    const enc = encrypt(cfg[software][field]);
+    if (!enc) continue;
+    onDisk[software][`${field}Enc`] = enc;
+    delete onDisk[software][field];
   }
   const file = configPath();
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -103,4 +116,4 @@ function save(next) {
   return cfg;
 }
 
-module.exports = { load, save, normalize, defaultButton, configPath };
+module.exports = { load, save, normalize, defaultButton, configPath, SOFTWARES };

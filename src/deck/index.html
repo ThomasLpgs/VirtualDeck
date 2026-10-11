@@ -6,21 +6,22 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' file: data:; media-src file:"
     />
-    <title>Stream Deck virtuel</title>
+    <title>VirtualDeck</title>
     <link rel="stylesheet" href="../shared/keys.css" />
     <link rel="stylesheet" href="deck.css" />
   </head>
-  <body>
+  <body class="i18n-pending">
     <main id="panel" class="deck-panel">
       <header class="deck-header">
         <span id="deck-status" class="deck-status"></span>
         <span class="deck-actions">
-          <kbd>Échap</kbd>
-          <button id="open-editor" class="deck-icon-btn" type="button" title="Configurer le deck"></button>
+          <kbd data-i18n="key.Escape"></kbd>
+          <button id="open-editor" class="deck-icon-btn" type="button" data-i18n-title="deck.configure"></button>
         </span>
       </header>
       <div id="grid" class="keys"></div>
     </main>
+    <script src="../shared/i18n.js"></script>
     <script src="../shared/keys.js"></script>
     <script src="deck.js"></script>
   </body>

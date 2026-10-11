@@ -1,4 +1,4 @@
-/* global createKey, createGlyph, isEmptyButton, renderDeckHeader */
+/* global createKey, createGlyph, isEmptyButton, renderDeckHeader, loadI18n */
 const panel = document.getElementById('panel');
 const grid = document.getElementById('grid');
 const statusEl = document.getElementById('deck-status');
@@ -7,7 +7,7 @@ const statusEl = document.getElementById('deck-status');
 const PRESS_DELAY_MS = 90;
 
 let config = null;
-let obsState = { status: 'disconnected', currentScene: null };
+let streamState = { status: 'disconnected', currentScene: null };
 let audio = null;
 
 function visibleButtons() {
@@ -28,13 +28,13 @@ function render() {
 }
 
 function renderObs() {
-  renderDeckHeader(statusEl, obsState);
+  renderDeckHeader(statusEl, streamState);
   if (!config) return;
   visibleButtons().forEach((button, i) => {
     const isLive =
-      obsState.status === 'connected' &&
+      streamState.status === 'connected' &&
       button.action.type === 'obs-scene' &&
-      button.action.scene === obsState.currentScene;
+      button.action.scene === streamState.currentScene;
     grid.children[i]?.classList.toggle('active', isLive);
   });
 }
@@ -100,13 +100,14 @@ window.api.onConfig((next) => {
   config = next;
   render();
 });
-window.api.onObsState((state) => {
-  obsState = state;
+window.api.onStreamState((state) => {
+  streamState = state;
   renderObs();
 });
 window.api.onAudio(toggleAudio);
 
 (async () => {
-  [config, obsState] = await Promise.all([window.api.getConfig(), window.api.obsState()]);
+  await loadI18n();
+  [config, streamState] = await Promise.all([window.api.getConfig(), window.api.streamState()]);
   render();
 })();
