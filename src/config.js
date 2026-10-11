@@ -20,6 +20,10 @@ const SECRETS = { obs: 'password', streamlabs: 'token' };
 
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
 
+// The config as last read or written, to skip writing the disk when nothing changed. Compared
+// before encryption: an encrypted password differs on every call even when it is the same.
+let lastSaved = null;
+
 function defaultButton() {
   return {
     id: crypto.randomUUID(),
@@ -146,11 +150,15 @@ function load() {
     settings[field] = decrypt(settings[`${field}Enc`]);
     delete settings[`${field}Enc`];
   }
-  return { config: normalize(raw), firstRun: false };
+  const config = normalize(raw);
+  lastSaved = JSON.stringify(config);
+  return { config, firstRun: false };
 }
 
 function save(next) {
   const cfg = normalize(next);
+  const text = JSON.stringify(cfg);
+  if (text === lastSaved) return cfg;
   const onDisk = structuredClone(cfg);
   for (const [software, field] of Object.entries(SECRETS)) {
     const enc = encrypt(cfg[software][field]);
@@ -162,6 +170,7 @@ function save(next) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(`${file}.tmp`, JSON.stringify(onDisk, null, 2));
   fs.renameSync(`${file}.tmp`, file);
+  lastSaved = text;
   return cfg;
 }
 
