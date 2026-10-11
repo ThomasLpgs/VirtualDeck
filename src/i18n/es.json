@@ -285,7 +285,7 @@
   "page.removeConfirm": "¿Eliminar la página {n} y todos sus botones?",
 
   "settings.pageMode": "Apertura de páginas",
-  "settings.pageModeHint": "«En el deck» cambia la cuadrícula. «Deck superpuesto» abre la página encima, saliendo del botón; al cerrar el deck se vuelve a la página 1.",
+  "settings.pageModeHint": "«En el deck» cambia la cuadrícula. «Deck superpuesto» abre la página en una burbuja que sale del botón, encima del deck; al cerrar el deck se vuelve a la página 1.",
   "pageMode.replace": "En el deck",
   "pageMode.popup": "Deck superpuesto",
   "deck.back": "Volver"

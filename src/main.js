@@ -39,6 +39,9 @@ const KEY_GAP = 10;
 const PANEL_PADDING = 14;
 const HEADER_HEIGHT = 34;
 const SHADOW_MARGIN = 24;
+// Pointer under a popup page: its height, and how far its tip reaches into the key (CSS pixels).
+const TAIL_SIZE = 12;
+const TAIL_DEPTH = 10;
 const UPDATE_CHECK_MS = 6 * 60 * 60 * 1000;
 
 const FILE_EXTENSIONS = {
@@ -58,8 +61,11 @@ if (app.getPath('userData') === path.join(app.getPath('appData'), app.getName())
 
 let cfg;
 let deckWin = null;
+// Popup page mode: a page opens in this window, as a bubble above the key that asked for it.
+let popupWin = null;
+let popupLayout = null;
 // Page shown by the deck (0-based). Not saved: the deck starts on the first page.
-// In 'popup' page mode, the deck's own grid stays on page 1 and this is the page shown over it.
+// In 'popup' page mode, the deck itself stays on page 1 and this is the page in the bubble.
 let deckPage = 0;
 let lastPageMode = null;
 // Where showDeck() last put the deck, to tell its own moves from the user's drags.
@@ -99,7 +105,7 @@ function streamState() {
 }
 
 function broadcast(channel, data) {
-  for (const win of [deckWin, editorWin]) {
+  for (const win of [deckWin, popupWin, editorWin]) {
     if (win && !win.isDestroyed() && !win.webContents.isLoading()) win.webContents.send(channel, data);
   }
 }
@@ -214,7 +220,7 @@ function createDeckWindow() {
     if (cfg.pageMode === 'popup') deckPage = 0;
     deckWin.webContents.send('deck:page', deckPage);
   });
-  deckWin.on('blur', hideDeck);
+  deckWin.on('blur', hideIfFocusLeft);
   deckWin.on('moved', () => {
     const [x, y] = deckWin.getPosition();
     if (placedAt && placedAt.x === x && placedAt.y === y) return;
@@ -250,24 +256,97 @@ function showDeck() {
 }
 
 // target: 'next' / 'prev' (wrapping around) or a page number (1-based).
-// from: index of the key that asked for it, so a popup page can grow out of it.
-function goToPage(target, from = null) {
+// origin: the key that asked for it, { win, rect } (rect within win), for a popup page.
+function goToPage(target, origin = null) {
   const count = cfg.pageCount;
   if (target === 'next') deckPage = (deckPage + 1) % count;
   else if (target === 'prev') deckPage = (deckPage - 1 + count) % count;
   else deckPage = Math.min(count, Math.max(1, Number(target) || 1)) - 1;
-  // Popup mode: page 1 is the deck itself, any other page opens over it.
-  if (cfg.pageMode === 'popup') deckWin.webContents.send('deck:popup', deckPage ? { page: deckPage, from } : null);
-  else deckWin.webContents.send('deck:page', deckPage);
+  if (cfg.pageMode !== 'popup') return deckWin.webContents.send('deck:page', deckPage);
+  // Popup mode: page 1 is the deck itself, any other page opens in the bubble.
+  if (deckPage === 0) closePopup();
+  else showPopupPage(origin);
+}
+
+function createPopupWindow() {
+  popupWin = new BrowserWindow({
+    ...deckSize(),
+    show: false,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    hasShadow: false,
+    alwaysOnTop: true,
+    webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true, backgroundThrottling: false },
+  });
+  popupWin.setAlwaysOnTop(true, 'screen-saver');
+  popupWin.on('blur', hideIfFocusLeft);
+  return new Promise((resolve) => {
+    popupWin.webContents.once('did-finish-load', resolve);
+    popupWin.loadFile(path.join(__dirname, 'deck', 'index.html'), { query: { popup: '1' } });
+  });
+}
+
+// Shows the page `deckPage` as a bubble above the key that opened it, its pointer reaching into
+// that key, like a genie out of its lamp. Below the key when there is no room above it.
+async function showPopupPage(origin) {
+  if (!popupWin || popupWin.isDestroyed()) await createPopupWindow();
+  const scale = liveScale ?? cfg.deckScale;
+  const { width, height } = deckSize();
+  if (origin?.win === popupWin && popupLayout) {
+    // A page key inside the bubble: the bubble stays where it is.
+    popupLayout = { ...popupLayout, page: deckPage };
+  } else {
+    const base = (origin?.win ?? deckWin).getBounds();
+    // Without a key (hotkey, arrow keys), the bubble rises from the top of the deck.
+    const rect = origin?.rect ?? { x: base.width / 2 - 1, y: SHADOW_MARGIN * scale, width: 2, height: 2 };
+    const key = { x: base.x + rect.x, y: base.y + rect.y, width: rect.width, height: rect.height };
+    const centerX = key.x + key.width / 2;
+    const area = screen.getDisplayNearestPoint({ x: Math.round(centerX), y: Math.round(key.y) }).workArea;
+    const margin = SHADOW_MARGIN * scale;
+    // The window keeps a transparent margin for the shadow; the pointer sits in it.
+    let y = Math.round(key.y + TAIL_DEPTH * scale - (height - margin + TAIL_SIZE * scale));
+    const below = y < area.y - margin;
+    if (below) y = Math.round(key.y + key.height - TAIL_DEPTH * scale - (margin - TAIL_SIZE * scale));
+    const x = Math.round(Math.min(Math.max(centerX - width / 2, area.x - margin), area.x + area.width - width + margin));
+    // Pointer position in the page's CSS pixels, kept away from the rounded corners.
+    const tailX = Math.min(Math.max((centerX - x) / scale, SHADOW_MARGIN + 26), width / scale - SHADOW_MARGIN - 26);
+    popupLayout = { page: deckPage, tailX, below, bounds: { x, y, width, height } };
+  }
+  popupWin.setBounds(popupLayout.bounds);
+  popupWin.webContents.send('deck:popup', { page: popupLayout.page, tailX: popupLayout.tailX, below: popupLayout.below });
+  // Without taking the focus: the keyboard (Esc, 1-9) keeps going to the deck.
+  if (!popupWin.isVisible()) popupWin.showInactive();
+}
+
+function closePopup() {
+  if (cfg.pageMode === 'popup') deckPage = 0;
+  popupLayout = null;
+  if (!popupWin || popupWin.isDestroyed() || !popupWin.isVisible()) return;
+  popupWin.hide();
+  popupWin.webContents.send('deck:hidden');
+}
+
+// The deck and its popup page act as one: they close when the focus goes anywhere else.
+function hideIfFocusLeft() {
+  setTimeout(() => {
+    const focused = BrowserWindow.getFocusedWindow();
+    if (focused !== deckWin && focused !== popupWin) hideDeck();
+  }, 50);
 }
 
 function hideDeck() {
+  closePopup();
   if (!deckWin || deckWin.isDestroyed() || !deckWin.isVisible()) return;
   deckWin.hide();
   // The page stays loaded (instant opening): tell it to stop refreshing what nobody sees.
   deckWin.webContents.send('deck:hidden');
-  // A popup page is temporary: the next opening shows the deck itself again.
-  if (cfg.pageMode === 'popup' && deckPage) goToPage(1);
 }
 
 function toggleDeck() {
@@ -346,7 +425,7 @@ function registerHotkey() {
 
 // Runs a key, from the deck or from its own hotkey. When the deck isn't on screen (closed after
 // the action, or never opened), errors and confirmations are shown as notifications.
-async function runKey(index, { fromDeck = false } = {}) {
+async function runKey(index, { fromDeck = false, origin = null } = {}) {
   const button = cfg.buttons[index];
   if (!button) return { ok: false, error: t('error.buttonNotFound') };
   // A page key changes what the deck shows: it must not close it.
@@ -356,9 +435,9 @@ async function runKey(index, { fromDeck = false } = {}) {
   try {
     const result = await runAction(button.action, { stream: activeStream(), playSound });
     if (result?.page) {
-      goToPage(result.page, index);
       // From a hotkey (or after the deck closed), open the deck on that page.
       if (!deckWin.isVisible()) showDeck();
+      goToPage(result.page, origin);
     }
     if (unseen && result?.notice) notify(result.notice);
     return { ok: true, warning: result?.warning, notice: result?.notice };
@@ -397,8 +476,8 @@ function applyConfig(next) {
   cfg = config.save(next);
   // Switching page mode starts again from the deck's first page.
   if (lastPageMode && lastPageMode !== cfg.pageMode) {
+    closePopup();
     deckPage = 0;
-    deckWin.webContents.send('deck:popup', null);
     deckWin.webContents.send('deck:page', 0);
   }
   lastPageMode = cfg.pageMode;
@@ -410,7 +489,7 @@ function applyConfig(next) {
   if (applyLanguage() !== previousLanguage) {
     // Simplest way to retranslate everything: reload the pages (the config is already saved).
     updateTray();
-    for (const win of [deckWin, editorWin]) if (win && !win.isDestroyed()) win.webContents.reload();
+    for (const win of [deckWin, popupWin, editorWin]) if (win && !win.isDestroyed()) win.webContents.reload();
     if (editorWin && !editorWin.isDestroyed()) editorWin.setTitle(t('editor.windowTitle'));
   } else {
     updateTray();
@@ -500,12 +579,18 @@ function registerIpc() {
     }
   });
 
-  ipcMain.handle('deck:press', (_e, index) => runKey(index, { fromDeck: true }));
+  // rect: where the pressed key is in its window, for a popup page to grow out of it.
+  ipcMain.handle('deck:press', (e, index, rect) =>
+    runKey(index, { fromDeck: true, origin: rect ? { win: BrowserWindow.fromWebContents(e.sender), rect } : null }),
+  );
 
   ipcMain.on('deck:hide', hideDeck);
   ipcMain.on('deck:resetPosition', () => saveDeckPosition(null));
   ipcMain.on('deck:turnPage', (_e, delta) => goToPage(delta < 0 ? 'prev' : 'next'));
-  ipcMain.on('deck:closePopup', () => goToPage(1));
+  ipcMain.on('deck:closePopup', () => {
+    closePopup();
+    if (deckWin.isVisible()) deckWin.focus();
+  });
   ipcMain.on('deck:resize', (_e, phase) => onDeckResize(phase));
   ipcMain.on('deck:setScale', (_e, scale) => {
     if (Number.isFinite(scale)) saveDeckScale(Math.min(config.MAX_DECK_SCALE, Math.max(config.MIN_DECK_SCALE, scale)));

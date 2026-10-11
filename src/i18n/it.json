@@ -285,7 +285,7 @@
   "page.removeConfirm": "Eliminare la pagina {n} e tutti i suoi pulsanti?",
 
   "settings.pageMode": "Apertura delle pagine",
-  "settings.pageModeHint": "«Nel deck» cambia la griglia. «Deck sovrapposto» apre la pagina sopra, uscendo dal pulsante; chiudendo il deck si torna alla pagina 1.",
+  "settings.pageModeHint": "«Nel deck» cambia la griglia. «Deck sovrapposto» apre la pagina in una bolla che esce dal pulsante, sopra il deck; chiudendo il deck si torna alla pagina 1.",
   "pageMode.replace": "Nel deck",
   "pageMode.popup": "Deck sovrapposto",
   "deck.back": "Indietro"

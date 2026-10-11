@@ -285,7 +285,7 @@
   "page.removeConfirm": "Excluir a página {n} e todos os seus botões?",
 
   "settings.pageMode": "Abertura das páginas",
-  "settings.pageModeHint": "“No deck” troca a grade. “Deck sobreposto” abre a página por cima, saindo do botão; ao fechar o deck, volta para a página 1.",
+  "settings.pageModeHint": "“No deck” troca a grade. “Deck sobreposto” abre a página num balão que sai do botão, acima do deck; ao fechar o deck, volta para a página 1.",
   "pageMode.replace": "No deck",
   "pageMode.popup": "Deck sobreposto",
   "deck.back": "Voltar"
