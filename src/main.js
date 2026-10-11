@@ -87,7 +87,6 @@ let editorWin = null;
 let tray = null;
 // { version, url } of a newer GitHub release, once one has been found.
 let update = null;
-let notifiedUpdate = null;
 const streams = { obs: new ObsManager(), streamlabs: new StreamlabsManager() };
 const activeStream = () => streams[cfg.software];
 
@@ -121,11 +120,8 @@ function broadcast(channel, data) {
   }
 }
 
-function notify(body, onClick) {
-  if (!Notification.isSupported()) return;
-  const notification = new Notification({ title: t('app.name'), body });
-  if (onClick) notification.on('click', onClick);
-  notification.show();
+function notify(body) {
+  if (Notification.isSupported()) new Notification({ title: t('app.name'), body }).show();
 }
 
 // ---------- Updates ----------
@@ -140,11 +136,6 @@ async function checkUpdates() {
   update = found;
   updateTray();
   broadcast('update:available', update);
-  // Once per version and per session: the editor pill and tray item stay as reminders.
-  if (notifiedUpdate !== update.version) {
-    notifiedUpdate = update.version;
-    notify(t('update.notify', { version: update.version }), openUpdatePage);
-  }
 }
 
 function applyLanguage() {

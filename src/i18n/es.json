@@ -209,6 +209,5 @@
 
   "update.pill": "Actualización {version} disponible",
   "update.pillTitle": "Abre la página de descarga",
-  "update.notify": "VirtualDeck {version} está disponible. Haz clic aquí para descargarlo.",
   "update.tray": "Descargar la actualización {version}"
 }
