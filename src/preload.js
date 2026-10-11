@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('api', {
   resetDeckPosition: () => ipcRenderer.send('deck:resetPosition'),
   turnPage: (delta) => ipcRenderer.send('deck:turnPage', delta),
   closePopup: () => ipcRenderer.send('deck:closePopup'),
+  deckPointer: (index) => ipcRenderer.send('deck:pointer', index),
   resizeDeck: (phase) => ipcRenderer.send('deck:resize', phase),
   setDeckScale: (scale) => ipcRenderer.send('deck:setScale', scale),
   openEditor: (buttonIndex) => ipcRenderer.send('editor:open', buttonIndex),

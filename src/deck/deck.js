@@ -179,6 +179,15 @@ function showBubble(layout) {
   panel.classList.add('opening');
 }
 
+// Deck side: clicking its keys (or the gaps between them) closes a popup page.
+if (!IS_POPUP) {
+  grid.addEventListener('pointerdown', (e) => {
+    const key = e.target.closest('.key');
+    const index = key ? [...grid.children].indexOf(key) : -1;
+    window.api.deckPointer(index < 0 ? null : pageStart() + index);
+  });
+}
+
 if (IS_POPUP) {
   window.api.onDeckPopup((layout) => {
     if (config) showBubble(layout);
