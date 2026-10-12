@@ -112,3 +112,12 @@ test('saving an unchanged config does not write the disk again', (t) => {
   save({ ...cfg, hotkey: 'F13' });
   assert.equal(write.mock.callCount(), 2);
 });
+
+test('phone settings are off by default and keep only a valid key', () => {
+  assert.deepEqual(normalize({}).remote, { enabled: false, port: 0, key: '' });
+  const key = 'a'.repeat(43);
+  assert.deepEqual(normalize({ remote: { enabled: true, port: 41234, key } }).remote, { enabled: true, port: 41234, key });
+  assert.equal(normalize({ remote: { enabled: 'yes', key: 'bad key' } }).remote.enabled, false);
+  assert.equal(normalize({ remote: { key: 'bad key' } }).remote.key, '');
+  assert.equal(normalize({ remote: { port: 99999 } }).remote.port, 65535);
+});
