@@ -283,7 +283,8 @@
   "page.n": "Page {n}",
   "page.add": "Add a page",
   "page.remove": "Delete this page",
-  "page.removeConfirm": "Delete page {n} and all its buttons?",
+  "page.removeConfirm": "Delete page \"{name}\" and all its buttons?",
+  "page.name": "Name",
 
   "settings.pageMode": "Opening pages",
   "settings.pageModeHint": "“In the deck” swaps the grid. “Deck on top” opens the page in a bubble coming out of the button, above the deck; closing the deck then goes back to page 1.",

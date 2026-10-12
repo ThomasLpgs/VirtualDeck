@@ -282,7 +282,8 @@
   "page.n": "Page {n}",
   "page.add": "Ajouter une page",
   "page.remove": "Supprimer cette page",
-  "page.removeConfirm": "Supprimer la page {n} et tous ses boutons ?",
+  "page.removeConfirm": "Supprimer la page « {name} » et tous ses boutons ?",
+  "page.name": "Nom",
 
   "settings.pageMode": "Ouverture des pages",
   "settings.pageModeHint": "« Dans le deck » change la grille. « Deck superposé » ouvre la page dans une bulle qui sort du bouton, au-dessus du deck ; fermer le deck revient ensuite à la page 1.",

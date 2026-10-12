@@ -1,4 +1,4 @@
-/* global PAGE_SIZE, pageGrid, createKey, createGlyph, isEmptyButton, markKeys, countVerticalIssues, hasRunningTimer, renderDeckHeader, loadI18n */
+/* global PAGE_SIZE, pageGrid, pageTitle, createKey, createGlyph, isEmptyButton, markKeys, countVerticalIssues, hasRunningTimer, renderDeckHeader, loadI18n */
 const panel = document.getElementById('panel');
 const grid = document.getElementById('grid');
 const statusEl = document.getElementById('deck-status');
@@ -46,7 +46,9 @@ function render() {
   );
   // Popup mode reaches the other pages through page keys only.
   $pager.hidden = config.pageCount <= 1 || config.pageMode === 'popup' || IS_POPUP;
-  $pageLabel.textContent = `${page + 1}/${config.pageCount}`;
+  const position = `${page + 1}/${config.pageCount}`;
+  $pageLabel.textContent = config.pageNames?.[page] || position;
+  $pageLabel.title = position;
   renderObs();
 }
 
@@ -182,7 +184,7 @@ function showBubble(layout) {
   panel.style.setProperty('--tail-x', `${layout.tailX}px`);
   document.getElementById('tail').hidden = false;
   document.getElementById('popup-title').hidden = false;
-  document.getElementById('popup-label').textContent = t('page.n', { n: page + 1 });
+  document.getElementById('popup-label').textContent = pageTitle(config, page);
   render();
   const opening = !visible;
   visible = true;

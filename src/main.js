@@ -632,6 +632,7 @@ function registerIpc() {
         grid: imported.grid,
         pageCount: imported.pageCount,
         pageGrids: imported.pageGrids,
+        pageNames: imported.pageNames,
         // Same rule as the deck hotkey: an imported key can't grab Ctrl+C or Alt+Tab system-wide.
         buttons: imported.buttons.map((b) => (isImportableHotkey(b?.hotkey) ? b : { ...b, hotkey: '' })),
       });

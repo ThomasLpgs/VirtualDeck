@@ -282,7 +282,8 @@
   "page.n": "Página {n}",
   "page.add": "Adicionar uma página",
   "page.remove": "Excluir esta página",
-  "page.removeConfirm": "Excluir a página {n} e todos os seus botões?",
+  "page.removeConfirm": "Eliminar a página «{name}» e todos os seus botões?",
+  "page.name": "Nome",
 
   "settings.pageMode": "Abertura das páginas",
   "settings.pageModeHint": "“No deck” troca a grade. “Deck sobreposto” abre a página num balão que sai do botão, acima do deck; ao fechar o deck, volta para a página 1.",

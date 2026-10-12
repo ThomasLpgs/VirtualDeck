@@ -48,6 +48,7 @@ function exportBundle(cfg) {
       grid: cfg.grid,
       pageCount: cfg.pageCount,
       pageGrids: cfg.pageGrids,
+      pageNames: cfg.pageNames,
       buttons,
     },
     media,
@@ -106,6 +107,7 @@ function restoreBundle(bundle, mediaDir) {
     grid: bundle.config.grid,
     pageCount: bundle.config.pageCount,
     pageGrids: bundle.config.pageGrids,
+    pageNames: bundle.config.pageNames,
     buttons,
   };
 }

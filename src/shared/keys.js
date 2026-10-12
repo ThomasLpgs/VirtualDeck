@@ -22,6 +22,11 @@ function pageGrid(config, page) {
   return config.pageGrids?.[page] || config.grid;
 }
 
+// Name of a page (0-based) as shown to the user: its own name, or "Page n".
+function pageTitle(config, page) {
+  return config.pageNames?.[page] || t('page.n', { n: page + 1 });
+}
+
 // Keys that drive an output, on the horizontal canvas and/or the vertical one (action.target).
 const OUTPUT_ACTIONS = ['obs-stream', 'obs-record', 'obs-replay'];
 

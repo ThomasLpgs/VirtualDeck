@@ -1,4 +1,4 @@
-/* global PAGE_SIZE, pageGrid, api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader, markKeys, countVerticalIssues, hasRunningTimer
+/* global PAGE_SIZE, pageGrid, pageTitle, api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader, markKeys, countVerticalIssues, hasRunningTimer
    -- api comes from preload.js, t/I18N/loadI18n from shared/i18n.js, the rest from shared/keys.js */
 const $ = (id) => document.getElementById(id);
 
@@ -212,7 +212,8 @@ function renderPreview() {
 function renderPageTabs() {
   const tabs = [];
   for (let p = 0; p < config.pageCount; p++) {
-    const tab = el('button', { type: 'button', className: 'page-tab', textContent: String(p + 1), title: t('page.n', { n: p + 1 }) });
+    const name = config.pageNames[p];
+    const tab = el('button', { type: 'button', className: 'page-tab', textContent: name || String(p + 1), title: pageTitle(config, p) });
     tab.classList.toggle('selected', p === page);
     tab.addEventListener('click', () => select(p * PAGE_SIZE));
     tabs.push(tab);
@@ -228,6 +229,11 @@ function renderPageTabs() {
     tabs.push(remove);
   }
   $('page-tabs').replaceChildren(...tabs);
+  // Naming a page only makes sense once there are several.
+  $('page-name-field').hidden = config.pageCount <= 1;
+  $('page-name').placeholder = t('page.n', { n: page + 1 });
+  // Not while typing in it: the saved name is trimmed, the field must keep the space just typed.
+  if (document.activeElement !== $('page-name')) $('page-name').value = config.pageNames[page];
 }
 
 // Pads the buttons so every page but the last is full (see PAGE_SIZE in config.js).
@@ -239,6 +245,7 @@ function padPages() {
 // The new page starts with the grid of the page shown.
 function addPage() {
   config.pageGrids.push({ ...currentGrid() });
+  config.pageNames.push('');
   config.pageCount += 1;
   padPages();
   select((config.pageCount - 1) * PAGE_SIZE);
@@ -246,9 +253,10 @@ function addPage() {
 }
 
 function removePage() {
-  if (!window.confirm(t('page.removeConfirm', { n: page + 1 }))) return;
+  if (!window.confirm(t('page.removeConfirm', { name: pageTitle(config, page) }))) return;
   config.buttons.splice(pageStart(), PAGE_SIZE);
   config.pageGrids.splice(page, 1);
+  config.pageNames.splice(page, 1);
   config.grid = { ...config.pageGrids[0] };
   config.pageCount -= 1;
   padPages();
@@ -310,7 +318,7 @@ function updateAction(patch) {
 
 function renderHead() {
   const number = t('editor.buttonN', { n: (selected % PAGE_SIZE) + 1 });
-  $('button-number').textContent = config.pageCount > 1 ? `${t('page.n', { n: page + 1 })} · ${number}` : number;
+  $('button-number').textContent = config.pageCount > 1 ? `${pageTitle(config, page)} · ${number}` : number;
   $('button-title').textContent = current().label || t('editor.untitled');
 }
 
@@ -866,7 +874,7 @@ function fillActionFields(container, action, update, rerender) {
     }
 
     case 'page': {
-      const pages = Array.from({ length: config.pageCount }, (_, p) => [String(p + 1), t('page.n', { n: p + 1 })]);
+      const pages = Array.from({ length: config.pageCount }, (_, p) => [String(p + 1), pageTitle(config, p)]);
       container.append(
         el('p', { className: 'muted', textContent: t('action.page.hint') }),
         field(
@@ -1175,6 +1183,12 @@ function bindStaticFields() {
   });
 
   $('label').addEventListener('input', (e) => updateButton({ label: e.target.value }));
+  $('page-name').addEventListener('input', (e) => {
+    config.pageNames[page] = e.target.value.trim();
+    renderPageTabs();
+    renderHead();
+    scheduleSave();
+  });
   $('emoji').addEventListener('input', (e) => {
     const icon = e.target.value.trim();
     updateButton({ icon, symbol: icon ? '' : current().symbol });
