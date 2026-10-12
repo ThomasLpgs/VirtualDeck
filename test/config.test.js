@@ -86,6 +86,9 @@ test('each page has its own grid; older configs give every page the main grid', 
   const old = normalize({ grid: { cols: 4, rows: 2 }, pageCount: 2 });
   assert.deepEqual(old.pageGrids, [{ cols: 4, rows: 2 }, { cols: 4, rows: 2 }]);
 
+  const named = normalize({ pageCount: 3, pageNames: ['  Sons ', 42, 'x'.repeat(50), 'extra'] });
+  assert.deepEqual(named.pageNames, ['Sons', '', 'x'.repeat(30)]);
+  assert.deepEqual(normalize({}).pageNames, ['']);
   const cfg = normalize({ grid: { cols: 3, rows: 2 }, pageCount: 2, pageGrids: [{ cols: 5, rows: 1 }, { cols: 2, rows: 9 }] });
   assert.deepEqual(cfg.pageGrids, [{ cols: 5, rows: 1 }, { cols: 2, rows: 6 }]);
   // `grid` follows page 1, and the last page is padded to its own grid.

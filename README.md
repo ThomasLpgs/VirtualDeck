@@ -23,7 +23,7 @@
 - **Pilote OBS Studio et Streamlabs Desktop** : scènes, sources et animations, sons coupés, clips, live et enregistrement.
 - **État en direct sur les boutons** : badge LIVE sur la scène à l'antenne, chrono « LIVE 1:02:03 » et « REC 12:03 » (ou « PAUSE ») sur les boutons Stream et Enregistrer, « MUET » sur un son coupé. Tout suit aussi ce que tu fais directement dans OBS.
 - **Multi-actions** : un seul bouton enchaîne plusieurs actions, avec une attente possible avant chacune (par exemple « Pause » : scène Pause, puis musique, puis webcam masquée).
-- **Pages** : jusqu'à 10 grilles, chacune avec son propre nombre de colonnes et de lignes. Elles s'ouvrent dans le deck ou dans une bulle qui sort du bouton, au-dessus du deck (au choix dans les Réglages).
+- **Pages** : jusqu'à 10 grilles, chacune avec son nom (« Sons », « Scènes »…) et son propre nombre de colonnes et de lignes. Elles s'ouvrent dans le deck ou dans une bulle qui sort du bouton, au-dessus du deck (au choix dans les Réglages).
 - **Raccourci par bouton** : déclenche n'importe quel bouton de partout, sans ouvrir le deck (les touches F13 à F24 marchent seules).
 - **Format vertical (TikTok, Shorts…)** avec le plugin [Aitum Vertical](https://github.com/Aitum/obs-vertical-canvas) : scènes, sources, live, enregistrement et clips en horizontal, en vertical ou les deux en même temps.
 - **Sons** (mp3, wav, ogg…) avec réglage du volume ; un second clic coupe le son.
@@ -88,7 +88,7 @@ Dans l'onglet **Boutons**, clique sur une case puis choisis :
 
 En bas des réglages de chaque bouton, **Raccourci** lui donne une combinaison de touches qui le déclenche de n'importe où.
 
-Glisse-dépose les boutons pour les réorganiser, et ajoute des pages avec **+** au-dessus de l'aperçu. Tout est enregistré automatiquement.
+Glisse-dépose les boutons pour les réorganiser, et ajoute des pages avec **+** au-dessus de l'aperçu, et donne-leur un nom dans le champ **Nom** sous l'aperçu. Tout est enregistré automatiquement.
 
 ### 3. Utiliser le deck
 

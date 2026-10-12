@@ -254,6 +254,13 @@ code {
   color: var(--text);
 }
 
+.page-tab {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .page-tab .glyph {
   width: 13px;
   height: 13px;
@@ -322,6 +329,27 @@ code {
   text-align: center;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+
+.page-name[hidden] {
+  display: none;
+}
+
+.page-name input {
+  width: 130px;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.page-name input:focus {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .canvas-hint {

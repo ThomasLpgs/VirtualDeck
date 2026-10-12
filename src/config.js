@@ -9,6 +9,7 @@ const MAX_ROWS = 6;
 // resizing the grid never moves a key to another page. Must match PAGE_SIZE in shared/keys.js.
 const PAGE_SIZE = MAX_COLS * MAX_ROWS;
 const MAX_PAGES = 10;
+const MAX_PAGE_NAME = 30;
 // Size of the deck relative to its default size (1 = 100 %).
 const MIN_DECK_SCALE = 0.6;
 const MAX_DECK_SCALE = 1.6;
@@ -46,6 +47,8 @@ function defaults() {
     launchAtLogin: false,
     grid: { cols: 3, rows: 2 },
     pageCount: 1,
+    // Name of each page ('' shows "Page n").
+    pageNames: [''],
     // How page keys show a page: 'replace' the deck's grid, or 'popup' a deck over it.
     pageMode: 'replace',
     // Top-left corner where the user dragged the deck, or null to open it under the mouse.
@@ -116,6 +119,10 @@ function normalize(raw) {
     rows: clamp(grids[p]?.rows, 1, MAX_ROWS, cfg.grid.rows),
   }));
   cfg.grid = { ...cfg.pageGrids[0] };
+  const names = Array.isArray(raw?.pageNames) ? raw.pageNames : [];
+  cfg.pageNames = Array.from({ length: cfg.pageCount }, (_, p) =>
+    typeof names[p] === 'string' ? names[p].trim().slice(0, MAX_PAGE_NAME) : '',
+  );
   // Every page but the last is full, so a page always starts at its own PAGE_SIZE boundary.
   const last = cfg.pageGrids[cfg.pageCount - 1];
   const needed = (cfg.pageCount - 1) * PAGE_SIZE + last.cols * last.rows;

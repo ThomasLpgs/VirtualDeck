@@ -282,7 +282,8 @@
   "page.n": "Pagina {n}",
   "page.add": "Aggiungi una pagina",
   "page.remove": "Elimina questa pagina",
-  "page.removeConfirm": "Eliminare la pagina {n} e tutti i suoi pulsanti?",
+  "page.removeConfirm": "Eliminare la pagina «{name}» e tutti i suoi pulsanti?",
+  "page.name": "Nome",
 
   "settings.pageMode": "Apertura delle pagine",
   "settings.pageModeHint": "«Nel deck» cambia la griglia. «Deck sovrapposto» apre la pagina in una bolla che esce dal pulsante, sopra il deck; chiudendo il deck si torna alla pagina 1.",

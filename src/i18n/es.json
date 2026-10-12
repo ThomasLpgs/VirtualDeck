@@ -282,7 +282,8 @@
   "page.n": "Página {n}",
   "page.add": "Añadir una página",
   "page.remove": "Eliminar esta página",
-  "page.removeConfirm": "¿Eliminar la página {n} y todos sus botones?",
+  "page.removeConfirm": "¿Eliminar la página «{name}» y todos sus botones?",
+  "page.name": "Nombre",
 
   "settings.pageMode": "Apertura de páginas",
   "settings.pageModeHint": "«En el deck» cambia la cuadrícula. «Deck superpuesto» abre la página en una burbuja que sale del botón, encima del deck; al cerrar el deck se vuelve a la página 1.",
