@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { electron, connectedObs, aitum } = require('./helpers');
-const { runAction } = require('../src/actions');
+const { runAction, needsStream } = require('../src/actions');
 
 const run = (action, obs, extra = {}) => runAction(action, { stream: obs, playSound: () => {}, ...extra });
 const requests = (calls, type) => calls.filter(([request]) => request === type);
@@ -389,4 +389,15 @@ test.describe('page keys', () => {
     );
     assert.equal(result.page, '2');
   });
+});
+
+test('only keys driving OBS / Streamlabs wait for a connection attempt', () => {
+  for (const type of ['obs-scene', 'obs-source', 'obs-mute', 'obs-replay', 'obs-record', 'obs-stream']) {
+    assert.ok(needsStream({ type }), type);
+  }
+  for (const type of ['sound', 'open', 'page', 'none']) assert.ok(!needsStream({ type }), type);
+  assert.ok(needsStream({ type: 'multi', steps: [{ action: { type: 'sound' } }, { action: { type: 'obs-scene' } }] }));
+  assert.ok(!needsStream({ type: 'multi', steps: [{ action: { type: 'sound' } }, { action: { type: 'page' } }] }));
+  assert.ok(!needsStream({ type: 'multi', steps: [{}, null] }));
+  assert.ok(!needsStream(undefined));
 });

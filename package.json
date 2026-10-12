@@ -1,6 +1,6 @@
 {
   "name": "virtualdeck",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "VirtualDeck : un Stream Deck virtuel pour Windows. Une grille de boutons qui s'ouvre au raccourci clavier et pilote OBS, Streamlabs, des sons et des programmes.",
   "author": "Thomas Laspougeas",
   "main": "src/main.js",

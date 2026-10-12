@@ -40,7 +40,7 @@
   "grid.removeColumn": "Quitar una columna",
   "grid.addRow": "Añadir una fila",
   "grid.removeRow": "Quitar una fila",
-  "grid.hint": "Haz clic en un botón para editarlo · Arrastra y suelta para reordenar",
+  "grid.hint": "Haz clic en un botón para editarlo · Arrastra y suelta para reordenar, o sobre la pestaña de una página para moverlo allí",
 
   "editor.buttonN": "Botón {n}",
   "editor.untitled": "Sin título",
@@ -317,5 +317,6 @@
   "phone.fullTitle": "Límite de teléfonos alcanzado",
   "phone.fullHint": "Este deck ya acepta el número máximo de teléfonos. En el PC, en Ajustes › Teléfono, aumenta el límite o crea un nuevo código QR.",
   "field.appIcon": "Usar el icono de la aplicación",
-  "field.appIconNone": "No se encontró ningún icono: elige el programa (.exe) o su acceso directo con Examinar…"
+  "field.appIconNone": "No se encontró ningún icono: elige el programa (.exe) o su acceso directo con Examinar…",
+  "page.full": "La página «{name}» no tiene más sitio libre"
 }

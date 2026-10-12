@@ -261,6 +261,27 @@ code {
   white-space: nowrap;
 }
 
+.page-tab.drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+  color: var(--text);
+}
+
+.page-tab.refused {
+  animation: tab-refused 400ms ease;
+}
+
+@keyframes tab-refused {
+  20%,
+  60% {
+    transform: translateX(-3px);
+  }
+  40%,
+  80% {
+    transform: translateX(3px);
+  }
+}
+
 .page-tab .glyph {
   width: 13px;
   height: 13px;

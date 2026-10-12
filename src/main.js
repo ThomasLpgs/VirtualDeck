@@ -21,7 +21,7 @@ const config = require('./config');
 const i18n = require('./i18n');
 const { ObsManager } = require('./obs');
 const { StreamlabsManager } = require('./streamlabs');
-const { runAction } = require('./actions');
+const { runAction, needsStream } = require('./actions');
 const backup = require('./backup');
 const { checkForUpdate } = require('./updates');
 const remote = require('./remote');
@@ -31,6 +31,8 @@ const { t } = i18n;
 
 const PRELOAD = path.join(__dirname, 'preload.js');
 const APP_ICON = path.join(__dirname, 'assets', 'icon.png');
+// Same logo as an .ico, for the taskbar in development (see showInTaskbar).
+const APP_ICON_ICO = path.join(__dirname, 'assets', 'icon.ico');
 // Must match "build.appId" in package.json, or Windows notifications won't show in the installed app.
 const APP_ID = 'com.virtualdeck.app';
 const LUCIDE_DIR = path.join(__dirname, '..', 'node_modules', 'lucide-static');
@@ -421,6 +423,13 @@ function playSound(file, volume) {
 // ---------- Editor window ----------
 
 // buttonIndex (optional): button to select in the editor, e.g. when an empty "+" key is clicked.
+// With our app id set, Windows takes the taskbar icon from the running exe. Installed, that is
+// VirtualDeck.exe (our logo); with `npm start` it is electron.exe, so give the window our logo.
+function showInTaskbar(win) {
+  if (app.isPackaged) return;
+  win.setAppDetails({ appId: APP_ID, appIconPath: APP_ICON_ICO, appIconIndex: 0 });
+}
+
 function openEditor(buttonIndex) {
   activeStream().wake();
   const selectButton = () => {
@@ -447,6 +456,7 @@ function openEditor(buttonIndex) {
     titleBarOverlay: { color: '#0e0f12', symbolColor: '#a1a3ad', height: 52 },
     webPreferences: { preload: PRELOAD, contextIsolation: true, sandbox: true },
   });
+  showInTaskbar(editorWin);
   editorWin.webContents.once('did-finish-load', selectButton);
   editorWin.loadFile(path.join(__dirname, 'editor', 'index.html'));
   editorWin.on('closed', () => {
@@ -499,9 +509,11 @@ const { hidePaths } = remote;
 
 const WAKE_WAIT_MS = 2000;
 
-// Before a key runs: if OBS / Streamlabs was waiting for its next attempt (it may have been
-// started since), connect now and give it a moment, rather than failing the key.
-function wakeStream() {
+// Before a key that drives OBS / Streamlabs runs: if it was waiting for its next attempt (it may
+// have been started since), connect now and give it a moment, rather than failing the key.
+// Other keys don't wait: on Windows a refused local connection takes about 2 s to fail.
+function wakeStream(action) {
+  if (!needsStream(action)) return Promise.resolve();
   const stream = activeStream();
   if (!stream.wake()) return Promise.resolve();
   return new Promise((resolve) => {
@@ -524,7 +536,7 @@ async function runKey(index, { fromDeck = false, origin = null, fromPhone = fals
   if (!button) return { ok: false, error: t('error.buttonNotFound') };
   if (fromPhone) {
     try {
-      await wakeStream();
+      await wakeStream(button.action);
       const result = await runAction(button.action, { stream: activeStream(), playSound });
       return { ok: true, warning: hidePaths(result?.warning), notice: hidePaths(result?.notice), page: result?.page };
     } catch (err) {
@@ -536,7 +548,7 @@ async function runKey(index, { fromDeck = false, origin = null, fromPhone = fals
   if (closes) hideDeck();
   const unseen = !fromDeck || closes;
   // After closing the deck: waiting for OBS must not keep it on screen.
-  await wakeStream();
+  await wakeStream(button.action);
   try {
     const result = await runAction(button.action, { stream: activeStream(), playSound });
     if (result?.page) {

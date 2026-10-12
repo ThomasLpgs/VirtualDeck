@@ -137,4 +137,11 @@ async function runSteps(steps, context) {
   return { warning, notice, page };
 }
 
-module.exports = { runAction };
+// Whether an action talks to OBS / Streamlabs (directly or in one of its steps). Only those wait
+// for a connection attempt before running: a sound, a program or a page must stay instant.
+function needsStream(action) {
+  if (action?.type === 'multi') return (action.steps || []).some((step) => needsStream(step?.action));
+  return typeof action?.type === 'string' && action.type.startsWith('obs-');
+}
+
+module.exports = { runAction, needsStream };
