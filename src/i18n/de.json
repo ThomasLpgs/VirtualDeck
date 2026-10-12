@@ -309,5 +309,11 @@
   "phone.pairTitle": "Handy nicht gekoppelt",
   "phone.pairHint": "Öffne auf dem PC VirtualDeck › Einstellungen › Handy, zeige den QR-Code an und scanne ihn.",
   "phone.offline": "PC nicht erreichbar, neuer Versuch…",
-  "phone.blocked": "Zu viele abgelehnte Versuche: Versuche es in 10 Minuten erneut."
+  "phone.blocked": "Zu viele abgelehnte Versuche: Versuche es in 10 Minuten erneut.",
+  "phone.maxPhones": "Erlaubte Handys",
+  "phone.maxPhonesHint": "Belegte Plätze: {count} von {max}. Die ersten Geräte, die den QR-Code scannen, belegen sie; weitere werden abgelehnt. „Neuer QR-Code“ gibt die Plätze frei.",
+  "phone.maxPhonesNone": "Jedes Gerät, das den QR-Code scannt, kann das Deck nutzen.",
+  "phone.unlimited": "Unbegrenzt",
+  "phone.fullTitle": "Handy-Limit erreicht",
+  "phone.fullHint": "Dieses Deck akzeptiert bereits die maximale Anzahl an Handys. Erhöhe auf dem PC unter Einstellungen › Handy das Limit oder erstelle einen neuen QR-Code."
 }

@@ -3,11 +3,16 @@
 // #fragment and stays on the phone; every call to the PC is signed with it (see shared/hmac.js).
 
 const KEY_STORE = 'virtualdeck-key';
+// Random id of this phone, so the PC can limit how many phones use the deck.
+const DEVICE_STORE = 'virtualdeck-device';
 // Must match --key-size / --key-gap in shared/keys.css: the grid is zoomed from that size.
 const KEY_SIZE = 88;
 const KEY_GAP = 10;
 const MAX_ZOOM = 1.8;
 const RETRY_MS = [1000, 2000, 5000, 10000];
+// The PC answers a "wait" within 25 s: past 40 s, the connection is dead.
+const WAIT_TIMEOUT_MS = 40 * 1000;
+const CALL_TIMEOUT_MS = 10 * 1000;
 
 const $ = (id) => document.getElementById(id);
 const grid = $('grid');
@@ -19,11 +24,27 @@ let state = null;
 let page = 0;
 let timer = null;
 let toastTimer = null;
-// Key pictures, downloaded once: image tag -> blob: URL.
+// Key pictures, downloaded once: image tag -> blob: URL. Failed ones aren't asked for again.
 const images = new Map();
 const loadingImages = new Set();
+const failedImages = new Set();
+// Several pictures arriving together: one redraw.
+let renderQueued = false;
+// The long poll in progress, cancelled when the page comes back on screen.
+let listenController = null;
 
 class Unpaired extends Error {}
+// The PC already has as many phones as allowed.
+class Full extends Error {}
+
+function deviceId() {
+  let id = localStorage.getItem(DEVICE_STORE);
+  if (!id || !/^[A-Za-z0-9_-]{16,64}$/.test(id)) {
+    id = nonce();
+    localStorage.setItem(DEVICE_STORE, id);
+  }
+  return id;
+}
 
 function readKey() {
   const fromQr = /^#k=([A-Za-z0-9_-]{43})$/.exec(location.hash);
@@ -42,20 +63,29 @@ function nonce() {
 }
 
 // Signed call to the PC. Throws Unpaired when the PC doesn't know our key (any more).
-async function call(op, extra = {}, retried = false) {
-  const body = JSON.stringify({ ts: Date.now() + clockOffset, nonce: nonce(), op, ...extra });
-  const res = await fetch('/api', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Signature': hmacSha256Hex(key, body) },
-    body,
-    cache: 'no-store',
-  });
+// Never waits forever: after a Wi-Fi change or the phone's sleep, a request can hang silently.
+async function call(op, extra = {}, retried = false, controller = new AbortController()) {
+  const body = JSON.stringify({ ts: Date.now() + clockOffset, nonce: nonce(), device: deviceId(), op, ...extra });
+  const timeout = setTimeout(() => controller.abort(), op === 'wait' ? WAIT_TIMEOUT_MS : CALL_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch('/api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Signature': hmacSha256Hex(key, body) },
+      body,
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && data.error === 'clock' && !retried && Number.isFinite(data.now)) {
     clockOffset = data.now - Date.now();
-    return call(op, extra, true);
+    return call(op, extra, true, controller);
   }
   if (res.status === 401 && data.error === 'unpaired') throw new Unpaired();
+  if (res.status === 403 && data.error === 'full') throw new Full();
   if (res.status === 429) throw new Error(t('phone.blocked'));
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   return data;
@@ -65,6 +95,21 @@ function showPairing() {
   localStorage.removeItem(KEY_STORE);
   key = null;
   $('pair').hidden = false;
+}
+
+function showFull() {
+  key = null;
+  $('pair-title').textContent = t('phone.fullTitle');
+  $('pair-hint').textContent = t('phone.fullHint');
+  $('pair').hidden = false;
+}
+
+// The PC refused this phone: why, on the whole screen.
+function refused(err) {
+  if (err instanceof Unpaired) showPairing();
+  else if (err instanceof Full) showFull();
+  else return false;
+  return true;
 }
 
 function banner(text) {
@@ -110,7 +155,7 @@ function render() {
   grid.replaceChildren(
     ...visibleButtons().map((button, i) => {
       const shown = { ...button, imageUrl: images.get(button.image) || '' };
-      if (button.image && !shown.imageUrl) loadImage(pageStart() + i, button.image);
+      if (button.image && !shown.imageUrl && !failedImages.has(button.image)) loadImage(pageStart() + i, button.image);
       const el = createKey(shown, i);
       if (!isEmptyButton(button)) el.addEventListener('click', () => press(i));
       return el;
@@ -125,9 +170,22 @@ function render() {
 function renderStream() {
   renderDeckHeader($('deck-status'), state.stream);
   markKeys(grid.children, visibleButtons(), state.stream);
-  // LIVE / REC badges count the time: refresh them every second while something runs.
+  // LIVE / REC badges count the time: refresh them every second while something runs and the
+  // page is on screen (no battery spent while the phone is locked).
   clearInterval(timer);
-  timer = hasRunningTimer(state.stream) ? setInterval(() => markKeys(grid.children, visibleButtons(), state.stream), 1000) : null;
+  timer =
+    hasRunningTimer(state.stream) && !document.hidden
+      ? setInterval(() => markKeys(grid.children, visibleButtons(), state.stream), 1000)
+      : null;
+}
+
+function queueRender() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => {
+    renderQueued = false;
+    render();
+  });
 }
 
 async function loadImage(index, tag) {
@@ -137,9 +195,12 @@ async function loadImage(index, tag) {
     const { mime, data } = await call('image', { index });
     const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
     images.set(tag, URL.createObjectURL(new Blob([bytes], { type: mime })));
-    render();
-  } catch {
-    // No picture: the key keeps its symbol / label.
+    queueRender();
+  } catch (err) {
+    if (refused(err)) return;
+    // The PC has no picture to give (too big, missing file…): the key keeps its symbol / label.
+    // A network error is tried again on the next redraw.
+    if (err.message === 'not-found') failedImages.add(tag);
   } finally {
     loadingImages.delete(tag);
   }
@@ -160,19 +221,22 @@ async function press(index) {
   el.classList.add('pressed');
   setTimeout(() => el.classList.remove('pressed'), 150);
   navigator.vibrate?.(12);
+  const shownPage = page;
+  // The grid may have been redrawn meanwhile (OBS event): mark the key now on screen.
+  const mark = (className) => page === shownPage && grid.children[index]?.classList.add(className);
   try {
     const result = await call('press', { index: pageStart() + index });
     if (result.page) return goToPage(result.page);
     if (!result.ok || result.warning) {
-      el.classList.add('error');
+      mark('error');
       toast(result.error || result.warning, true);
     } else if (result.notice) {
-      el.classList.add('saved');
+      mark('saved');
       toast(result.notice);
     }
   } catch (err) {
-    if (err instanceof Unpaired) return showPairing();
-    el.classList.add('error');
+    if (refused(err)) return;
+    mark('error');
     toast(t('phone.offline'), true);
   }
 }
@@ -181,6 +245,14 @@ async function press(index) {
 
 function apply(next) {
   if (!next.buttons) return; // "nothing changed" reply
+  // Pictures no key uses any more: free them.
+  const used = new Set(next.buttons.map((b) => b.image));
+  for (const [tag, url] of images) {
+    if (!used.has(tag)) {
+      URL.revokeObjectURL(url);
+      images.delete(tag);
+    }
+  }
   state = next;
   render();
 }
@@ -189,14 +261,18 @@ function apply(next) {
 async function listen() {
   let failures = 0;
   for (;;) {
+    listenController = new AbortController();
+    const kicked = listenController.signal;
     try {
-      const next = await call(state ? 'wait' : 'hello', state ? { since: state.version } : {});
+      const next = await call(state ? 'wait' : 'hello', state ? { since: state.version } : {}, false, listenController);
       if (next.buttons) apply(next);
       else state.version = next.version;
       failures = 0;
       banner('');
     } catch (err) {
-      if (err instanceof Unpaired) return showPairing();
+      if (refused(err)) return;
+      // Back on screen: ask again at once (the answer comes right away if something changed).
+      if (kicked.reason === 'visible') continue;
       banner(err.message === t('phone.blocked') ? err.message : t('phone.offline'));
       await new Promise((r) => setTimeout(r, RETRY_MS[Math.min(failures, RETRY_MS.length - 1)]));
       failures += 1;
@@ -225,6 +301,11 @@ document.addEventListener('touchend', (e) => {
   touchStart = null;
 });
 window.addEventListener('resize', fit);
+// Back from the lock screen or another app: the long poll may be dead, start a fresh one.
+document.addEventListener('visibilitychange', () => {
+  if (state) renderStream();
+  if (!document.hidden && key) listenController?.abort('visible');
+});
 
 (async () => {
   try {

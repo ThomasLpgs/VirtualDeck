@@ -2,7 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('http');
 const crypto = require('crypto');
-const { createRemoteServer, pickLanAddress, isPrivateIPv4, newKey, isKey } = require('../src/remote');
+const net = require('net');
+const { createRemoteServer, pickLanAddress, isPrivateIPv4, newKey, isKey, hidePaths } = require('../src/remote');
 const { hmacSha256Hex, base64UrlToBytes } = require('../src/shared/hmac');
 
 const HOST = '127.0.0.1';
@@ -29,9 +30,11 @@ function request(port, { method = 'GET', path = '/', body, headers = {} } = {}) 
   });
 }
 
+const PHONE = 'phone-one-0123456789';
+
 // A request signed like the phone does (shared/hmac.js).
-function signed(key, payload) {
-  const body = JSON.stringify({ ts: Date.now(), nonce: crypto.randomBytes(18).toString('base64url'), ...payload });
+function signed(key, payload, device = PHONE) {
+  const body = JSON.stringify({ ts: Date.now(), nonce: crypto.randomBytes(18).toString('base64url'), device, ...payload });
   return { body, signature: hmacSha256Hex(base64UrlToBytes(key), body) };
 }
 
@@ -51,6 +54,7 @@ async function startServer(overrides = {}) {
         return { ok: true };
       },
       image: async () => null,
+      allowDevice: () => true,
       ...overrides,
     },
     { isLocal: (ip) => ip === HOST },
@@ -156,14 +160,18 @@ test('serves the phone page with strict headers, and nothing outside its list', 
 });
 
 test('a waiting phone gets the new state as soon as the deck changes', async () => {
-  const { server, port, key } = await startServer();
+  let label = 'Live';
+  const { server, port, key } = await startServer({ state: () => ({ buttons: [{ label }], pageCount: 1 }) });
   try {
     const { version } = (await callApi(port, signed(key, { op: 'hello' }))).json;
     const waiting = callApi(port, signed(key, { op: 'wait', since: version }));
-    setTimeout(() => server.changed(), 50);
+    setTimeout(() => {
+      label = 'Scène 2';
+      server.changed();
+    }, 50);
     const next = (await waiting).json;
     assert.equal(next.version, version + 1);
-    assert.equal(next.buttons[0].label, 'Live');
+    assert.equal(next.buttons[0].label, 'Scène 2');
   } finally {
     server.stop();
   }
@@ -174,5 +182,93 @@ test("the phone's HMAC matches Node's crypto", () => {
     const key = crypto.randomBytes(32);
     const message = 'é'.repeat(size) + '{"op":"press"}';
     assert.equal(hmacSha256Hex(key, message), crypto.createHmac('sha256', key).update(message).digest('hex'));
+  }
+});
+
+// Raw request, for targets an http client would refuse to send.
+function rawRequest(port, text) {
+  return new Promise((resolve) => {
+    const socket = net.connect(port, HOST, () => socket.write(text));
+    let reply = '';
+    socket.on('data', (chunk) => (reply += chunk));
+    socket.on('close', () => resolve(reply));
+    socket.on('error', () => resolve(reply));
+    setTimeout(() => socket.destroy(), 1000);
+  });
+}
+
+test('odd request targets are refused without crashing the server', async () => {
+  const { server, port, key } = await startServer();
+  try {
+    for (const target of ['//[', '//evil.example/', '*']) {
+      const reply = await rawRequest(port, `GET ${target} HTTP/1.1\r\nHost: ${HOST}:${port}\r\nConnection: close\r\n\r\n`);
+      assert.ok(!reply.startsWith('HTTP/1.1 200'), target);
+    }
+    assert.equal((await callApi(port, signed(key, { op: 'hello' }))).status, 200);
+  } finally {
+    server.stop();
+  }
+});
+
+test('without a valid key nobody is paired, even with an empty-key signature', async () => {
+  const { server, port } = await startServer({ key: () => '' });
+  try {
+    const body = JSON.stringify({ ts: Date.now(), nonce: 'n'.repeat(24), op: 'press', index: 0 });
+    const signature = crypto.createHmac('sha256', Buffer.alloc(0)).update(body).digest('hex');
+    assert.equal((await callApi(port, { body, signature })).json.error, 'unpaired');
+  } finally {
+    server.stop();
+  }
+});
+
+test('phones are only woken up when what they show changed', async () => {
+  let label = 'Live';
+  let builds = 0;
+  const { server, port, key } = await startServer({
+    state: () => {
+      builds += 1;
+      return { buttons: [{ label }], pageCount: 1 };
+    },
+  });
+  try {
+    const { version } = (await callApi(port, signed(key, { op: 'hello' }))).json;
+    server.changed(); // same state: nothing to send
+    const waiting = callApi(port, signed(key, { op: 'wait', since: version }));
+    await new Promise((r) => setTimeout(r, 30));
+    label = 'Pause';
+    server.changed();
+    const next = (await waiting).json;
+    assert.equal(next.version, version + 1);
+    assert.equal(next.buttons[0].label, 'Pause');
+    assert.equal(builds, 3); // hello, the unchanged check, the change: not once per waiting phone
+  } finally {
+    server.stop();
+  }
+});
+
+test('error messages sent to a phone keep file names but not the folders of the PC', () => {
+  assert.equal(hidePaths('spawn C:\\Users\\Thomas Laspougeas\\Desktop\\jeu.exe ENOENT'), 'spawn jeu.exe ENOENT');
+  assert.equal(hidePaths('Fichier introuvable : « D:\\Sons\\boom.mp3 »'), 'Fichier introuvable : « boom.mp3 »');
+  assert.equal(hidePaths('Lecture de \\\\nas\\partage\\a.wav impossible'), 'Lecture de a.wav impossible');
+  assert.equal(hidePaths('OBS non connecté'), 'OBS non connecté');
+  assert.equal(hidePaths(undefined), undefined);
+});
+
+test('once the allowed phones are paired, another device is refused even with the key', async () => {
+  const allowed = [];
+  const { server, port, key } = await startServer({
+    allowDevice: (id) => allowed.includes(id) || (allowed.length < 1 && allowed.push(id) > 0),
+  });
+  try {
+    assert.equal((await callApi(port, signed(key, { op: 'hello' }))).status, 200);
+    const other = await callApi(port, signed(key, { op: 'press', index: 0 }, 'phone-two-0123456789'));
+    assert.equal(other.status, 403);
+    assert.equal(other.json.error, 'full');
+    // The first phone keeps working; a request without a device id is refused.
+    assert.equal((await callApi(port, signed(key, { op: 'hello' }))).status, 200);
+    assert.equal((await callApi(port, signed(key, { op: 'hello' }, ''))).status, 400);
+    assert.equal(server.phones(), 1);
+  } finally {
+    server.stop();
   }
 });

@@ -1,8 +1,8 @@
 const { EventEmitter } = require('events');
 const { OBSWebSocket } = require('obs-websocket-js');
 const { t } = require('./i18n');
+const { retryDelay } = require('./retry');
 
-const RETRY_MS = 5000;
 // obs-websocket close code for a missing or wrong password: retrying cannot succeed until settings change.
 const AUTH_FAILED = 4009;
 // obs-websocket vendor name of the Aitum Vertical plugin (second, vertical canvas for TikTok & co).
@@ -44,6 +44,8 @@ class ObsManager extends EventEmitter {
     this.ws = new OBSWebSocket();
     this.settings = null;
     this.retryTimer = null;
+    // Failed attempts in a row: the next one waits longer (see retry.js).
+    this.failures = 0;
     // Bumped by stop()/reconnect() so a connection attempt still in flight is ignored.
     this.generation = 0;
     this.flashTimers = new Map();
@@ -126,6 +128,7 @@ class ObsManager extends EventEmitter {
 
   setState(patch) {
     this.state = { ...this.state, ...patch };
+    if (this.state.status === 'connected') this.failures = 0;
     if (this.state.status !== 'connected') this.state = { ...this.state, ...OFFLINE_STATE };
     this.emit('state', this.state);
   }
@@ -266,9 +269,18 @@ class ObsManager extends EventEmitter {
     this.flashTimers.clear();
   }
 
+  // The user is about to use the deck (opened it, the editor, or pressed a key): if the software
+  // isn't connected, try now rather than at the next background attempt (up to 2 min away).
+  // Returns whether an attempt started.
+  wake() {
+    if (this.state.status !== 'disconnected' || this.state.authFailed || !this.settings?.url) return false;
+    this.connect();
+    return true;
+  }
+
   scheduleRetry() {
     clearTimeout(this.retryTimer);
-    this.retryTimer = setTimeout(() => this.connect(), RETRY_MS);
+    this.retryTimer = setTimeout(() => this.connect(), retryDelay(this.failures++));
   }
 
   call(request, data) {

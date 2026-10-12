@@ -309,5 +309,11 @@
   "phone.pairTitle": "Teléfono no emparejado",
   "phone.pairHint": "En el PC, abre VirtualDeck › Ajustes › Teléfono, muestra el código QR y escanéalo.",
   "phone.offline": "PC inaccesible, reintentando…",
-  "phone.blocked": "Demasiados intentos rechazados: inténtalo de nuevo en 10 minutos."
+  "phone.blocked": "Demasiados intentos rechazados: inténtalo de nuevo en 10 minutos.",
+  "phone.maxPhones": "Teléfonos permitidos",
+  "phone.maxPhonesHint": "Plazas ocupadas: {count} de {max}. Los primeros dispositivos que escanean el código QR las ocupan; los siguientes son rechazados. «Nuevo código QR» libera las plazas.",
+  "phone.maxPhonesNone": "Cualquier dispositivo que escanee el código QR puede usar el deck.",
+  "phone.unlimited": "Sin límite",
+  "phone.fullTitle": "Límite de teléfonos alcanzado",
+  "phone.fullHint": "Este deck ya acepta el número máximo de teléfonos. En el PC, en Ajustes › Teléfono, aumenta el límite o crea un nuevo código QR."
 }
