@@ -1399,3 +1399,15 @@ input[type='range']:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.18) padding-box;
 }
+
+/* "Open" keys: button taking the program's icon as the key's picture. */
+.app-icon .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.app-icon .glyph {
+  width: 14px;
+  height: 14px;
+}

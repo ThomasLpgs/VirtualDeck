@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('api', {
   openEditor: (buttonIndex) => ipcRenderer.send('editor:open', buttonIndex),
   pauseHotkey: (paused) => ipcRenderer.send('hotkey:pause', paused),
   pickFile: (kind) => ipcRenderer.invoke('dialog:pick', kind),
+  programIcon: (target) => ipcRenderer.invoke('icon:fromProgram', target),
   listIcons: () => ipcRenderer.invoke('icons:list'),
   streamState: () => ipcRenderer.invoke('stream:state'),
   streamReconnect: () => ipcRenderer.invoke('stream:reconnect'),

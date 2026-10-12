@@ -83,7 +83,7 @@ Dans l'onglet **Boutons**, clique sur une case puis choisis :
 | **Enregistrer** | Démarre ou arrête l'enregistrement, avec le chrono sur le bouton. |
 | **Stream** | Démarre ou arrête le live, avec le chrono sur le bouton. |
 | **Son** | Joue un fichier audio, ou le coupe s'il est en cours. |
-| **Ouvrir** | Lance un programme, un fichier ou un lien. |
+| **Ouvrir** | Lance un programme, un fichier ou un lien. **Utiliser l'icône de l'application** met l'icône du programme (Spotify, OBS…) sur le bouton. |
 | **Page** | Va à la page suivante, précédente ou à une page précise, sans fermer le deck. |
 | **Multi** | Enchaîne plusieurs de ces actions dans l'ordre, avec une attente possible avant chacune. Si une étape échoue, les suivantes s'exécutent quand même. |
 

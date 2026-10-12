@@ -315,5 +315,7 @@
   "phone.maxPhonesNone": "Cualquier dispositivo que escanee el código QR puede usar el deck.",
   "phone.unlimited": "Sin límite",
   "phone.fullTitle": "Límite de teléfonos alcanzado",
-  "phone.fullHint": "Este deck ya acepta el número máximo de teléfonos. En el PC, en Ajustes › Teléfono, aumenta el límite o crea un nuevo código QR."
+  "phone.fullHint": "Este deck ya acepta el número máximo de teléfonos. En el PC, en Ajustes › Teléfono, aumenta el límite o crea un nuevo código QR.",
+  "field.appIcon": "Usar el icono de la aplicación",
+  "field.appIconNone": "No se encontró ningún icono: elige el programa (.exe) o su acceso directo con Examinar…"
 }

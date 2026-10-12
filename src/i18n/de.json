@@ -315,5 +315,7 @@
   "phone.maxPhonesNone": "Jedes Gerät, das den QR-Code scannt, kann das Deck nutzen.",
   "phone.unlimited": "Unbegrenzt",
   "phone.fullTitle": "Handy-Limit erreicht",
-  "phone.fullHint": "Dieses Deck akzeptiert bereits die maximale Anzahl an Handys. Erhöhe auf dem PC unter Einstellungen › Handy das Limit oder erstelle einen neuen QR-Code."
+  "phone.fullHint": "Dieses Deck akzeptiert bereits die maximale Anzahl an Handys. Erhöhe auf dem PC unter Einstellungen › Handy das Limit oder erstelle einen neuen QR-Code.",
+  "field.appIcon": "Symbol der App verwenden",
+  "field.appIconNone": "Kein Symbol gefunden: Wähle das Programm (.exe) oder seine Verknüpfung mit Durchsuchen…"
 }

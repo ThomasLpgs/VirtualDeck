@@ -316,5 +316,7 @@
   "phone.maxPhonesNone": "Every device that scans the QR code can use the deck.",
   "phone.unlimited": "No limit",
   "phone.fullTitle": "Phone limit reached",
-  "phone.fullHint": "This deck already accepts the maximum number of phones. On the PC, in Settings › Phone, raise the limit or create a new QR code."
+  "phone.fullHint": "This deck already accepts the maximum number of phones. On the PC, in Settings › Phone, raise the limit or create a new QR code.",
+  "field.appIcon": "Use the app's icon",
+  "field.appIconNone": "No icon found: pick the program (.exe) or its shortcut with Browse…"
 }
