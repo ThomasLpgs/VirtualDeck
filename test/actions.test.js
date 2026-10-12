@@ -320,6 +320,18 @@ test.describe('other keys', () => {
     t.mock.method(electron.shell, 'openPath', async () => 'File not found');
     await assert.rejects(run({ type: 'open', target: 'C:\\missing.exe' }, null), /File not found/);
   });
+
+  test('Hue keys go to the bridge, without waiting for OBS', async () => {
+    const sent = [];
+    const action = { type: 'hue', light: 'id', lightKind: 'room', mode: 'toggle' };
+    await run(action, null, { hue: async (a) => sent.push(a) });
+    assert.deepEqual(sent, [action]);
+    assert.equal(needsStream(action), false);
+    const offline = async () => {
+      throw new Error('The Hue bridge does not answer.');
+    };
+    await assert.rejects(run(action, null, { hue: offline }), /does not answer/);
+  });
 });
 
 test.describe('multi-action keys', () => {

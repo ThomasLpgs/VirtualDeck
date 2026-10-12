@@ -42,6 +42,11 @@ const ACTIONS = [
   { type: 'obs-stream', icon: 'radio', defaults: {} },
   { type: 'sound', icon: 'volume-2', defaults: { file: '', volume: 1 } },
   { type: 'open', icon: 'external-link', defaults: { target: '' } },
+  {
+    type: 'hue',
+    icon: 'lightbulb',
+    defaults: { mode: 'toggle', light: '', lightKind: '', lightName: '', scene: '', sceneName: '', brightness: '', color: '' },
+  },
   { type: 'page', icon: 'files', defaults: { page: 'next' } },
   { type: 'multi', icon: 'list-ordered', defaults: { steps: [] } },
 ];
@@ -53,6 +58,23 @@ const SOURCE_MODES = ['flash', 'toggle', 'show', 'hide'];
 // Canvases a stream / record / clip key can act on (action.target).
 const OUTPUT_TARGETS = ['horizontal', 'vertical', 'both'];
 const MUTE_MODES = ['toggle', 'mute', 'unmute'];
+const HUE_MODES = ['toggle', 'on', 'off', 'scene'];
+const HUE_BRIGHTNESS = [10, 25, 50, 75, 100];
+// Colours a Hue key can set: the whites are colour temperatures (saved by name), the others RGB.
+const HUE_WHITES = ['warm', 'neutral', 'cool'];
+const HUE_COLORS = [
+  ['warm', '#ffc47e'],
+  ['neutral', '#fff2df'],
+  ['cool', '#dde8ff'],
+  ['red', '#ff0000'],
+  ['orange', '#ff7a00'],
+  ['amber', '#ffc400'],
+  ['green', '#00e05a'],
+  ['teal', '#00d8d0'],
+  ['blue', '#1f4dff'],
+  ['violet', '#8a2bff'],
+  ['pink', '#ff2fa8'],
+];
 
 // Connection form per streaming software: which config field holds the secret.
 const SOFTWARE = {
@@ -172,6 +194,7 @@ function showView(name) {
   document.querySelectorAll('.tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.view === name));
   document.querySelectorAll('.view').forEach((v) => (v.hidden = v.id !== `view-${name}`));
   watchPhone(name === 'settings');
+  if (name === 'settings') refreshHueSettings();
   // Survives the page reload that follows a language change.
   sessionStorage.setItem('view', name);
 }
@@ -941,6 +964,10 @@ function fillActionFields(container, action, update, rerender) {
       break;
     }
 
+    case 'hue':
+      fillHueFields(container, action, update, rerender);
+      break;
+
     case 'page': {
       const pages = Array.from({ length: config.pageCount }, (_, p) => [String(p + 1), pageTitle(config, p)]);
       container.append(
@@ -1224,12 +1251,18 @@ async function importConfig() {
 
 // ---------- Updates ----------
 
+// update: { version, oneClick, progress } from main.js, or null.
 function renderUpdate(update) {
   const pill = $('update-pill');
   pill.hidden = !update;
   if (!update) return;
-  $('update-pill-text').textContent = t('update.pill', { version: update.version });
-  pill.title = t('update.pillTitle');
+  const { version, oneClick, progress } = update;
+  const downloading = progress !== null;
+  pill.disabled = downloading;
+  $('update-pill-text').textContent = downloading
+    ? t('update.downloading', { percent: progress })
+    : t(oneClick ? 'update.install' : 'update.pill', { version });
+  pill.title = downloading ? '' : t(oneClick ? 'update.installTitle' : 'update.pillTitle');
 }
 
 // ---------- Wiring ----------
@@ -1242,7 +1275,7 @@ function bindStaticFields() {
   document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => showView(tab.dataset.view)));
   $('stream-pill').addEventListener('click', () => showView('connection'));
   $('update-glyph').replaceWith(createGlyph('download'));
-  $('update-pill').addEventListener('click', () => api.openUpdate());
+  $('update-pill').addEventListener('click', () => api.installUpdate());
 
   document.querySelectorAll('.stepper').forEach((stepper) => {
     stepper.querySelectorAll('button').forEach((b) =>
@@ -1367,6 +1400,244 @@ function renderDeckScale() {
   $('deck-scale-reset').disabled = percent === 100;
 }
 
+// ---------- Philips Hue ----------
+
+// Lights, rooms and scenes of the paired bridge ({ targets, scenes } or { error }), loaded the first
+// time a Hue key is shown.
+let hueLists = null;
+let hueListsLoading = null;
+
+function loadHueLists() {
+  hueListsLoading ??= api.hueLights().then((lists) => {
+    hueLists = lists;
+    hueListsLoading = null;
+  });
+  return hueListsLoading;
+}
+
+function hueTargetLabel(target) {
+  if (target.kind === 'all') return t('hue.all');
+  if (target.kind === 'room' || target.kind === 'zone') return t(`hue.${target.kind}`, { name: target.name });
+  return target.name;
+}
+
+// A choice list that still shows a light or scene the bridge no longer has (or couldn't list).
+function hueOptions(options, value, savedName, pickText) {
+  if (!value) return [['', pickText], ...options];
+  if (options.some(([id]) => id === value)) return options;
+  return [[value, t('hue.missing', { name: savedName || '?' })], ...options];
+}
+
+function fillHueFields(container, action, update, rerender) {
+  if (!config.hue?.paired) {
+    container.append(
+      el(
+        'div',
+        { className: 'callout' },
+        createGlyph('lightbulb-off'),
+        el('span', { textContent: t('hue.notPairedCallout') }),
+        button(t('hue.openSettings'), () => {
+          showView('settings');
+          $('hue-card').scrollIntoView({ block: 'center' });
+        }),
+      ),
+    );
+    return;
+  }
+  if (!hueLists) {
+    container.append(el('p', { className: 'muted', textContent: t('hue.loading') }));
+    loadHueLists().then(rerender);
+    return;
+  }
+  if (hueLists.error) container.append(el('p', { className: 'muted warn', textContent: hueLists.error }));
+  const targets = hueLists.targets || [];
+  const mode = action.mode || 'toggle';
+  container.append(
+    field(
+      t('field.behavior'),
+      segmented(
+        HUE_MODES.map((value) => [value, t(`hueMode.${value}`)]),
+        mode,
+        (value) => {
+          update({ mode: value });
+          rerender();
+        },
+      ),
+    ),
+  );
+
+  if (mode === 'scene') {
+    // Scenes belong to a room or zone: named after it, as in the Hue app.
+    const areaName = (area) => targets.find((target) => target.area === area)?.name;
+    const scenes = (hueLists.scenes || []).map((scene) => [
+      scene.id,
+      areaName(scene.area) ? `${scene.name} · ${areaName(scene.area)}` : scene.name,
+    ]);
+    const options = hueOptions(scenes, action.scene, action.sceneName, t('hue.pickScene'));
+    container.append(
+      field(
+        t('field.hueScene'),
+        themedSelect(options, action.scene || '', (id) => update({ scene: id, sceneName: options.find(([v]) => v === id)?.[1] || '' })),
+      ),
+    );
+  } else {
+    const lights = targets.map((target) => [target.id, hueTargetLabel(target)]);
+    const options = hueOptions(lights, action.light, action.lightName, t('hue.pickLight'));
+    container.append(
+      field(
+        t('field.hueLight'),
+        themedSelect(options, action.light || '', (id) => {
+          const target = targets.find((item) => item.id === id);
+          if (target) update({ light: id, lightKind: target.kind, lightName: hueTargetLabel(target) });
+        }),
+      ),
+    );
+  }
+
+  if (mode !== 'off') {
+    const levels = [['', t('hue.keep')], ...HUE_BRIGHTNESS.map((n) => [String(n), `${n} %`])];
+    container.append(
+      field(
+        t('field.hueBrightness'),
+        themedSelect(levels, String(action.brightness || ''), (value) => update({ brightness: value ? Number(value) : '' })),
+      ),
+    );
+  }
+  if (mode === 'on' || mode === 'toggle') container.append(field(t('field.hueColor'), hueSwatches(action, update)));
+  if (mode === 'toggle') container.append(el('p', { className: 'muted', textContent: t('hue.toggleHint') }));
+}
+
+// Colour of a Hue key: unchanged, a white, a preset colour or any colour.
+function hueSwatches(action, update) {
+  const wrap = el('div', { className: 'swatches' });
+  const pick = (value) => {
+    update({ color: value });
+    render();
+  };
+  function render() {
+    const color = (action.color || '').toLowerCase();
+    const none = el('button', { type: 'button', className: 'swatch none', title: t('hue.keepColor') }, createGlyph('ban'));
+    none.classList.toggle('selected', !color);
+    none.addEventListener('click', () => pick(''));
+    const presets = HUE_COLORS.map(([name, shown]) => {
+      const white = HUE_WHITES.includes(name);
+      const value = white ? name : shown;
+      const swatch = el('button', { type: 'button', className: 'swatch', title: t(white ? `hue.white.${name}` : `color.${name}`) });
+      swatch.style.setProperty('--swatch', shown);
+      swatch.classList.toggle('selected', color === value);
+      swatch.addEventListener('click', () => pick(value));
+      return swatch;
+    });
+    const isCustom = color.startsWith('#') && !HUE_COLORS.some(([, shown]) => shown === color);
+    const picker = el('input', { type: 'color', value: isCustom ? color : '#ff7a00', title: t('color.custom') });
+    const custom = el('label', { className: 'swatch custom', title: t('color.custom') }, picker);
+    if (isCustom) {
+      custom.classList.add('selected');
+      custom.style.setProperty('--swatch', color);
+    }
+    picker.addEventListener('input', () => update({ color: picker.value }));
+    picker.addEventListener('change', render);
+    wrap.replaceChildren(none, ...presets, custom);
+  }
+  render();
+  return wrap;
+}
+
+// Settings › Philips Hue. Pairing: find the bridge, then press its button within 30 seconds.
+const HUE_PAIR_SECONDS = 30;
+const HUE_PAIR_RETRY_MS = 2000;
+let hueStatus = { paired: false, name: '', ip: '' };
+// Bridges found by the last search: null before any, 'searching' during one.
+let hueFound = null;
+let hueManualIp = '';
+let huePairing = false;
+
+function settingRow(title, hint, ...controls) {
+  const text = el('div', { className: 'setting-text' }, el('p', { className: 'setting-title', textContent: title }));
+  if (hint) text.append(el('p', { className: 'muted', textContent: hint }));
+  return el('div', { className: 'setting' }, text, ...controls);
+}
+
+function renderHueSettings(message = '', warn = false) {
+  const rows = [];
+  if (hueStatus.paired) {
+    rows.push(
+      settingRow(
+        t('hue.paired', { name: hueStatus.name }),
+        t('hue.pairedHint', { ip: hueStatus.ip }),
+        button(t('hue.forget'), async () => {
+          hueStatus = await api.hueForget();
+          hueLists = null;
+          hueFound = null;
+          renderHueSettings();
+        }),
+      ),
+    );
+  } else {
+    const searching = hueFound === 'searching';
+    const search = button(t(searching ? 'hue.searching' : 'hue.search'), searchHue);
+    search.disabled = searching || huePairing;
+    rows.push(settingRow(t('hue.bridge'), t('hue.bridgeHint'), search));
+    if (Array.isArray(hueFound)) {
+      for (const bridge of hueFound) {
+        const pair = button(t('hue.pair'), () => pairHue(bridge.ip));
+        pair.disabled = huePairing;
+        rows.push(settingRow(bridge.name, bridge.ip, pair));
+      }
+      // Not found (or another one): its address, from the Hue app.
+      const ip = el('input', { className: 'hue-ip', value: hueManualIp, placeholder: '192.168.1.20', spellcheck: false });
+      ip.addEventListener('input', () => (hueManualIp = ip.value.trim()));
+      const pair = button(t('hue.pair'), () => pairHue(hueManualIp));
+      pair.disabled = huePairing;
+      rows.push(settingRow(t('hue.manual'), t(hueFound.length ? 'hue.manualHint' : 'hue.noneFound'), inline(ip, pair)));
+    }
+  }
+  if (message) rows.push(el('p', { className: `hue-status${warn ? ' warn' : ''}`, textContent: message }));
+  $('hue-card').replaceChildren(...rows);
+}
+
+async function refreshHueSettings() {
+  if (huePairing || hueFound === 'searching') return;
+  hueStatus = await api.hueStatus();
+  renderHueSettings();
+}
+
+async function searchHue() {
+  hueFound = 'searching';
+  renderHueSettings();
+  hueFound = await api.hueDiscover();
+  renderHueSettings();
+}
+
+// Asks the bridge again every 2 seconds while the user goes to press its button.
+async function pairHue(ip) {
+  if (huePairing || !ip) return;
+  huePairing = true;
+  const deadline = Date.now() + HUE_PAIR_SECONDS * 1000;
+  let message = '';
+  let warn = true;
+  for (;;) {
+    const result = await api.huePair(ip);
+    if (result.ok) {
+      hueStatus = result.status;
+      hueFound = null;
+      hueLists = null;
+      message = t('hue.pairedNow');
+      warn = false;
+      break;
+    }
+    const left = Math.ceil((deadline - Date.now()) / 1000);
+    if (result.code !== 'linkButton' || left <= 0) {
+      message = result.code === 'linkButton' ? t('hue.timeout') : result.error;
+      break;
+    }
+    renderHueSettings(t('hue.pressButton', { seconds: left }));
+    await new Promise((resolve) => setTimeout(resolve, HUE_PAIR_RETRY_MS));
+  }
+  huePairing = false;
+  renderHueSettings(message, warn);
+}
+
 // ---------- Phone ----------
 
 // The QR code gives access to the deck: shown on demand only, and hidden again after a while
@@ -1482,6 +1753,12 @@ function renderSettings() {
   api.onConfig((next) => {
     config.deckPosition = next.deckPosition;
     config.deckScale = next.deckScale;
+    // Pairing or unlinking the Hue bridge (Settings) changes what Hue keys can offer.
+    if (next.hue?.paired !== config.hue?.paired) {
+      config.hue = next.hue;
+      hueLists = null;
+      if (current().action.type === 'hue' || current().action.type === 'multi') renderActionFields();
+    }
     renderDeckPosition();
     renderDeckScale();
   });

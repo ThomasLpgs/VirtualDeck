@@ -29,9 +29,10 @@
 - **Format vertical (TikTok, Shorts…)** avec le plugin [Aitum Vertical](https://github.com/Aitum/obs-vertical-canvas) : scènes, sources, live, enregistrement et clips en horizontal, en vertical ou les deux en même temps.
 - **Sons** (mp3, wav, ogg…) avec réglage du volume ; un second clic coupe le son.
 - **Ouvrir** un programme, un fichier ou un lien (`https://`, `spotify:`, `steam://`, `discord://`…).
+- **Lumières Philips Hue** : allume, éteins, change la couleur ou lance une scène de tes lampes, en passant par le pont Hue de la maison (sans compte Hue).
 - **Personnalisation** : plus de 2 000 icônes, emojis ou tes propres images, 10 couleurs ou une couleur libre, grille jusqu'à 8 × 6. Le deck se déplace et se redimensionne (60 % à 160 %).
 - **Export / import** de toute la configuration (sons et images compris), pour changer de PC ou partager ton deck.
-- **Mises à jour** : une pastille dans l'éditeur prévient quand une nouvelle version est disponible.
+- **Mises à jour en un clic** : une pastille dans l'éditeur prévient quand une nouvelle version sort ; un clic la télécharge, l'installe et relance VirtualDeck.
 - **6 langues** : français, anglais, espagnol, allemand, italien, portugais (ou automatique selon Windows).
 - Tourne discrètement dans la zone de notification, peut se lancer au démarrage de Windows.
 
@@ -56,7 +57,7 @@ Pas besoin de Node.js ni de npm : l'installateur contient tout.
 2. Lance-le et suis l'installateur. Windows SmartScreen peut afficher « Windows a protégé votre ordinateur » car l'app n'est pas signée par un éditeur reconnu : clique sur **Informations complémentaires** puis **Exécuter quand même**.
 3. VirtualDeck s'ouvre sur l'éditeur. Ensuite, il vit dans la zone de notification (à côté de l'horloge).
 
-Pour mettre à jour, il suffit de lancer le nouvel installateur : tes boutons sont conservés.
+Pour mettre à jour, clique sur **Installer la mise à jour** en haut de l'éditeur (ou dans le menu de l'icône près de l'horloge) : VirtualDeck télécharge la nouvelle version, vérifie que le fichier est intact, l'installe et se relance. Tu peux aussi lancer le nouvel installateur toi-même. Dans les deux cas, tes boutons, tes réglages et l'épingle de la barre des tâches sont conservés.
 
 ## Premiers pas
 
@@ -84,6 +85,7 @@ Dans l'onglet **Boutons**, clique sur une case puis choisis :
 | **Stream** | Démarre ou arrête le live, avec le chrono sur le bouton. |
 | **Son** | Joue un fichier audio, ou le coupe s'il est en cours. |
 | **Ouvrir** | Lance un programme, un fichier ou un lien. **Utiliser l'icône de l'application** met l'icône du programme (Spotify, OBS…) sur le bouton. |
+| **Lumières Hue** | Allume, éteint ou bascule une lampe, une pièce, une zone ou toutes les lampes, avec une luminosité et une couleur au choix ; ou lance une scène Hue. Le pont s'associe dans **Réglages › Lumières Philips Hue**. |
 | **Page** | Va à la page suivante, précédente ou à une page précise, sans fermer le deck. |
 | **Multi** | Enchaîne plusieurs de ces actions dans l'ordre, avec une attente possible avant chacune. Si une étape échoue, les suivantes s'exécutent quand même. |
 
@@ -111,7 +113,15 @@ Les pages se changent avec les flèches ou en glissant le doigt. Les badges LIVE
 
 Sécurité : le serveur n'existe que pendant que l'option est activée et n'écoute que sur le réseau local (rien sur la box, rien sur internet). Chaque appui est signé avec une clé secrète transmise par le QR code : un appareil du wifi qui ne l'a pas scanné ne peut rien déclencher, même en rejouant une requête. **Nouveau QR code** déconnecte tous les téléphones. Évite de montrer le QR code en stream : même s'il ne marche que depuis ton wifi, autant le garder pour toi.
 
-### 5. Format vertical avec Aitum Vertical (optionnel)
+### 5. Lumières Philips Hue (optionnel)
+
+1. **Réglages › Lumières Philips Hue** : **Rechercher le pont**, puis **Associer**. Si le pont n'apparaît pas, saisis son adresse IP (appli Hue › Paramètres › Ponts Hue).
+2. Appuie sur le gros bouton rond au centre du pont dans les 30 secondes.
+3. Crée un bouton **Lumières Hue** et choisis la lampe ou la pièce, ou une scène.
+
+Tout passe par le réseau de la maison : pas de compte Hue, rien à ouvrir sur la box. La liaison avec le pont est chiffrée et VirtualDeck vérifie à chaque fois que c'est bien ton pont qui répond. Si la box donne une nouvelle adresse au pont, VirtualDeck le retrouve tout seul.
+
+### 6. Format vertical avec Aitum Vertical (optionnel)
 
 Si le plugin [Aitum Vertical](https://github.com/Aitum/obs-vertical-canvas) est installé dans OBS, VirtualDeck le détecte tout seul :
 

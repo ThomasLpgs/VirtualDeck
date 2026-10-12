@@ -19,8 +19,9 @@ const MAX_DECK_SCALE = 1.6;
 const DEFAULT_COLOR = '#8b8d98';
 const SOFTWARES = ['obs', 'streamlabs'];
 
-// Secret field of each settings section (streaming software, phone pairing key), stored encrypted on disk.
-const SECRETS = { obs: 'password', streamlabs: 'token', remote: 'key' };
+// Secret field of each settings section (streaming software, phone pairing key, Hue bridge key),
+// stored encrypted on disk.
+const SECRETS = { obs: 'password', streamlabs: 'token', remote: 'key', hue: 'key' };
 
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
 
@@ -63,6 +64,8 @@ function defaults() {
     // Phone as a deck (remote.js): off by default. port 0 = not chosen yet; key = pairing key;
     // maxPhones = how many devices may use it (0 = no limit); devices = ids of those that did.
     remote: { enabled: false, port: 0, key: '', maxPhones: 1, devices: [] },
+    // Paired Philips Hue bridge (hue.js): its address, id, name, certificate fingerprint and key.
+    hue: { ip: '', id: '', name: '', cert: '', key: '' },
     buttons: Array.from({ length: 6 }, defaultButton),
   };
 }
@@ -112,6 +115,15 @@ function normalize(raw) {
     0,
     cfg.remote.maxPhones || MAX_PHONES,
   );
+  const hue = raw?.hue && typeof raw.hue === 'object' ? raw.hue : {};
+  const matching = (value, pattern) => (typeof value === 'string' && pattern.test(value) ? value : '');
+  cfg.hue = {
+    ip: matching(hue.ip, /^\d{1,3}(\.\d{1,3}){3}$/),
+    id: matching(hue.id, /^[0-9a-f]{16}$/),
+    name: typeof hue.name === 'string' ? hue.name.slice(0, 60) : '',
+    cert: matching(hue.cert, /^[0-9A-F]{2}(:[0-9A-F]{2}){31}$/),
+    key: matching(hue.key, /^[A-Za-z0-9_-]{20,64}$/),
+  };
   cfg.launchAtLogin = cfg.launchAtLogin === true;
 
   const buttons = Array.isArray(raw?.buttons) ? raw.buttons : [];
