@@ -11,6 +11,7 @@ const {
   screen,
   shell,
 } = require('electron');
+const { spawn } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
@@ -23,9 +24,10 @@ const { ObsManager } = require('./obs');
 const { StreamlabsManager } = require('./streamlabs');
 const { runAction, needsStream } = require('./actions');
 const backup = require('./backup');
-const { checkForUpdate } = require('./updates');
+const { checkForUpdate, downloadInstaller } = require('./updates');
 const remote = require('./remote');
 const { saveAppIcon } = require('./app-icon');
+const hue = require('./hue');
 
 const { t } = i18n;
 
@@ -92,8 +94,10 @@ let liveScale = null;
 let resizeStart = null;
 let editorWin = null;
 let tray = null;
-// { version, url } of a newer GitHub release, once one has been found.
+// { version, url, installer } of a newer GitHub release, once one has been found.
 let update = null;
+// Download progress (0-100) while the update is being downloaded, null otherwise.
+let updateProgress = null;
 const streams = { obs: new ObsManager(), streamlabs: new StreamlabsManager() };
 const activeStream = () => streams[cfg.software];
 
@@ -111,6 +115,8 @@ function forRenderer(c) {
   return {
     ...c,
     remote: { enabled: c.remote.enabled },
+    // The Hue bridge key and certificate stay here too.
+    hue: { paired: Boolean(c.hue.key), name: c.hue.name },
     buttons: c.buttons.map((b) => ({ ...b, imageUrl: fileUrl(b.image) })),
   };
 }
@@ -138,16 +144,55 @@ function notify(body) {
 
 // ---------- Updates ----------
 
+// Where the installer is downloaded; removed again at the next start.
+const updateDir = () => path.join(app.getPath('temp'), 'VirtualDeck-update');
+// One click installs it, when the release has a checked installer. Not from `npm start`: that
+// would install the released app, not update the code being run.
+const canInstallUpdate = () => Boolean(app.isPackaged && update?.installer);
+
+// What the editor shows: no addresses, just the version and what a click does.
+function updateInfo() {
+  return update && { version: update.version, oneClick: canInstallUpdate(), progress: updateProgress };
+}
+
 function openUpdatePage() {
   if (update) shell.openExternal(update.url);
 }
 
 async function checkUpdates() {
   const found = await checkForUpdate(app.getVersion());
-  if (!found) return;
+  if (!found || updateProgress !== null) return;
   update = found;
   updateTray();
-  broadcast('update:available', update);
+  broadcast('update:available', updateInfo());
+}
+
+// Downloads the new installer, checks it, then runs it silently: it replaces the app in its folder
+// (keeping the keys, settings, shortcuts and taskbar pin) and starts it again.
+async function installUpdate() {
+  if (!canInstallUpdate()) return openUpdatePage();
+  if (updateProgress !== null) return;
+  updateProgress = 0;
+  updateTray();
+  broadcast('update:available', updateInfo());
+  try {
+    const file = await downloadInstaller(update.installer, updateDir(), (fraction) => {
+      const percent = Math.floor(fraction * 100);
+      if (percent === updateProgress) return;
+      updateProgress = percent;
+      broadcast('update:available', updateInfo());
+    });
+    const installer = spawn(file, ['/S', '--updated', '--force-run'], { detached: true, stdio: 'ignore' });
+    await new Promise((resolve, reject) => installer.once('spawn', resolve).once('error', reject));
+    installer.unref();
+    // The installer waits for the app to close before replacing it.
+    app.quit();
+  } catch {
+    updateProgress = null;
+    updateTray();
+    broadcast('update:available', updateInfo());
+    notify(t('update.failed'));
+  }
 }
 
 function applyLanguage() {
@@ -532,6 +577,9 @@ function wakeStream(action) {
   });
 }
 
+// What the actions need from here: the streaming software, the sound player, the Hue bridge.
+const keyContext = () => ({ stream: activeStream(), playSound, hue: runHue });
+
 // Runs a key, from the deck, from its own hotkey or from a phone. When the deck isn't on screen
 // (closed after the action, or never opened), errors and confirmations are shown as notifications.
 // A phone gets the result instead, and turns its own pages (result.page).
@@ -541,7 +589,7 @@ async function runKey(index, { fromDeck = false, origin = null, fromPhone = fals
   if (fromPhone) {
     try {
       await wakeStream(button.action);
-      const result = await runAction(button.action, { stream: activeStream(), playSound });
+      const result = await runAction(button.action, keyContext());
       return { ok: true, warning: hidePaths(result?.warning), notice: hidePaths(result?.notice), page: result?.page };
     } catch (err) {
       return { ok: false, error: hidePaths(err.message) };
@@ -554,7 +602,7 @@ async function runKey(index, { fromDeck = false, origin = null, fromPhone = fals
   // After closing the deck: waiting for OBS must not keep it on screen.
   await wakeStream(button.action);
   try {
-    const result = await runAction(button.action, { stream: activeStream(), playSound });
+    const result = await runAction(button.action, keyContext());
     if (result?.page) {
       // From a hotkey (or after the deck closed), open the deck on that page.
       if (!deckWin.isVisible()) showDeck();
@@ -572,15 +620,20 @@ function updateTray() {
   tray.setToolTip(`${t('app.name')} (${cfg.hotkey})`);
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      ...(update
-        ? [{ label: t('update.tray', { version: update.version }), click: openUpdatePage }, { type: 'separator' }]
-        : []),
+      ...(update ? [updateTrayItem(), { type: 'separator' }] : []),
       { label: t('tray.open'), click: showDeck },
       { label: t('tray.configure'), click: () => openEditor() },
       { type: 'separator' },
       { label: t('tray.quit'), click: () => app.quit() },
     ]),
   );
+}
+
+function updateTrayItem() {
+  const { version } = update;
+  if (updateProgress !== null) return { label: t('update.trayDownloading', { version }), enabled: false };
+  if (canInstallUpdate()) return { label: t('update.trayInstall', { version }), click: installUpdate };
+  return { label: t('update.tray', { version }), click: openUpdatePage };
 }
 
 function createTray() {
@@ -624,6 +677,45 @@ function applyConfig(next) {
   phoneServer.changed();
   return hotkeyOk;
 }
+
+// ---------- Philips Hue (hue.js) ----------
+
+function saveHue(patch) {
+  const next = { ...cfg.hue, ...patch };
+  if (Object.keys(next).every((field) => next[field] === cfg.hue[field])) return;
+  cfg = config.save({ ...cfg, hue: next });
+  broadcast('config:changed', forRenderer(cfg));
+}
+
+// A HueError as a sentence for the user.
+function hueMessage(err) {
+  if (!(err instanceof hue.HueError)) return err.message;
+  return t(`hueError.${err.code}`, { detail: err.detail || err.code });
+}
+
+// Calls the bridge; when it doesn't answer, it may have a new address (given by the router):
+// it is looked for on the network by its id, and kept only with the same certificate.
+async function withBridge(call) {
+  try {
+    return await call(cfg.hue);
+  } catch (err) {
+    if (err.code !== 'unreachable' || !cfg.hue.id) throw err;
+    const moved = (await hue.discover()).find((b) => b.id === cfg.hue.id && b.cert === cfg.hue.cert && b.ip !== cfg.hue.ip);
+    if (!moved) throw err;
+    saveHue({ ip: moved.ip });
+    return call(cfg.hue);
+  }
+}
+
+async function runHue(action) {
+  try {
+    await withBridge((settings) => hue.runHue(action, settings));
+  } catch (err) {
+    throw new Error(hueMessage(err));
+  }
+}
+
+const hueStatus = () => ({ paired: Boolean(cfg.hue.key), name: cfg.hue.name, ip: cfg.hue.ip });
 
 // ---------- Phone as a deck (remote.js) ----------
 
@@ -787,7 +879,14 @@ function registerIpc() {
     try {
       // Position and size are set from the deck itself (see saveDeckPosition / saveDeckScale).
       // The phone settings change through remote:* only (the editor never sees the pairing key).
-      const hotkeyOk = applyConfig({ ...next, deckPosition: cfg.deckPosition, deckScale: cfg.deckScale, remote: cfg.remote });
+      // The Hue bridge changes through hue:* only (the editor never sees its key).
+      const hotkeyOk = applyConfig({
+        ...next,
+        deckPosition: cfg.deckPosition,
+        deckScale: cfg.deckScale,
+        remote: cfg.remote,
+        hue: cfg.hue,
+      });
       return { ok: true, hotkeyOk, failedKeyHotkeys };
     } catch (err) {
       return { ok: false, error: err.message };
@@ -958,8 +1057,32 @@ function registerIpc() {
     return remoteStatus();
   });
 
-  ipcMain.handle('update:get', () => update);
-  ipcMain.on('update:open', openUpdatePage);
+  ipcMain.handle('hue:status', () => hueStatus());
+  ipcMain.handle('hue:discover', async () => (await hue.discover()).map(({ ip, id, name }) => ({ ip, id, name })));
+  // One try: the editor asks again every few seconds while the user goes to press the bridge button.
+  ipcMain.handle('hue:pair', async (_e, ip) => {
+    try {
+      const paired = await hue.pair(String(ip || '').trim(), os.hostname());
+      saveHue(paired);
+      return { ok: true, status: hueStatus() };
+    } catch (err) {
+      return { ok: false, code: err.code || '', error: hueMessage(err) };
+    }
+  });
+  ipcMain.handle('hue:forget', () => {
+    saveHue({ ip: '', id: '', name: '', cert: '', key: '' });
+    return hueStatus();
+  });
+  ipcMain.handle('hue:lights', async () => {
+    try {
+      return await withBridge((settings) => hue.listLights(settings));
+    } catch (err) {
+      return { error: hueMessage(err) };
+    }
+  });
+
+  ipcMain.handle('update:get', () => updateInfo());
+  ipcMain.on('update:install', installUpdate);
 
   ipcMain.handle('stream:state', () => streamState());
   ipcMain.handle('stream:reconnect', () => activeStream().reconnect());
@@ -1009,7 +1132,11 @@ if (!app.requestSingleInstanceLock()) {
     activateStream();
 
     // A short delay keeps the check off the startup path (the app may start with Windows, before the network).
-    setTimeout(checkUpdates, 15000);
+    setTimeout(() => {
+      // The installer of the last update, once it has finished.
+      fs.rm(updateDir(), { recursive: true, force: true }, () => {});
+      checkUpdates();
+    }, 15000);
     setInterval(checkUpdates, UPDATE_CHECK_MS);
     syncRemote();
     // The PC can change network (other Wi-Fi, new address from the router): follow it.
@@ -1017,6 +1144,8 @@ if (!app.requestSingleInstanceLock()) {
 
     const hotkeyOk = registerHotkey();
     if (!hotkeyOk && !loaded.firstRun) notify(t('notify.hotkeyTaken', { hotkey: cfg.hotkey }));
+    // Started again by the installer of a one-click update.
+    if (process.argv.includes('--updated')) notify(t('update.done', { version: app.getVersion() }));
     // Opened by the user: show it, otherwise it looks like nothing happened (it lives in the tray).
     if (loaded.firstRun || !hotkeyOk || !process.argv.includes(LOGIN_ARG)) openEditor();
   });

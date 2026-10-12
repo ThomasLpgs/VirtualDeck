@@ -191,6 +191,15 @@ code {
   background: var(--accent-soft);
 }
 
+.hue-ip {
+  width: 150px;
+}
+
+.pill.update:disabled {
+  cursor: progress;
+  font-variant-numeric: tabular-nums;
+}
+
 .pill.update .glyph {
   width: 13px;
   height: 13px;
@@ -826,6 +835,19 @@ input[type='search']::-webkit-search-cancel-button {
   box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--swatch);
 }
 
+.swatch.none {
+  display: grid;
+  place-items: center;
+  --swatch: var(--line-strong);
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.swatch.none .glyph {
+  width: 14px;
+  height: 14px;
+}
+
 .swatch.custom {
   background: conic-gradient(#f2555a, #f2b33d, #3fcf8e, #2bc4c4, #4c8dff, #b06cff, #f062a8, #f2555a);
 }
@@ -1392,7 +1414,8 @@ input[type='range']:focus {
   margin-top: 8px;
 }
 
-.backup-status {
+.backup-status,
+.hue-status {
   margin: 0;
   padding: 12px 20px;
   border-top: 1px solid var(--line);
@@ -1400,7 +1423,8 @@ input[type='range']:focus {
   font-size: 12.5px;
 }
 
-.backup-status.warn {
+.backup-status.warn,
+.hue-status.warn {
   color: var(--warn);
 }
 

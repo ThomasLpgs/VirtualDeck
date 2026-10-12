@@ -131,3 +131,12 @@ test('phone settings are off by default and keep only a valid key', () => {
   assert.equal(normalize({ remote: { key: 'bad key' } }).remote.key, '');
   assert.equal(normalize({ remote: { port: 99999 } }).remote.port, 65535);
 });
+
+test('Hue bridge settings keep only well-formed values', () => {
+  const empty = { ip: '', id: '', name: '', cert: '', key: '' };
+  assert.deepEqual(normalize({}).hue, empty);
+  const cert = Array.from({ length: 32 }, () => 'AB').join(':');
+  const paired = { ip: '192.168.1.20', id: '001788fffe123456', name: 'Hue Bridge', cert, key: 'a'.repeat(40) };
+  assert.deepEqual(normalize({ hue: paired }).hue, paired);
+  assert.deepEqual(normalize({ hue: { ip: 'evil.example', id: 'x', name: 42, cert: 'AB', key: 'short' } }).hue, empty);
+});
