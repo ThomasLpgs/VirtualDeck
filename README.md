@@ -89,7 +89,7 @@ Dans l'onglet **Boutons**, clique sur une case puis choisis :
 
 En bas des réglages de chaque bouton, **Raccourci** lui donne une combinaison de touches qui le déclenche de n'importe où.
 
-Glisse-dépose les boutons pour les réorganiser, et ajoute des pages avec **+** au-dessus de l'aperçu, et donne-leur un nom dans le champ **Nom** sous l'aperçu. Tout est enregistré automatiquement.
+Glisse-dépose les boutons pour les réorganiser. Pour changer un bouton de page, dépose-le sur l'onglet de la page (il prend la première place libre), ou garde-le une demi-seconde au-dessus pour ouvrir la page et le poser où tu veux. Ajoute des pages avec **+** au-dessus de l'aperçu, et donne-leur un nom dans le champ **Nom** sous l'aperçu. Tout est enregistré automatiquement.
 
 ### 3. Utiliser le deck
 

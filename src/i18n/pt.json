@@ -40,7 +40,7 @@
   "grid.removeColumn": "Remover uma coluna",
   "grid.addRow": "Adicionar uma linha",
   "grid.removeRow": "Remover uma linha",
-  "grid.hint": "Clique em um botão para editá-lo · Arraste e solte para reordenar",
+  "grid.hint": "Clica num botão para o editar · Arrasta e larga para reorganizar, ou no separador de uma página para o mover para lá",
 
   "editor.buttonN": "Botão {n}",
   "editor.untitled": "Sem título",
@@ -317,5 +317,6 @@
   "phone.fullTitle": "Limite de telemóveis atingido",
   "phone.fullHint": "Este deck já aceita o número máximo de telemóveis. No PC, em Definições › Telemóvel, aumenta o limite ou cria um novo código QR.",
   "field.appIcon": "Usar o ícone da aplicação",
-  "field.appIconNone": "Nenhum ícone encontrado: escolhe o programa (.exe) ou o seu atalho com Procurar…"
+  "field.appIconNone": "Nenhum ícone encontrado: escolhe o programa (.exe) ou o seu atalho com Procurar…",
+  "page.full": "A página «{name}» já não tem lugares livres"
 }

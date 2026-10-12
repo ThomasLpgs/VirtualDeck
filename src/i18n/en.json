@@ -41,7 +41,7 @@
   "grid.removeColumn": "Remove a column",
   "grid.addRow": "Add a row",
   "grid.removeRow": "Remove a row",
-  "grid.hint": "Click a button to edit it · Drag and drop to reorder",
+  "grid.hint": "Click a button to edit it · Drag and drop to reorder, or onto a page tab to move it there",
 
   "editor.buttonN": "Button {n}",
   "editor.untitled": "Untitled",
@@ -318,5 +318,6 @@
   "phone.fullTitle": "Phone limit reached",
   "phone.fullHint": "This deck already accepts the maximum number of phones. On the PC, in Settings › Phone, raise the limit or create a new QR code.",
   "field.appIcon": "Use the app's icon",
-  "field.appIconNone": "No icon found: pick the program (.exe) or its shortcut with Browse…"
+  "field.appIconNone": "No icon found: pick the program (.exe) or its shortcut with Browse…",
+  "page.full": "Page \"{name}\" has no free spot left"
 }

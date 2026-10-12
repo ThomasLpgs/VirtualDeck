@@ -1,4 +1,4 @@
-/* global PAGE_SIZE, pageGrid, pageTitle, api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader, markKeys, countVerticalIssues, hasRunningTimer
+/* global PAGE_SIZE, pageGrid, pageTitle, isEmptyButton, api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader, markKeys, countVerticalIssues, hasRunningTimer
    -- api comes from preload.js, t/I18N/loadI18n from shared/i18n.js, the rest from shared/keys.js */
 const $ = (id) => document.getElementById(id);
 
@@ -217,6 +217,7 @@ function renderPageTabs() {
     const tab = el('button', { type: 'button', className: 'page-tab', textContent: name || String(p + 1), title: pageTitle(config, p) });
     tab.classList.toggle('selected', p === page);
     tab.addEventListener('click', () => select(p * PAGE_SIZE));
+    acceptKeyDrops(tab, p);
     tabs.push(tab);
   }
   if (config.pageCount < MAX_PAGES) {
@@ -236,6 +237,52 @@ function renderPageTabs() {
   // Not while typing in it: the saved name is trimmed, the field must keep the space just typed.
   if (document.activeElement !== $('page-name')) $('page-name').value = config.pageNames[page];
 }
+
+// A key dragged onto a page tab: held there a moment, the page opens (to drop it on a precise
+// spot); dropped on the tab, it goes to that page's first free spot.
+const TAB_OPEN_DELAY_MS = 600;
+let tabOpenTimer = null;
+
+function acceptKeyDrops(tab, p) {
+  tab.addEventListener('dragover', (e) => {
+    if (dragFrom === null || p === page) return;
+    e.preventDefault();
+    tab.classList.add('drop-target');
+    if (!tabOpenTimer) tabOpenTimer = setTimeout(() => ((tabOpenTimer = null), select(p * PAGE_SIZE)), TAB_OPEN_DELAY_MS);
+  });
+  tab.addEventListener('dragleave', () => {
+    tab.classList.remove('drop-target');
+    clearTimeout(tabOpenTimer);
+    tabOpenTimer = null;
+  });
+  tab.addEventListener('drop', (e) => {
+    e.preventDefault();
+    clearTimeout(tabOpenTimer);
+    tabOpenTimer = null;
+    moveToPage(dragFrom, p, tab);
+  });
+}
+
+function moveToPage(from, p, tab) {
+  const { cols, rows } = pageGrid(config, p);
+  const free = Array.from({ length: cols * rows }, (_, i) => p * PAGE_SIZE + i).find((i) => isEmptyButton(config.buttons[i]));
+  if (from === null || free === undefined) {
+    dragFrom = null;
+    tab.classList.remove('drop-target');
+    // No free spot: say so on the tab itself.
+    tab.classList.remove('refused');
+    void tab.offsetWidth;
+    tab.classList.add('refused');
+    tab.title = t('page.full', { name: pageTitle(config, p) });
+    return;
+  }
+  swap(from, free);
+}
+
+document.addEventListener('dragend', () => {
+  clearTimeout(tabOpenTimer);
+  tabOpenTimer = null;
+});
 
 // Pads the buttons so every page but the last is full (see PAGE_SIZE in config.js).
 function padPages() {
