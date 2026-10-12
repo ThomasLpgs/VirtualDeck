@@ -569,6 +569,25 @@ function segmented(options, value, onChange) {
 
 // ---------- Action fields ----------
 
+// "Open" keys: take the opened program's icon (Spotify, OBS…) as the key's picture, on request.
+function appIconField(target) {
+  const status = el('span', { className: 'muted' });
+  const take = button(t('field.appIcon'), async () => {
+    take.disabled = true;
+    status.textContent = '';
+    const icon = await api.programIcon(target.value.trim());
+    take.disabled = false;
+    if (!icon) {
+      status.textContent = t('field.appIconNone');
+      return;
+    }
+    updateButton({ image: icon.path, imageUrl: icon.url });
+    renderInspector();
+  });
+  take.prepend(createGlyph('image'));
+  return el('div', { className: 'inline app-icon' }, take, status);
+}
+
 // Output picker of stream / record / clip keys: horizontal (OBS), vertical (Aitum) or both.
 // Only offered with the plugin (or once a vertical target was chosen, so it can be undone).
 function outputField(action, update, rerender) {
@@ -870,6 +889,7 @@ function fillActionFields(container, action, update, rerender) {
           ),
           t('field.targetHint'),
         ),
+        appIconField(target),
       );
       break;
     }

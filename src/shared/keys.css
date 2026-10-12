@@ -171,6 +171,8 @@ kbd {
 .key-media {
   display: grid;
   place-items: center;
+  /* Pictures (40 px) are larger than the box: keep them centered, not overflowing to one side. */
+  place-content: center;
   width: 36px;
   height: 36px;
 }

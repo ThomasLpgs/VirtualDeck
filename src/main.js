@@ -25,6 +25,7 @@ const { runAction } = require('./actions');
 const backup = require('./backup');
 const { checkForUpdate } = require('./updates');
 const remote = require('./remote');
+const { saveAppIcon } = require('./app-icon');
 
 const { t } = i18n;
 
@@ -895,6 +896,16 @@ function registerIpc() {
     const { canceled, filePaths } = await dialog.showOpenDialog(editorWin, { properties: ['openFile'], filters });
     if (canceled || !filePaths[0]) return null;
     return { path: filePaths[0], url: fileUrl(filePaths[0]) };
+  });
+
+  // Picture of an "Open" key taken from the program it opens (Spotify, OBS…).
+  ipcMain.handle('icon:fromProgram', async (_e, target) => {
+    try {
+      const file = await saveAppIcon(target, path.join(app.getPath('userData'), 'media'), { app, shell });
+      return file ? { path: file, url: fileUrl(file) } : null;
+    } catch {
+      return null;
+    }
   });
 
   // About 1,600 icons: read once, then kept for the next times the editor opens.
