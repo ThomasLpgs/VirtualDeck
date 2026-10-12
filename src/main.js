@@ -256,6 +256,7 @@ function saveDeckPosition(deckPosition) {
 }
 
 function showDeck() {
+  activeStream().wake();
   const { width, height } = deckSize();
   // Where the user dragged it last, otherwise centered under the mouse.
   const saved = cfg.deckPosition;
@@ -420,6 +421,7 @@ function playSound(file, volume) {
 
 // buttonIndex (optional): button to select in the editor, e.g. when an empty "+" key is clicked.
 function openEditor(buttonIndex) {
+  activeStream().wake();
   const selectButton = () => {
     if (Number.isInteger(buttonIndex)) editorWin.webContents.send('editor:select', buttonIndex);
   };
@@ -492,6 +494,27 @@ function registerHotkey() {
   return deckOk;
 }
 
+const { hidePaths } = remote;
+
+const WAKE_WAIT_MS = 2000;
+
+// Before a key runs: if OBS / Streamlabs was waiting for its next attempt (it may have been
+// started since), connect now and give it a moment, rather than failing the key.
+function wakeStream() {
+  const stream = activeStream();
+  if (!stream.wake()) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      stream.off('state', check);
+      resolve();
+    };
+    const check = (state) => state.status !== 'connecting' && done();
+    const timer = setTimeout(done, WAKE_WAIT_MS);
+    stream.on('state', check);
+  });
+}
+
 // Runs a key, from the deck, from its own hotkey or from a phone. When the deck isn't on screen
 // (closed after the action, or never opened), errors and confirmations are shown as notifications.
 // A phone gets the result instead, and turns its own pages (result.page).
@@ -500,16 +523,19 @@ async function runKey(index, { fromDeck = false, origin = null, fromPhone = fals
   if (!button) return { ok: false, error: t('error.buttonNotFound') };
   if (fromPhone) {
     try {
+      await wakeStream();
       const result = await runAction(button.action, { stream: activeStream(), playSound });
-      return { ok: true, warning: result?.warning, notice: result?.notice, page: result?.page };
+      return { ok: true, warning: hidePaths(result?.warning), notice: hidePaths(result?.notice), page: result?.page };
     } catch (err) {
-      return { ok: false, error: err.message };
+      return { ok: false, error: hidePaths(err.message) };
     }
   }
   // A page key changes what the deck shows: it must not close it.
   const closes = fromDeck && cfg.closeAfterAction && button.action.type !== 'page';
   if (closes) hideDeck();
   const unseen = !fromDeck || closes;
+  // After closing the deck: waiting for OBS must not keep it on screen.
+  await wakeStream();
   try {
     const result = await runAction(button.action, { stream: activeStream(), playSound });
     if (result?.page) {
@@ -588,13 +614,13 @@ function applyConfig(next) {
 // muted input...): no file paths, programs or URLs leave the PC.
 const PHONE_ACTION_FIELDS = ['type', 'scene', 'verticalScene', 'source', 'verticalSource', 'input', 'page'];
 
-function phoneAction(action) {
+function phoneAction(action = {}) {
   const copy = Object.fromEntries(PHONE_ACTION_FIELDS.filter((f) => typeof action[f] === 'string').map((f) => [f, action[f]]));
   // `target` is the output (horizontal / vertical) on output keys, but a path on program keys.
   if (['obs-stream', 'obs-record', 'obs-replay'].includes(action.type) && typeof action.target === 'string') {
     copy.target = action.target;
   }
-  if (action.type === 'multi') copy.steps = (action.steps || []).map((step) => ({ action: phoneAction(step.action) }));
+  if (action.type === 'multi') copy.steps = (action.steps || []).map((step) => ({ action: phoneAction(step?.action) }));
   return copy;
 }
 
@@ -655,41 +681,60 @@ const phoneServer = remote.createRemoteServer({
   i18n: () => i18n.bundle(),
   press: (index) => runKey(index, { fromPhone: true }),
   image: phoneImage,
+  allowDevice,
 });
+
+// A phone not seen before takes a free place, kept after a restart (written once, when it first
+// connects). Once every place is taken, other devices are refused, even if they scan the QR code.
+function allowDevice(id) {
+  const { devices, maxPhones } = cfg.remote;
+  if (devices.includes(id)) return true;
+  if (maxPhones && devices.length >= maxPhones) return false;
+  saveRemote({ devices: [...devices, id] });
+  return true;
+}
 // Why the server couldn't start (no network...), shown in the settings.
 let remoteError = '';
 
+// Saved once per change (enabling the first time sets enabled, key and port together).
 function saveRemote(patch) {
-  cfg = config.save({ ...cfg, remote: { ...cfg.remote, ...patch } });
+  const next = { ...cfg.remote, ...patch };
+  if (Object.keys(next).every((field) => next[field] === cfg.remote[field])) return;
+  cfg = config.save({ ...cfg, remote: next });
 }
 
-// Starts, restarts (new network address) or stops the phone server to match the setting.
+// Starts, restarts (new network address or key) or stops the phone server to match the setting.
 // One at a time: the settings page and the address check may ask together.
 let remoteSync = Promise.resolve();
-function syncRemote() {
-  remoteSync = remoteSync.then(syncRemoteNow);
+function syncRemote(patch = {}) {
+  remoteSync = remoteSync
+    .then(() => syncRemoteNow(patch))
+    // Keeps the queue alive (a failed config write must not block every later sync).
+    .catch((err) => {
+      remoteError = err.message;
+    });
   return remoteSync;
 }
 
-async function syncRemoteNow() {
-  const address = cfg.remote.enabled ? remote.pickLanAddress(os.networkInterfaces()) : null;
+async function syncRemoteNow(patch) {
+  const settings = { ...cfg.remote, ...patch };
+  if (settings.enabled && !remote.isKey(settings.key)) settings.key = remote.newKey();
+  const address = settings.enabled ? remote.pickLanAddress(os.networkInterfaces()) : null;
   const current = phoneServer.address();
-  if (current && address === current.host) return;
+  if (current && address === current.host && settings.key === cfg.remote.key) return saveRemote(settings);
   phoneServer.stop();
   remoteError = '';
-  if (!cfg.remote.enabled) return;
-  if (!address) {
+  if (address) {
+    try {
+      // Keep the same port next time, so the phone's bookmark keeps working.
+      settings.port = await phoneServer.start(address, settings.port);
+    } catch (err) {
+      remoteError = err.message;
+    }
+  } else if (settings.enabled) {
     remoteError = t('phone.noNetwork');
-    return;
   }
-  if (!cfg.remote.key) saveRemote({ key: remote.newKey() });
-  try {
-    const port = await phoneServer.start(address, cfg.remote.port);
-    // Keep the same port next time, so the phone's bookmark keeps working.
-    if (port !== cfg.remote.port) saveRemote({ port });
-  } catch (err) {
-    remoteError = err.message;
-  }
+  saveRemote(settings);
 }
 
 function remoteStatus() {
@@ -698,6 +743,8 @@ function remoteStatus() {
     enabled: cfg.remote.enabled,
     url: address ? `http://${address.host}:${address.port}` : '',
     phones: phoneServer.phones(),
+    paired: cfg.remote.devices.length,
+    maxPhones: cfg.remote.maxPhones,
     error: remoteError,
   };
 }
@@ -868,16 +915,19 @@ function registerIpc() {
     return remoteStatus();
   });
   ipcMain.handle('remote:setEnabled', async (_e, enabled) => {
-    saveRemote({ enabled: enabled === true });
-    await syncRemote();
+    await syncRemote({ enabled: enabled === true });
     return remoteStatus();
   });
   ipcMain.handle('remote:qr', () => remoteQr());
   // A new key unpairs every phone: they need to scan the new QR code.
   ipcMain.handle('remote:newKey', async () => {
-    saveRemote({ key: remote.newKey() });
-    phoneServer.stop();
-    await syncRemote();
+    await syncRemote({ key: remote.newKey(), devices: [] });
+    return remoteStatus();
+  });
+  // Fewer places than phones already paired: the first ones keep theirs.
+  ipcMain.handle('remote:setMaxPhones', (_e, maxPhones) => {
+    const max = [0, 1, 2, 3].includes(maxPhones) ? maxPhones : 1;
+    saveRemote({ maxPhones: max, devices: max ? cfg.remote.devices.slice(0, max) : cfg.remote.devices });
     return remoteStatus();
   });
 

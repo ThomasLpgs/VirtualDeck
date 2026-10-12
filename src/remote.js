@@ -22,10 +22,12 @@ const MAX_CLOCK_SKEW_MS = 60 * 1000;
 const NONCE_TTL_MS = 2 * MAX_CLOCK_SKEW_MS;
 const WAIT_MS = 25 * 1000;
 const MAX_WAITERS = 16;
+const MAX_CONNECTIONS = 64;
+const DEVICE_ID = /^[A-Za-z0-9_-]{16,64}$/;
 const MAX_FAILURES = 10;
 const FAILURE_WINDOW_MS = 10 * 60 * 1000;
 const BLOCK_MS = 10 * 60 * 1000;
-// A phone counts as connected while it polls (it does every WAIT_MS at most).
+// A phone counts as connected while it polls (it does every WAIT_MS at most). Counted by device id.
 const SEEN_MS = WAIT_MS + 15 * 1000;
 
 const STATIC = {
@@ -76,17 +78,24 @@ function pickLanAddress(interfaces) {
   return candidates[0]?.address || null;
 }
 
+// Messages sent to a phone: no paths of the PC ("C:\Users\…\file.exe" -> "file.exe").
+// Folder names may contain spaces: everything up to the last backslash before a quote goes.
+const hidePaths = (text) => (typeof text === 'string' ? text.replace(/(?:[A-Za-z]:|\\\\)[^"«»\n]*\\/g, '') : text);
+
 const newKey = () => crypto.randomBytes(32).toString('base64url');
 const isKey = (key) => typeof key === 'string' && /^[A-Za-z0-9_-]{43}$/.test(key);
 
 // handlers: { key() -> base64url key, state() -> object, i18n() -> object,
-//             press(index) -> Promise<result>, image(index) -> { mime, data } | null }
+//             press(index) -> Promise<result>, image(index) -> { mime, data } | null,
+//             allowDevice(id) -> whether this phone may use the deck (limit of phones) }
 // isLocal: which client addresses are answered (tests use the loopback address).
 function createRemoteServer(handlers, { isLocal = isPrivateIPv4 } = {}) {
   let server = null;
   let host = null;
   let port = 0;
   let version = 1;
+  // Last state sent to phones: { state, json } (see snapshot / changed).
+  let current = null;
   let waiters = [];
   const nonces = new Map();
   const failures = new Map();
@@ -115,7 +124,7 @@ function createRemoteServer(handlers, { isLocal = isPrivateIPv4 } = {}) {
 
   function prune() {
     for (const [nonce, expires] of nonces) if (expires < now()) nonces.delete(nonce);
-    for (const [ip, at] of seen) if (now() - at > SEEN_MS) seen.delete(ip);
+    for (const [device, at] of seen) if (now() - at > SEEN_MS) seen.delete(device);
     for (const [ip, entry] of failures) {
       if (now() - entry.since > FAILURE_WINDOW_MS && entry.blockedUntil < now()) failures.delete(ip);
     }
@@ -141,6 +150,8 @@ function createRemoteServer(handlers, { isLocal = isPrivateIPv4 } = {}) {
   // { error } (then the reply status).
   function verify(raw, signature, ip) {
     const key = handlers.key();
+    // No valid key (e.g. not decryptable any more): nobody is paired, rather than an empty HMAC key.
+    if (!isKey(key)) return { error: 'unpaired', status: 401 };
     const expected = crypto.createHmac('sha256', Buffer.from(key, 'base64url')).update(raw).digest();
     const given = Buffer.from(/^[0-9a-f]{64}$/.test(signature || '') ? signature : '', 'hex');
     if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) {
@@ -160,11 +171,20 @@ function createRemoteServer(handlers, { isLocal = isPrivateIPv4 } = {}) {
       return { error: 'replay', status: 401 };
     }
     nonces.set(body.nonce, now() + NONCE_TTL_MS);
+    // Each phone has its own random id: once the allowed number of phones is reached, a new one
+    // is refused, even with the QR code.
+    if (typeof body.device !== 'string' || !DEVICE_ID.test(body.device)) return { error: 'bad-request', status: 400 };
+    if (!handlers.allowDevice(body.device)) return { error: 'full', status: 403 };
     return { body };
   }
 
+  // The state sent to phones, built once per change and shared by all of them.
   function snapshot() {
-    return { version, ...handlers.state() };
+    if (!current) {
+      const state = handlers.state();
+      current = { state, json: JSON.stringify(state) };
+    }
+    return { version, ...current.state };
   }
 
   function wait(since, res) {
@@ -175,7 +195,13 @@ function createRemoteServer(handlers, { isLocal = isPrivateIPv4 } = {}) {
       done: () => {
         clearTimeout(waiter.timer);
         waiters = waiters.filter((w) => w !== waiter);
-        if (!res.writableEnded) send(res, 200, since === version ? { version } : snapshot());
+        if (res.writableEnded) return;
+        // Runs from a timer or from changed(), outside any request handler: never throw from here.
+        try {
+          send(res, 200, since === version ? { version } : snapshot());
+        } catch {
+          send(res, 500, { error: 'internal' });
+        }
       },
     };
     waiter.timer = setTimeout(waiter.done, WAIT_MS);
@@ -213,7 +239,9 @@ function createRemoteServer(handlers, { isLocal = isPrivateIPv4 } = {}) {
       return;
     }
     if (blocked(ip)) return send(res, 429, { error: 'blocked' });
-    const { pathname } = new URL(req.url, `http://${host}:${port}`);
+    // Parsed by hand: new URL() throws on odd targets like "//[", which would crash the app.
+    const pathname = String(req.url || '').split('?')[0];
+    if (!/^\/(?!\/)/.test(pathname)) return send(res, 404, { error: 'not-found' });
 
     if (req.method === 'GET') return serveStatic(pathname, res);
     if (req.method !== 'POST' || pathname !== '/api') return send(res, 405, { error: 'method' });
@@ -235,8 +263,9 @@ function createRemoteServer(handlers, { isLocal = isPrivateIPv4 } = {}) {
       prune();
       const checked = verify(Buffer.concat(chunks).toString('utf8'), req.headers['x-signature'], ip);
       if (checked.error) return send(res, checked.status, { error: checked.error, now: now() });
-      seen.set(ip, now());
-      api(checked.body, res).catch((err) => send(res, 500, { error: err.message }));
+      seen.set(checked.body.device, now());
+      // No details: an error message could contain a path of the PC.
+      api(checked.body, res).catch(() => !res.headersSent && send(res, 500, { error: 'internal' }));
     });
   }
 
@@ -246,14 +275,21 @@ function createRemoteServer(handlers, { isLocal = isPrivateIPv4 } = {}) {
       return new Promise((resolve, reject) => {
         const attempt = (tryPort) => {
           const candidate = http.createServer(onRequest);
+          // Time to send a request (not to wait for the long-poll answer), and a cap on open
+          // connections, so a device can't tie the server up.
           candidate.headersTimeout = 10 * 1000;
-          candidate.requestTimeout = WAIT_MS + 10 * 1000;
-          candidate.once('error', (err) => {
+          candidate.requestTimeout = 15 * 1000;
+          candidate.maxConnections = MAX_CONNECTIONS;
+          candidate.on('clientError', (_err, socket) => socket.destroy());
+          let listening = false;
+          candidate.on('error', (err) => {
+            if (listening) return console.error('Phone server error:', err);
             // The saved port is taken by something else: any free port will do.
             if (err.code === 'EADDRINUSE' && tryPort !== 0) attempt(0);
             else reject(err);
           });
           candidate.listen(tryPort, address, () => {
+            listening = true;
             server = candidate;
             host = address;
             port = candidate.address().port;
@@ -274,8 +310,24 @@ function createRemoteServer(handlers, { isLocal = isPrivateIPv4 } = {}) {
       host = null;
       seen.clear();
     },
-    // The deck changed (config or OBS state): waiting phones get the new state.
+    // The deck may have changed (config or OBS state): waiting phones get the new state, only if
+    // what they show did change (an editor autosave or an OBS event often changes nothing for them).
     changed() {
+      if (!server) {
+        current = null;
+        version += 1;
+        return;
+      }
+      let state;
+      try {
+        state = handlers.state();
+      } catch (err) {
+        console.error('Phone state:', err);
+        return;
+      }
+      const json = JSON.stringify(state);
+      if (current && json === current.json) return;
+      current = { state, json };
       version += 1;
       for (const waiter of [...waiters]) waiter.done();
     },
@@ -288,4 +340,4 @@ function createRemoteServer(handlers, { isLocal = isPrivateIPv4 } = {}) {
   };
 }
 
-module.exports = { createRemoteServer, pickLanAddress, isPrivateIPv4, newKey, isKey };
+module.exports = { createRemoteServer, pickLanAddress, isPrivateIPv4, newKey, isKey, hidePaths };

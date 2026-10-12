@@ -107,6 +107,8 @@ Appuie sur `Ctrl + Maj + Espace` n'importe où (ou sur la touche choisie dans **
 
 Les pages se changent avec les flèches ou en glissant le doigt. Les badges LIVE / REC / MUET suivent en direct.
 
+**Téléphones autorisés** (1 par défaut, jusqu'à 3 ou sans limite) : les premiers appareils qui scannent le QR code prennent les places, les suivants sont refusés même avec le QR code.
+
 Sécurité : le serveur n'existe que pendant que l'option est activée et n'écoute que sur le réseau local (rien sur la box, rien sur internet). Chaque appui est signé avec une clé secrète transmise par le QR code : un appareil du wifi qui ne l'a pas scanné ne peut rien déclencher, même en rejouant une requête. **Nouveau QR code** déconnecte tous les téléphones. Évite de montrer le QR code en stream : même s'il ne marche que depuis ton wifi, autant le garder pour toi.
 
 ### 5. Format vertical avec Aitum Vertical (optionnel)

@@ -1307,6 +1307,8 @@ function renderDeckScale() {
 const QR_VISIBLE_MS = 2 * 60 * 1000;
 let qrTimer = null;
 let phonePoll = null;
+let phoneUrl = '';
+let phoneMax = null;
 
 function renderPhone(status) {
   $('phone-enabled').checked = status.enabled;
@@ -1315,8 +1317,20 @@ function renderPhone(status) {
   $('phone-status').textContent = status.error || (status.url ? t('phone.ready', { url: status.url }) : t('phone.starting'));
   $('phone-status').classList.toggle('warn', Boolean(status.error));
   $('phone-phones').textContent = t('phone.phones', { count: status.phones });
+  $('phone-max-hint').textContent = status.maxPhones
+    ? t('phone.maxPhonesHint', { count: status.paired, max: status.maxPhones })
+    : t('phone.maxPhonesNone');
+  if (status.maxPhones !== phoneMax) {
+    phoneMax = status.maxPhones;
+    const choices = [1, 2, 3].map((n) => [n, String(n)]).concat([[0, t('phone.unlimited')]]);
+    const picker = segmented(choices, phoneMax, async (max) => renderPhone(await api.setRemoteMaxPhones(max)));
+    picker.id = 'phone-max';
+    $('phone-max').replaceWith(picker);
+  }
   $('phone-qr-toggle').disabled = !status.url;
-  if (!status.url) hideQr();
+  // New address (other network): the QR code shown points to the old one.
+  if (status.url !== phoneUrl) hideQr();
+  phoneUrl = status.url;
   $('phone-qr-toggle').textContent = t($('phone-qr').hidden ? 'phone.showQr' : 'phone.hideQr');
 }
 
@@ -1339,7 +1353,13 @@ async function toggleQr() {
 }
 
 async function refreshPhone() {
-  renderPhone(await api.remoteStatus());
+  // Minimized or behind other windows: nothing to keep up to date.
+  if (document.hidden) return;
+  try {
+    renderPhone(await api.remoteStatus());
+  } catch (err) {
+    console.error('Phone status:', err);
+  }
 }
 
 // The number of connected phones is kept up to date while the settings are on screen.
@@ -1350,6 +1370,8 @@ function watchPhone(visible) {
   refreshPhone();
   phonePoll = setInterval(refreshPhone, 5000);
 }
+
+document.addEventListener('visibilitychange', () => phonePoll && refreshPhone());
 
 function setupPhone() {
   $('phone-enabled').addEventListener('change', async (e) => renderPhone(await api.setRemoteEnabled(e.target.checked)));

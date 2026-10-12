@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('api', {
   setRemoteEnabled: (enabled) => ipcRenderer.invoke('remote:setEnabled', enabled),
   remoteQr: () => ipcRenderer.invoke('remote:qr'),
   newRemoteKey: () => ipcRenderer.invoke('remote:newKey'),
+  setRemoteMaxPhones: (max) => ipcRenderer.invoke('remote:setMaxPhones', max),
   openUpdate: () => ipcRenderer.send('update:open'),
   onConfig: listener('config:changed'),
   onStreamState: listener('stream:state'),

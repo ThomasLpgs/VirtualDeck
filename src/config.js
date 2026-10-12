@@ -10,6 +10,9 @@ const MAX_ROWS = 6;
 const PAGE_SIZE = MAX_COLS * MAX_ROWS;
 const MAX_PAGES = 10;
 const MAX_PAGE_NAME = 30;
+// Phones allowed to use the deck at most (the setting offers 1 to 3, or no limit = 0).
+const MAX_PHONES = 10;
+const DEVICE_ID = /^[A-Za-z0-9_-]{16,64}$/;
 // Size of the deck relative to its default size (1 = 100 %).
 const MIN_DECK_SCALE = 0.6;
 const MAX_DECK_SCALE = 1.6;
@@ -57,8 +60,9 @@ function defaults() {
     software: 'obs',
     obs: { url: 'ws://127.0.0.1:4455', password: '' },
     streamlabs: { url: 'ws://127.0.0.1:59650/api/websocket', token: '' },
-    // Phone as a deck (remote.js): off by default. port 0 = not chosen yet; key = pairing key.
-    remote: { enabled: false, port: 0, key: '' },
+    // Phone as a deck (remote.js): off by default. port 0 = not chosen yet; key = pairing key;
+    // maxPhones = how many devices may use it (0 = no limit); devices = ids of those that did.
+    remote: { enabled: false, port: 0, key: '', maxPhones: 1, devices: [] },
     buttons: Array.from({ length: 6 }, defaultButton),
   };
 }
@@ -100,7 +104,14 @@ function normalize(raw) {
     enabled: raw?.remote?.enabled === true,
     port: clamp(raw?.remote?.port, 0, 65535, 0),
     key: /^[A-Za-z0-9_-]{43}$/.test(raw?.remote?.key) ? raw.remote.key : '',
+    maxPhones: clamp(raw?.remote?.maxPhones, 0, MAX_PHONES, base.remote.maxPhones),
+    devices: [],
   };
+  const devices = Array.isArray(raw?.remote?.devices) ? raw.remote.devices : [];
+  cfg.remote.devices = [...new Set(devices.filter((id) => typeof id === 'string' && DEVICE_ID.test(id)))].slice(
+    0,
+    cfg.remote.maxPhones || MAX_PHONES,
+  );
   cfg.launchAtLogin = cfg.launchAtLogin === true;
 
   const buttons = Array.isArray(raw?.buttons) ? raw.buttons : [];

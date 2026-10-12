@@ -1,7 +1,7 @@
 const { EventEmitter } = require('events');
 const { t } = require('./i18n');
+const { retryDelay } = require('./retry');
 
-const RETRY_MS = 5000;
 const REQUEST_TIMEOUT_MS = 5000;
 // State that only makes sense while connected; reset on disconnection.
 const OFFLINE_STATE = {
@@ -27,6 +27,8 @@ class StreamlabsManager extends EventEmitter {
     this.ws = null;
     this.settings = null;
     this.retryTimer = null;
+    // Failed attempts in a row: the next one waits longer (see retry.js).
+    this.failures = 0;
     this.generation = 0;
     this.nextId = 1;
     this.pending = new Map();
@@ -39,6 +41,7 @@ class StreamlabsManager extends EventEmitter {
 
   setState(patch) {
     this.state = { ...this.state, ...patch };
+    if (this.state.status === 'connected') this.failures = 0;
     if (this.state.status !== 'connected') this.state = { ...this.state, ...OFFLINE_STATE };
     this.emit('state', this.state);
   }
@@ -197,9 +200,18 @@ class StreamlabsManager extends EventEmitter {
     }
   }
 
+  // The user is about to use the deck (opened it, the editor, or pressed a key): if the software
+  // isn't connected, try now rather than at the next background attempt (up to 2 min away).
+  // Returns whether an attempt started.
+  wake() {
+    if (this.state.status !== 'disconnected' || this.state.authFailed || !this.settings?.url) return false;
+    this.connect();
+    return true;
+  }
+
   scheduleRetry() {
     clearTimeout(this.retryTimer);
-    this.retryTimer = setTimeout(() => this.connect(), RETRY_MS);
+    this.retryTimer = setTimeout(() => this.connect(), retryDelay(this.failures++));
   }
 
   handleMessage(raw) {

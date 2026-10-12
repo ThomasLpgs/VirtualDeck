@@ -114,9 +114,19 @@ test('saving an unchanged config does not write the disk again', (t) => {
 });
 
 test('phone settings are off by default and keep only a valid key', () => {
-  assert.deepEqual(normalize({}).remote, { enabled: false, port: 0, key: '' });
+  assert.deepEqual(normalize({}).remote, { enabled: false, port: 0, key: '', maxPhones: 1, devices: [] });
   const key = 'a'.repeat(43);
-  assert.deepEqual(normalize({ remote: { enabled: true, port: 41234, key } }).remote, { enabled: true, port: 41234, key });
+  assert.deepEqual(normalize({ remote: { enabled: true, port: 41234, key, maxPhones: 0 } }).remote, {
+    enabled: true,
+    port: 41234,
+    key,
+    maxPhones: 0,
+    devices: [],
+  });
+  // Paired phones: valid ids only, no duplicates, never more than the limit.
+  const ids = ['phone-one-0123456789', 'phone-two-0123456789'];
+  assert.deepEqual(normalize({ remote: { maxPhones: 1, devices: [...ids, 'bad id', 42] } }).remote.devices, [ids[0]]);
+  assert.deepEqual(normalize({ remote: { maxPhones: 3, devices: [ids[0], ids[0], ids[1]] } }).remote.devices, ids);
   assert.equal(normalize({ remote: { enabled: 'yes', key: 'bad key' } }).remote.enabled, false);
   assert.equal(normalize({ remote: { key: 'bad key' } }).remote.key, '');
   assert.equal(normalize({ remote: { port: 99999 } }).remote.port, 65535);
