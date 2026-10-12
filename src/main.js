@@ -35,6 +35,10 @@ const APP_ICON = path.join(__dirname, 'assets', 'icon.png');
 const APP_ICON_ICO = path.join(__dirname, 'assets', 'icon.ico');
 // Must match "build.appId" in package.json, or Windows notifications won't show in the installed app.
 const APP_ID = 'com.virtualdeck.app';
+// Added to the "launch at login" entry: started with Windows, the app stays in the tray;
+// started by the user (shortcut, Start menu), it opens the editor.
+const LOGIN_ARG = '--at-login';
+const loginItem = (openAtLogin) => ({ openAtLogin, args: [LOGIN_ARG] });
 const LUCIDE_DIR = path.join(__dirname, '..', 'node_modules', 'lucide-static');
 const BACKUP_EXT = 'vdeck';
 // Shape of the hotkeys the editor records: modifiers + a key, or a lone function key.
@@ -603,7 +607,7 @@ function applyConfig(next) {
   const hotkeyOk = registeredHotkeys === hotkeySignature() ? deckHotkeyOk : registerHotkey();
   // Writes to the registry: only when the setting changes.
   if (loginItemSet !== cfg.launchAtLogin) {
-    app.setLoginItemSettings({ openAtLogin: cfg.launchAtLogin });
+    app.setLoginItemSettings(loginItem(cfg.launchAtLogin));
     loginItemSet = cfg.launchAtLogin;
   }
   activateStream();
@@ -996,7 +1000,7 @@ if (!app.requestSingleInstanceLock()) {
     lastPageMode = cfg.pageMode;
     applyLanguage();
     // Keeps the startup entry pointing at the current exe, e.g. after a reinstall elsewhere.
-    if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: cfg.launchAtLogin });
+    if (app.isPackaged) app.setLoginItemSettings(loginItem(cfg.launchAtLogin));
 
     registerIpc();
     createDeckWindow();
@@ -1012,11 +1016,8 @@ if (!app.requestSingleInstanceLock()) {
     setInterval(() => cfg.remote.enabled && syncRemote(), REMOTE_ADDRESS_CHECK_MS);
 
     const hotkeyOk = registerHotkey();
-    if (loaded.firstRun) {
-      openEditor();
-    } else if (!hotkeyOk) {
-      notify(t('notify.hotkeyTaken', { hotkey: cfg.hotkey }));
-      openEditor();
-    }
+    if (!hotkeyOk && !loaded.firstRun) notify(t('notify.hotkeyTaken', { hotkey: cfg.hotkey }));
+    // Opened by the user: show it, otherwise it looks like nothing happened (it lives in the tray).
+    if (loaded.firstRun || !hotkeyOk || !process.argv.includes(LOGIN_ARG)) openEditor();
   });
 }
