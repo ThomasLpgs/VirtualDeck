@@ -9,8 +9,9 @@
 //   device taking the bridge's address later can't receive the key.
 const dgram = require('dgram');
 const http = require('http');
+const os = require('os');
 const tls = require('tls');
-const { isPrivateIPv4 } = require('./remote');
+const { isPrivateIPv4, pickLanAddress } = require('./remote');
 
 const TIMEOUT_MS = 5000;
 const DISCOVERY_MS = 3000;
@@ -26,7 +27,7 @@ const WHITES = { warm: 370, neutral: 250, cool: 153 };
 const MODES = ['toggle', 'on', 'off', 'scene'];
 
 // Tests point these at a local fake bridge.
-const network = { port: 443, isLocal: isPrivateIPv4 };
+const network = { port: 443, isLocal: isPrivateIPv4, lanAddress: () => pickLanAddress(os.networkInterfaces()) };
 
 // code: what went wrong, for main.js to explain ('unreachable', 'certificate', 'linkButton'…).
 class HueError extends Error {
@@ -202,8 +203,11 @@ async function runHue(action, hue) {
 }
 
 // Local network search (mDNS, "_hue._tcp.local"): addresses of the devices that answer.
-// Asked from a random port, so they answer straight back to it (no shared port 5353 needed).
+// Asked from a random port of the home network address only (never the VPN's), so they answer
+// straight back to it (no shared port 5353 needed).
 function searchLocal() {
+  const lan = network.lanAddress();
+  if (!lan) return Promise.resolve([]);
   return new Promise((resolve) => {
     const found = new Set();
     const socket = dgram.createSocket('udp4');
@@ -224,7 +228,14 @@ function searchLocal() {
     ]);
     socket.on('message', (_msg, rinfo) => found.add(rinfo.address));
     socket.on('error', end);
-    socket.bind(0, () => socket.send(query, 5353, '224.0.0.251', () => {}));
+    socket.bind(0, lan, () => {
+      try {
+        socket.setMulticastInterface(lan);
+        socket.send(query, 5353, '224.0.0.251', () => {});
+      } catch {
+        end();
+      }
+    });
     setTimeout(end, DISCOVERY_MS);
   });
 }

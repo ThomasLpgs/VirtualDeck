@@ -1456,3 +1456,7 @@ input[type='range']:focus {
   width: 14px;
   height: 14px;
 }
+
+.setting-group + .setting {
+  border-top: 1px solid var(--line);
+}

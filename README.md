@@ -30,6 +30,7 @@
 - **Sons** (mp3, wav, ogg…) avec réglage du volume ; un second clic coupe le son.
 - **Ouvrir** un programme, un fichier ou un lien (`https://`, `spotify:`, `steam://`, `discord://`…).
 - **Lumières Philips Hue** : allume, éteins, change la couleur ou lance une scène de tes lampes, en passant par le pont Hue de la maison (sans compte Hue).
+- **Lumières Govee** : allume, éteins ou change la couleur de tes lampes Govee, directement sur le réseau de la maison (sans compte Govee).
 - **Personnalisation** : plus de 2 000 icônes, emojis ou tes propres images, 10 couleurs ou une couleur libre, grille jusqu'à 8 × 6. Le deck se déplace et se redimensionne (60 % à 160 %).
 - **Export / import** de toute la configuration (sons et images compris), pour changer de PC ou partager ton deck.
 - **Mises à jour en un clic** : une pastille dans l'éditeur prévient quand une nouvelle version sort ; un clic la télécharge, l'installe et relance VirtualDeck.
@@ -85,7 +86,8 @@ Dans l'onglet **Boutons**, clique sur une case puis choisis :
 | **Stream** | Démarre ou arrête le live, avec le chrono sur le bouton. |
 | **Son** | Joue un fichier audio, ou le coupe s'il est en cours. |
 | **Ouvrir** | Lance un programme, un fichier ou un lien. **Utiliser l'icône de l'application** met l'icône du programme (Spotify, OBS…) sur le bouton. |
-| **Lumières Hue** | Allume, éteint ou bascule une lampe, une pièce, une zone ou toutes les lampes, avec une luminosité et une couleur au choix ; ou lance une scène Hue. Le pont s'associe dans **Réglages › Lumières Philips Hue**. |
+| **Lumières Hue** | Allume, éteint ou bascule une lampe, une pièce, une zone ou toutes les lampes, avec une luminosité et une couleur au choix ; ou lance une scène Hue. Le pont s'associe dans **Réglages › Lumières connectées**. |
+| **Lumières Govee** | Allume, éteint ou bascule une lampe Govee ou toutes à la fois, avec une luminosité et une couleur au choix. Il faut activer « Contrôle LAN » sur la lampe dans l'appli Govee Home. |
 | **Page** | Va à la page suivante, précédente ou à une page précise, sans fermer le deck. |
 | **Multi** | Enchaîne plusieurs de ces actions dans l'ordre, avec une attente possible avant chacune. Si une étape échoue, les suivantes s'exécutent quand même. |
 
@@ -105,7 +107,7 @@ Appuie sur `Ctrl + Maj + Espace` n'importe où (ou sur la touche choisie dans **
 
 1. **Réglages › Téléphone** : active *Utiliser mon téléphone comme deck*, puis **Afficher le QR code**.
 2. Scanne-le avec l'appareil photo du téléphone (même wifi que le PC). Ajoute la page à l'écran d'accueil pour l'ouvrir comme une appli.
-3. Si Windows demande une autorisation pour VirtualDeck, laisse coché uniquement **Réseaux privés**.
+3. Si Windows demande une autorisation pour VirtualDeck, accepte-la pour le type de réseau de ta maison (Privé ou Public, indiqué dans **Paramètres › Réseau et Internet**) : c'est ce qui permet au téléphone de se connecter. Le deck téléphone reste protégé par sa propre clé, celle du QR code.
 
 Les pages se changent avec les flèches ou en glissant le doigt. Les badges LIVE / REC / MUET suivent en direct.
 
@@ -115,13 +117,23 @@ Sécurité : le serveur n'existe que pendant que l'option est activée et n'éco
 
 ### 5. Lumières Philips Hue (optionnel)
 
-1. **Réglages › Lumières Philips Hue** : **Rechercher le pont**, puis **Associer**. Si le pont n'apparaît pas, saisis son adresse IP (appli Hue › Paramètres › Ponts Hue).
+1. **Réglages › Lumières connectées** : active **Philips Hue**, puis **Rechercher le pont** et **Associer**. Si le pont n'apparaît pas, saisis son adresse IP (appli Hue › Paramètres › Ponts Hue).
 2. Appuie sur le gros bouton rond au centre du pont dans les 30 secondes.
 3. Crée un bouton **Lumières Hue** et choisis la lampe ou la pièce, ou une scène.
 
 Tout passe par le réseau de la maison : pas de compte Hue, rien à ouvrir sur la box. La liaison avec le pont est chiffrée et VirtualDeck vérifie à chaque fois que c'est bien ton pont qui répond. Si la box donne une nouvelle adresse au pont, VirtualDeck le retrouve tout seul.
 
-### 6. Format vertical avec Aitum Vertical (optionnel)
+### 6. Lumières Govee (optionnel)
+
+Hue et Govee sont désactivés tant que tu ne les actives pas : sans lumières connectées, VirtualDeck n'envoie aucune requête vers des lampes ou un pont.
+
+1. Dans l'appli **Govee Home**, ouvre ta lampe › **Paramètres** et active **Contrôle LAN** (LAN Control).
+2. **Réglages › Lumières connectées** : active **Govee**.
+3. Dans VirtualDeck, crée un bouton **Lumières Govee** : les lampes du réseau apparaissent toutes seules. Choisis-en une, ou toutes.
+
+Tout passe par le réseau de la maison : pas de compte Govee, pas d'Internet, rien à ouvrir sur la box ni dans le pare-feu. VirtualDeck n'écoute les réponses des lampes que pendant l'appui sur une touche. Les scènes Govee ne sont pas disponibles en local, seulement l'allumage, la luminosité et la couleur.
+
+### 7. Format vertical avec Aitum Vertical (optionnel)
 
 Si le plugin [Aitum Vertical](https://github.com/Aitum/obs-vertical-canvas) est installé dans OBS, VirtualDeck le détecte tout seul :
 

@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('api', {
   huePair: (ip) => ipcRenderer.invoke('hue:pair', ip),
   hueForget: () => ipcRenderer.invoke('hue:forget'),
   hueLights: () => ipcRenderer.invoke('hue:lights'),
+  goveeDiscover: () => ipcRenderer.invoke('govee:discover'),
   onConfig: listener('config:changed'),
   onStreamState: listener('stream:state'),
   onDeckShow: listener('deck:show'),

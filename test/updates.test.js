@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { Writable } = require('stream');
 const { checkForUpdate, downloadInstaller, isNewer } = require('../src/updates');
 
 const DOWNLOAD = 'https://github.com/ThomasLpgs/VirtualDeck/releases/download/v9.0.0/VirtualDeck-Setup-9.0.0.exe';
@@ -88,6 +89,16 @@ test('downloads the installer and checks it against its checksum', async (t) => 
   }
   fetch.mock.mockImplementation(async () => ({ ok: false, status: 404 }));
   await assert.rejects(downloadInstaller(installer, dir), /404/);
+  assert.equal(fs.existsSync(dir), false);
+});
+
+test('a disk error while downloading fails cleanly, without crashing the app', async (t) => {
+  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'vdeck-update-')), 'update');
+  t.mock.method(globalThis, 'fetch', async () => body('abc', 'def'));
+  // A full disk: the file refuses the data.
+  t.mock.method(fs, 'createWriteStream', () => new Writable({ write: (_chunk, _enc, done) => done(new Error('ENOSPC')) }));
+  const installer = { name: 'VirtualDeck-Setup-9.0.0.exe', url: DOWNLOAD, size: 6, sha256: sha256('abcdef') };
+  await assert.rejects(downloadInstaller(installer, dir), /ENOSPC|abort/i);
   assert.equal(fs.existsSync(dir), false);
 });
 

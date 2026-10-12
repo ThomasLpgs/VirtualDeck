@@ -47,6 +47,11 @@ const ACTIONS = [
     icon: 'lightbulb',
     defaults: { mode: 'toggle', light: '', lightKind: '', lightName: '', scene: '', sceneName: '', brightness: '', color: '' },
   },
+  {
+    type: 'govee',
+    icon: 'lamp-floor',
+    defaults: { mode: 'toggle', device: '', deviceName: '', brightness: '', color: '' },
+  },
   { type: 'page', icon: 'files', defaults: { page: 'next' } },
   { type: 'multi', icon: 'list-ordered', defaults: { steps: [] } },
 ];
@@ -59,6 +64,7 @@ const SOURCE_MODES = ['flash', 'toggle', 'show', 'hide'];
 const OUTPUT_TARGETS = ['horizontal', 'vertical', 'both'];
 const MUTE_MODES = ['toggle', 'mute', 'unmute'];
 const HUE_MODES = ['toggle', 'on', 'off', 'scene'];
+const GOVEE_MODES = ['toggle', 'on', 'off'];
 const HUE_BRIGHTNESS = [10, 25, 50, 75, 100];
 // Colours a Hue key can set: the whites are colour temperatures (saved by name), the others RGB.
 const HUE_WHITES = ['warm', 'neutral', 'cool'];
@@ -466,10 +472,14 @@ function renderSwatches() {
   $('swatches').replaceChildren(...swatches, custom);
 }
 
+// Hue and Govee actions are only offered while turned on in the settings (a key already using
+// one keeps showing it).
+const offered = (type, currentType) => type === currentType || !['hue', 'govee'].includes(type) || config.lights[type];
+
 function renderActionTiles() {
   const type = current().action.type;
   $('action-tiles').replaceChildren(
-    ...ACTIONS.map((action) => {
+    ...ACTIONS.filter((action) => offered(action.type, type)).map((action) => {
       const tile = el(
         'button',
         { type: 'button', className: 'action-tile' },
@@ -693,7 +703,7 @@ function renderSteps(container, action, update, rerender) {
   };
   steps.forEach((step, i) => {
     const typePicker = themedSelect(
-      STEP_ACTIONS.map((a) => [a.type, t(`action.${a.type}`)]),
+      STEP_ACTIONS.filter((a) => offered(a.type, step.action?.type)).map((a) => [a.type, t(`action.${a.type}`)]),
       step.action.type,
       (type) => {
         step.action = { type, ...structuredClone(ACTIONS.find((a) => a.type === type).defaults) };
@@ -965,7 +975,10 @@ function fillActionFields(container, action, update, rerender) {
     }
 
     case 'hue':
-      fillHueFields(container, action, update, rerender);
+    case 'govee':
+      if (!config.lights[action.type]) container.append(lightsOffCallout(action.type));
+      else if (action.type === 'hue') fillHueFields(container, action, update, rerender);
+      else fillGoveeFields(container, action, update, rerender);
       break;
 
     case 'page': {
@@ -1315,6 +1328,8 @@ function bindStaticFields() {
     scheduleSave();
   });
 
+  $('hue-enabled').addEventListener('change', (e) => setLights('hue', e.target.checked));
+  $('govee-enabled').addEventListener('change', (e) => setLights('govee', e.target.checked));
   $('close-after').addEventListener('change', (e) => {
     config.closeAfterAction = e.target.checked;
     scheduleSave();
@@ -1400,6 +1415,41 @@ function renderDeckScale() {
   $('deck-scale-reset').disabled = percent === 100;
 }
 
+// ---------- Connected lights (Settings) ----------
+
+function openLightsSettings() {
+  showView('settings');
+  $('lights-card').scrollIntoView({ block: 'center' });
+}
+
+// A key of a light brand turned off in the settings: kept as is, and says how to turn it back on.
+function lightsOffCallout(kind) {
+  return el(
+    'div',
+    { className: 'callout' },
+    createGlyph('lightbulb-off'),
+    el('span', { textContent: t(`lights.${kind}Off`) }),
+    button(t('lights.openSettings'), openLightsSettings),
+  );
+}
+
+function renderLightsSettings() {
+  $('hue-enabled').checked = config.lights.hue;
+  $('govee-enabled').checked = config.lights.govee;
+  $('hue-card').hidden = !config.lights.hue;
+}
+
+async function setLights(kind, on) {
+  config.lights[kind] = on;
+  renderLightsSettings();
+  // Right away: until then the app refuses to contact these lights.
+  scheduleSave();
+  await flushSave();
+  if (kind === 'hue' && on) refreshHueSettings();
+  // Its tile appears or goes, and a key using it shows its fields or the callout.
+  renderInspector();
+}
+
 // ---------- Philips Hue ----------
 
 // Lights, rooms and scenes of the paired bridge ({ targets, scenes } or { error }), loaded the first
@@ -1436,10 +1486,7 @@ function fillHueFields(container, action, update, rerender) {
         { className: 'callout' },
         createGlyph('lightbulb-off'),
         el('span', { textContent: t('hue.notPairedCallout') }),
-        button(t('hue.openSettings'), () => {
-          showView('settings');
-          $('hue-card').scrollIntoView({ block: 'center' });
-        }),
+        button(t('hue.openSettings'), openLightsSettings),
       ),
     );
     return;
@@ -1494,6 +1541,11 @@ function fillHueFields(container, action, update, rerender) {
     );
   }
 
+  lightLookFields(container, action, update, mode);
+}
+
+// Brightness and colour of a Hue or Govee key, for the modes that turn lights on.
+function lightLookFields(container, action, update, mode) {
   if (mode !== 'off') {
     const levels = [['', t('hue.keep')], ...HUE_BRIGHTNESS.map((n) => [String(n), `${n} %`])];
     container.append(
@@ -1503,12 +1555,12 @@ function fillHueFields(container, action, update, rerender) {
       ),
     );
   }
-  if (mode === 'on' || mode === 'toggle') container.append(field(t('field.hueColor'), hueSwatches(action, update)));
+  if (mode === 'on' || mode === 'toggle') container.append(field(t('field.hueColor'), lightSwatches(action, update)));
   if (mode === 'toggle') container.append(el('p', { className: 'muted', textContent: t('hue.toggleHint') }));
 }
 
-// Colour of a Hue key: unchanged, a white, a preset colour or any colour.
-function hueSwatches(action, update) {
+// Colour of a light key: unchanged, a white, a preset colour or any colour.
+function lightSwatches(action, update) {
   const wrap = el('div', { className: 'swatches' });
   const pick = (value) => {
     update({ color: value });
@@ -1541,6 +1593,67 @@ function hueSwatches(action, update) {
   }
   render();
   return wrap;
+}
+
+// ---------- Govee ----------
+
+// Govee lights found on the network ([{ id, sku, ip }]), searched the first time a Govee key is
+// shown (a search takes 2 seconds). goveeError: why the search couldn't run.
+let goveeLights = null;
+let goveeError = '';
+let goveeSearch = null;
+
+function searchGovee() {
+  goveeSearch ??= api
+    .goveeDiscover()
+    .then((result) => {
+      goveeLights = result.lights;
+      goveeError = result.error || '';
+    })
+    .finally(() => (goveeSearch = null));
+  return goveeSearch;
+}
+
+// "H6076 · 1C:13": the model and the end of the light's id (the local API doesn't give its name).
+const goveeLabel = (light) => `${light.sku || 'Govee'} · ${light.id.slice(-5)}`;
+
+function fillGoveeFields(container, action, update, rerender) {
+  if (!goveeLights) {
+    container.append(el('p', { className: 'muted', textContent: t('govee.searching') }));
+    searchGovee().then(rerender);
+    return;
+  }
+  const mode = action.mode || 'toggle';
+  container.append(
+    field(
+      t('field.behavior'),
+      segmented(
+        GOVEE_MODES.map((value) => [value, t(`hueMode.${value}`)]),
+        mode,
+        (value) => {
+          update({ mode: value });
+          rerender();
+        },
+      ),
+    ),
+  );
+  const lights = [['all', t('govee.all')], ...goveeLights.map((light) => [light.id, goveeLabel(light)])];
+  const options = hueOptions(lights, action.device, action.deviceName, t('govee.pick'));
+  const searchAgain = button(t('govee.searchAgain'), () => {
+    goveeLights = null;
+    rerender();
+  });
+  container.append(
+    field(
+      t('field.goveeLight'),
+      inline(
+        themedSelect(options, action.device || '', (id) => update({ device: id, deviceName: options.find(([v]) => v === id)?.[1] || '' })),
+        searchAgain,
+      ),
+      goveeError || t(goveeLights.length ? 'govee.lanHint' : 'govee.noneFound'),
+    ),
+  );
+  lightLookFields(container, action, update, mode);
 }
 
 // Settings › Philips Hue. Pairing: find the bridge, then press its button within 30 seconds.
@@ -1597,7 +1710,7 @@ function renderHueSettings(message = '', warn = false) {
 }
 
 async function refreshHueSettings() {
-  if (huePairing || hueFound === 'searching') return;
+  if (!config.lights.hue || huePairing || hueFound === 'searching') return;
   hueStatus = await api.hueStatus();
   renderHueSettings();
 }
@@ -1730,6 +1843,7 @@ function renderSettings() {
   renderConnectionForm();
   $('close-after').checked = config.closeAfterAction;
   $('login').checked = config.launchAtLogin;
+  renderLightsSettings();
 }
 
 (async () => {

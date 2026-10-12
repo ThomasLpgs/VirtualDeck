@@ -105,6 +105,10 @@ async function runAction(action, context) {
       // Philips Hue lights (hue.js, through main.js which holds the bridge settings).
       await context.hue(action);
       return;
+    case 'govee':
+      // Govee lights, on the home network (govee.js, through main.js).
+      await context.govee(action);
+      return;
     case 'page':
       return { page: action.page || 'next' };
     case 'multi':
