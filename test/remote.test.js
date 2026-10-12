@@ -66,6 +66,8 @@ async function startServer(overrides = {}) {
 test('only private network addresses count as local', () => {
   for (const ip of ['192.168.1.20', '10.0.0.5', '172.16.3.4', '172.31.255.1', '::ffff:192.168.0.2']) assert.ok(isPrivateIPv4(ip), ip);
   for (const ip of ['8.8.8.8', '172.32.0.1', '127.0.0.1', '169.254.1.1', '::1', '', 'abc', '192.168.1']) assert.ok(!isPrivateIPv4(ip), ip);
+  // Other spellings Windows could read as another (public) address.
+  for (const ip of ['010.0.0.1', '0x0a.0.0.1', '10.0.0.1e0', '192.168.1.1 ', '10.0.0.01']) assert.ok(!isPrivateIPv4(ip), ip);
 });
 
 test('picks the Wi-Fi / Ethernet address over virtual adapters', () => {

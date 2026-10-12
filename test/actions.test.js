@@ -332,6 +332,14 @@ test.describe('other keys', () => {
     };
     await assert.rejects(run(action, null, { hue: offline }), /does not answer/);
   });
+
+  test('Govee keys go to the lights, without waiting for OBS', async () => {
+    const sent = [];
+    const action = { type: 'govee', device: 'all', mode: 'on' };
+    await run(action, null, { govee: async (a) => sent.push(a) });
+    assert.deepEqual(sent, [action]);
+    assert.equal(needsStream(action), false);
+  });
 });
 
 test.describe('multi-action keys', () => {

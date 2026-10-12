@@ -301,8 +301,24 @@
           </div>
         </section>
 
-        <h2 class="section-title" data-i18n="hue.title"></h2>
-        <section id="hue-card" class="card rows"></section>
+        <h2 class="section-title" data-i18n="lights.title"></h2>
+        <section id="lights-card" class="card rows">
+          <div class="setting">
+            <div class="setting-text">
+              <p class="setting-title" data-i18n="lights.hue"></p>
+              <p class="muted" data-i18n="lights.hueHint"></p>
+            </div>
+            <label class="switch"><input type="checkbox" id="hue-enabled" /><span></span></label>
+          </div>
+          <div id="hue-card" class="setting-group" hidden></div>
+          <div class="setting">
+            <div class="setting-text">
+              <p class="setting-title" data-i18n="lights.govee"></p>
+              <p class="muted" data-i18n="lights.goveeHint"></p>
+            </div>
+            <label class="switch"><input type="checkbox" id="govee-enabled" /><span></span></label>
+          </div>
+        </section>
 
         <h2 class="section-title" data-i18n="backup.title"></h2>
         <section class="card rows">

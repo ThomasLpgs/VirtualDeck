@@ -66,6 +66,8 @@ function defaults() {
     remote: { enabled: false, port: 0, key: '', maxPhones: 1, devices: [] },
     // Paired Philips Hue bridge (hue.js): its address, id, name, certificate fingerprint and key.
     hue: { ip: '', id: '', name: '', cert: '', key: '' },
+    // Connected lights turned on in the settings: while off, nothing is ever sent to them.
+    lights: { hue: false, govee: false },
     buttons: Array.from({ length: 6 }, defaultButton),
   };
 }
@@ -123,6 +125,12 @@ function normalize(raw) {
     name: typeof hue.name === 'string' ? hue.name.slice(0, 60) : '',
     cert: matching(hue.cert, /^[0-9A-F]{2}(:[0-9A-F]{2}){31}$/),
     key: matching(hue.key, /^[A-Za-z0-9_-]{20,64}$/),
+  };
+  // A Hue bridge paired before this setting existed stays on.
+  const lights = raw?.lights && typeof raw.lights === 'object' ? raw.lights : {};
+  cfg.lights = {
+    hue: typeof lights.hue === 'boolean' ? lights.hue : Boolean(cfg.hue.key),
+    govee: lights.govee === true,
   };
   cfg.launchAtLogin = cfg.launchAtLogin === true;
 

@@ -28,6 +28,7 @@ const { checkForUpdate, downloadInstaller } = require('./updates');
 const remote = require('./remote');
 const { saveAppIcon } = require('./app-icon');
 const hue = require('./hue');
+const govee = require('./govee');
 
 const { t } = i18n;
 
@@ -577,8 +578,8 @@ function wakeStream(action) {
   });
 }
 
-// What the actions need from here: the streaming software, the sound player, the Hue bridge.
-const keyContext = () => ({ stream: activeStream(), playSound, hue: runHue });
+// What the actions need from here: the streaming software, the sound player, the lights.
+const keyContext = () => ({ stream: activeStream(), playSound, hue: runHue, govee: runGovee });
 
 // Runs a key, from the deck, from its own hotkey or from a phone. When the deck isn't on screen
 // (closed after the action, or never opened), errors and confirmations are shown as notifications.
@@ -707,7 +708,13 @@ async function withBridge(call) {
   }
 }
 
+// Lights turned off in the settings: nothing is sent to them, whatever asks.
+function checkLights(kind) {
+  if (!cfg.lights[kind]) throw new Error(t(`lights.${kind}Off`));
+}
+
 async function runHue(action) {
+  checkLights('hue');
   try {
     await withBridge((settings) => hue.runHue(action, settings));
   } catch (err) {
@@ -716,6 +723,23 @@ async function runHue(action) {
 }
 
 const hueStatus = () => ({ paired: Boolean(cfg.hue.key), name: cfg.hue.name, ip: cfg.hue.ip });
+
+// ---------- Govee (govee.js) ----------
+
+// A GoveeError as a sentence for the user.
+function goveeMessage(err) {
+  if (!(err instanceof govee.GoveeError)) return err.message;
+  return t(`goveeError.${err.code}`, { detail: err.detail || err.code });
+}
+
+async function runGovee(action) {
+  checkLights('govee');
+  try {
+    await govee.runGovee(action);
+  } catch (err) {
+    throw new Error(goveeMessage(err));
+  }
+}
 
 // ---------- Phone as a deck (remote.js) ----------
 
@@ -1058,10 +1082,13 @@ function registerIpc() {
   });
 
   ipcMain.handle('hue:status', () => hueStatus());
-  ipcMain.handle('hue:discover', async () => (await hue.discover()).map(({ ip, id, name }) => ({ ip, id, name })));
+  ipcMain.handle('hue:discover', async () =>
+    cfg.lights.hue ? (await hue.discover()).map(({ ip, id, name }) => ({ ip, id, name })) : [],
+  );
   // One try: the editor asks again every few seconds while the user goes to press the bridge button.
   ipcMain.handle('hue:pair', async (_e, ip) => {
     try {
+      checkLights('hue');
       const paired = await hue.pair(String(ip || '').trim(), os.hostname());
       saveHue(paired);
       return { ok: true, status: hueStatus() };
@@ -1075,9 +1102,20 @@ function registerIpc() {
   });
   ipcMain.handle('hue:lights', async () => {
     try {
+      checkLights('hue');
       return await withBridge((settings) => hue.listLights(settings));
     } catch (err) {
       return { error: hueMessage(err) };
+    }
+  });
+
+  // { lights: [{ id, sku, ip }] }, or { lights: [], error } when the search couldn't run.
+  ipcMain.handle('govee:discover', async () => {
+    try {
+      checkLights('govee');
+      return { lights: await govee.discover() };
+    } catch (err) {
+      return { lights: [], error: goveeMessage(err) };
     }
   });
 

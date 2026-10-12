@@ -74,6 +74,12 @@ async function downloadInstaller(installer, dir, onProgress = () => {}) {
   const controller = new AbortController();
   let stall = setTimeout(() => controller.abort(), STALL_MS);
   const out = fs.createWriteStream(part);
+  // A full disk or a locked file: the download fails cleanly (no crash of the app).
+  let writeError = null;
+  out.on('error', (err) => {
+    writeError = err;
+    controller.abort();
+  });
   try {
     const response = await fetch(installer.url, {
       headers: { 'User-Agent': 'VirtualDeck' },
@@ -88,10 +94,12 @@ async function downloadInstaller(installer, dir, onProgress = () => {}) {
       received += chunk.length;
       if (received > installer.size) throw new Error('size');
       hash.update(chunk);
-      if (!out.write(chunk)) await new Promise((resolve) => out.once('drain', resolve));
+      if (writeError) throw writeError;
+      if (!out.write(chunk)) await new Promise((resolve) => out.once('drain', resolve).once('error', resolve));
       onProgress(received / installer.size);
     }
     await new Promise((resolve, reject) => out.end((err) => (err ? reject(err) : resolve())));
+    if (writeError) throw writeError;
     if (received !== installer.size || hash.digest('hex') !== installer.sha256) throw new Error('checksum');
     const file = path.join(dir, installer.name);
     fs.renameSync(part, file);

@@ -11,6 +11,7 @@
 // - Too many bad signatures from one address: that address is ignored for a while.
 // - The served files are a fixed list; no path from the request ever reaches the disk.
 const http = require('http');
+const net = require('net');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -56,6 +57,8 @@ const VIRTUAL_ADAPTER = /virtual|vethernet|vmware|vbox|hyper-v|wsl|docker|loopba
 
 function isPrivateIPv4(address) {
   const ip = String(address || '').replace(/^::ffff:/, '');
+  // Only the plain dotted form: "010.0.0.1" or "0x0a.0.0.1" could be read as another address.
+  if (!net.isIPv4(ip)) return false;
   const parts = ip.split('.').map(Number);
   if (parts.length !== 4 || parts.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return false;
   const [a, b] = parts;

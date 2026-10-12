@@ -140,3 +140,13 @@ test('Hue bridge settings keep only well-formed values', () => {
   assert.deepEqual(normalize({ hue: paired }).hue, paired);
   assert.deepEqual(normalize({ hue: { ip: 'evil.example', id: 'x', name: 42, cert: 'AB', key: 'short' } }).hue, empty);
 });
+
+test('connected lights are off until turned on, except a Hue bridge paired before the setting', () => {
+  assert.deepEqual(normalize({}).lights, { hue: false, govee: false });
+  const cert = Array.from({ length: 32 }, () => 'AB').join(':');
+  const hue = { ip: '192.168.1.20', id: '001788fffe123456', name: 'Hue Bridge', cert, key: 'a'.repeat(40) };
+  assert.deepEqual(normalize({ hue }).lights, { hue: true, govee: false });
+  assert.deepEqual(normalize({ hue, lights: { hue: false } }).lights, { hue: false, govee: false });
+  assert.deepEqual(normalize({ lights: { hue: true, govee: true } }).lights, { hue: true, govee: true });
+  assert.deepEqual(normalize({ lights: { hue: 'yes', govee: 1 } }).lights, { hue: false, govee: false });
+});
