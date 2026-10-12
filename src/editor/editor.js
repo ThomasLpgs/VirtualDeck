@@ -171,6 +171,7 @@ async function save() {
 function showView(name) {
   document.querySelectorAll('.tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.view === name));
   document.querySelectorAll('.view').forEach((v) => (v.hidden = v.id !== `view-${name}`));
+  watchPhone(name === 'settings');
   // Survives the page reload that follows a language change.
   sessionStorage.setItem('view', name);
 }
@@ -1281,6 +1282,7 @@ function bindStaticFields() {
   });
   $('export-config').addEventListener('click', exportConfig);
   $('import-config').addEventListener('click', importConfig);
+  setupPhone();
 
   setupHotkeyField();
 }
@@ -1296,6 +1298,69 @@ function renderDeckScale() {
   $('deck-scale').value = percent;
   $('deck-scale-value').textContent = `${percent} %`;
   $('deck-scale-reset').disabled = percent === 100;
+}
+
+// ---------- Phone ----------
+
+// The QR code gives access to the deck: shown on demand only, and hidden again after a while
+// (the editor may be on screen during a stream).
+const QR_VISIBLE_MS = 2 * 60 * 1000;
+let qrTimer = null;
+let phonePoll = null;
+
+function renderPhone(status) {
+  $('phone-enabled').checked = status.enabled;
+  $('phone-details').hidden = !status.enabled;
+  if (!status.enabled) return hideQr();
+  $('phone-status').textContent = status.error || (status.url ? t('phone.ready', { url: status.url }) : t('phone.starting'));
+  $('phone-status').classList.toggle('warn', Boolean(status.error));
+  $('phone-phones').textContent = t('phone.phones', { count: status.phones });
+  $('phone-qr-toggle').disabled = !status.url;
+  if (!status.url) hideQr();
+  $('phone-qr-toggle').textContent = t($('phone-qr').hidden ? 'phone.showQr' : 'phone.hideQr');
+}
+
+function hideQr() {
+  clearTimeout(qrTimer);
+  $('phone-qr').hidden = true;
+  $('phone-qr-img').removeAttribute('src');
+  $('phone-qr-toggle').textContent = t('phone.showQr');
+}
+
+async function toggleQr() {
+  if (!$('phone-qr').hidden) return hideQr();
+  const qr = await api.remoteQr();
+  if (!qr) return;
+  $('phone-qr-img').src = qr;
+  $('phone-qr').hidden = false;
+  $('phone-qr-toggle').textContent = t('phone.hideQr');
+  clearTimeout(qrTimer);
+  qrTimer = setTimeout(hideQr, QR_VISIBLE_MS);
+}
+
+async function refreshPhone() {
+  renderPhone(await api.remoteStatus());
+}
+
+// The number of connected phones is kept up to date while the settings are on screen.
+function watchPhone(visible) {
+  clearInterval(phonePoll);
+  phonePoll = null;
+  if (!visible) return hideQr();
+  refreshPhone();
+  phonePoll = setInterval(refreshPhone, 5000);
+}
+
+function setupPhone() {
+  $('phone-enabled').addEventListener('change', async (e) => renderPhone(await api.setRemoteEnabled(e.target.checked)));
+  $('phone-qr-toggle').addEventListener('click', toggleQr);
+  $('phone-new-key').addEventListener('click', async () => {
+    if (!window.confirm(t('phone.newKeyConfirm'))) return;
+    const wasShown = !$('phone-qr').hidden;
+    hideQr();
+    renderPhone(await api.newRemoteKey());
+    if (wasShown) toggleQr();
+  });
 }
 
 function renderSettings() {

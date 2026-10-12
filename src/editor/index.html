@@ -259,6 +259,41 @@
           </div>
         </section>
 
+        <h2 class="section-title" data-i18n="phone.title"></h2>
+        <section class="card rows">
+          <div class="setting">
+            <div class="setting-text">
+              <p class="setting-title" data-i18n="phone.enable"></p>
+              <p class="muted" data-i18n="phone.enableHint"></p>
+            </div>
+            <label class="switch"><input type="checkbox" id="phone-enabled" /><span></span></label>
+          </div>
+          <div id="phone-details" class="setting-group" hidden>
+            <div class="setting">
+              <div class="setting-text">
+                <p id="phone-status" class="setting-title"></p>
+                <p id="phone-phones" class="muted"></p>
+              </div>
+              <button id="phone-qr-toggle" class="btn" type="button"></button>
+            </div>
+            <div id="phone-qr" class="setting phone-qr" hidden>
+              <img id="phone-qr-img" alt="" width="180" height="180" />
+              <div class="setting-text">
+                <p class="muted" data-i18n="phone.qrHint"></p>
+                <p class="muted" data-i18n="phone.qrWarning"></p>
+                <p class="muted" data-i18n="phone.firewallHint"></p>
+              </div>
+            </div>
+            <div class="setting">
+              <div class="setting-text">
+                <p class="setting-title" data-i18n="phone.newKey"></p>
+                <p class="muted" data-i18n="phone.newKeyHint"></p>
+              </div>
+              <button id="phone-new-key" class="btn" type="button" data-i18n="phone.newKeyButton"></button>
+            </div>
+          </div>
+        </section>
+
         <h2 class="section-title" data-i18n="backup.title"></h2>
         <section class="card rows">
           <div class="setting">

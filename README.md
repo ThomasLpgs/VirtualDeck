@@ -24,6 +24,7 @@
 - **État en direct sur les boutons** : badge LIVE sur la scène à l'antenne, chrono « LIVE 1:02:03 » et « REC 12:03 » (ou « PAUSE ») sur les boutons Stream et Enregistrer, « MUET » sur un son coupé. Tout suit aussi ce que tu fais directement dans OBS.
 - **Multi-actions** : un seul bouton enchaîne plusieurs actions, avec une attente possible avant chacune (par exemple « Pause » : scène Pause, puis musique, puis webcam masquée).
 - **Pages** : jusqu'à 10 grilles, chacune avec son nom (« Sons », « Scènes »…) et son propre nombre de colonnes et de lignes. Elles s'ouvrent dans le deck ou dans une bulle qui sort du bouton, au-dessus du deck (au choix dans les Réglages).
+- **Ton téléphone comme deck** : scanne un QR code et ton téléphone devient un Stream Deck tactile, sur le wifi de la maison, sans appli à installer et sans rien ouvrir sur internet.
 - **Raccourci par bouton** : déclenche n'importe quel bouton de partout, sans ouvrir le deck (les touches F13 à F24 marchent seules).
 - **Format vertical (TikTok, Shorts…)** avec le plugin [Aitum Vertical](https://github.com/Aitum/obs-vertical-canvas) : scènes, sources, live, enregistrement et clips en horizontal, en vertical ou les deux en même temps.
 - **Sons** (mp3, wav, ogg…) avec réglage du volume ; un second clic coupe le son.
@@ -98,7 +99,17 @@ Appuie sur `Ctrl + Maj + Espace` n'importe où (ou sur la touche choisie dans **
 - **Déplacer** le deck en le tirant par sa barre du haut : il se rouvre ensuite au même endroit. **Redimensionner** par le coin en bas à droite.
 - Dans **Réglages › Ouverture des pages**, *Deck superposé* ouvre les pages dans une bulle qui sort du bouton : re-cliquer sur le bouton ou sur le deck la referme.
 
-### 4. Format vertical avec Aitum Vertical (optionnel)
+### 4. Ton téléphone comme deck (optionnel)
+
+1. **Réglages › Téléphone** : active *Utiliser mon téléphone comme deck*, puis **Afficher le QR code**.
+2. Scanne-le avec l'appareil photo du téléphone (même wifi que le PC). Ajoute la page à l'écran d'accueil pour l'ouvrir comme une appli.
+3. Si Windows demande une autorisation pour VirtualDeck, laisse coché uniquement **Réseaux privés**.
+
+Les pages se changent avec les flèches ou en glissant le doigt. Les badges LIVE / REC / MUET suivent en direct.
+
+Sécurité : le serveur n'existe que pendant que l'option est activée et n'écoute que sur le réseau local (rien sur la box, rien sur internet). Chaque appui est signé avec une clé secrète transmise par le QR code : un appareil du wifi qui ne l'a pas scanné ne peut rien déclencher, même en rejouant une requête. **Nouveau QR code** déconnecte tous les téléphones. Évite de montrer le QR code en stream : même s'il ne marche que depuis ton wifi, autant le garder pour toi.
+
+### 5. Format vertical avec Aitum Vertical (optionnel)
 
 Si le plugin [Aitum Vertical](https://github.com/Aitum/obs-vertical-canvas) est installé dans OBS, VirtualDeck le détecte tout seul :
 

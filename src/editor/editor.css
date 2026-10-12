@@ -1259,6 +1259,7 @@ input[type='range']:focus {
   font-weight: 550;
 }
 
+.setting-title.warn,
 .setting-text .muted.warn {
   color: var(--warn);
 }
@@ -1346,6 +1347,28 @@ input[type='range']:focus {
 
 .switch input:focus-visible + span {
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.setting-group[hidden] {
+  display: none;
+}
+
+.setting-group {
+  border-top: 1px solid var(--line);
+}
+
+.phone-qr {
+  justify-content: flex-start;
+}
+
+.phone-qr img {
+  flex: none;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.phone-qr .setting-text p + p {
+  margin-top: 8px;
 }
 
 .backup-status {

@@ -11,7 +11,10 @@ const {
   screen,
   shell,
 } = require('electron');
+const crypto = require('crypto');
 const fs = require('fs');
+const os = require('os');
+const qrcode = require('qrcode-generator');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const config = require('./config');
@@ -21,6 +24,7 @@ const { StreamlabsManager } = require('./streamlabs');
 const { runAction } = require('./actions');
 const backup = require('./backup');
 const { checkForUpdate } = require('./updates');
+const remote = require('./remote');
 
 const { t } = i18n;
 
@@ -43,6 +47,10 @@ const SHADOW_MARGIN = 24;
 const TAIL_SIZE = 12;
 const TAIL_DEPTH = 10;
 const UPDATE_CHECK_MS = 6 * 60 * 60 * 1000;
+// How often the phone server checks that the PC's network address hasn't changed.
+const REMOTE_ADDRESS_CHECK_MS = 60 * 1000;
+// Images a phone can download (key pictures), at most.
+const MAX_PHONE_IMAGE = 3 * 1024 * 1024;
 
 const FILE_EXTENSIONS = {
   image: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'ico'],
@@ -91,8 +99,13 @@ app.on('web-contents-created', (_e, contents) => {
 });
 
 // Renderers can't build file:// URLs themselves (sandboxed preload), so add them here.
+// The phone pairing key stays in the main process (the editor shows it as a QR code on demand).
 function forRenderer(c) {
-  return { ...c, buttons: c.buttons.map((b) => ({ ...b, imageUrl: fileUrl(b.image) })) };
+  return {
+    ...c,
+    remote: { enabled: c.remote.enabled },
+    buttons: c.buttons.map((b) => ({ ...b, imageUrl: fileUrl(b.image) })),
+  };
 }
 
 // Ctrl+C, Ctrl+V… would stop working in every other app.
@@ -479,11 +492,20 @@ function registerHotkey() {
   return deckOk;
 }
 
-// Runs a key, from the deck or from its own hotkey. When the deck isn't on screen (closed after
-// the action, or never opened), errors and confirmations are shown as notifications.
-async function runKey(index, { fromDeck = false, origin = null } = {}) {
+// Runs a key, from the deck, from its own hotkey or from a phone. When the deck isn't on screen
+// (closed after the action, or never opened), errors and confirmations are shown as notifications.
+// A phone gets the result instead, and turns its own pages (result.page).
+async function runKey(index, { fromDeck = false, origin = null, fromPhone = false } = {}) {
   const button = cfg.buttons[index];
   if (!button) return { ok: false, error: t('error.buttonNotFound') };
+  if (fromPhone) {
+    try {
+      const result = await runAction(button.action, { stream: activeStream(), playSound });
+      return { ok: true, warning: result?.warning, notice: result?.notice, page: result?.page };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
+  }
   // A page key changes what the deck shows: it must not close it.
   const closes = fromDeck && cfg.closeAfterAction && button.action.type !== 'page';
   if (closes) hideDeck();
@@ -556,7 +578,139 @@ function applyConfig(next) {
     updateTray();
     broadcast('config:changed', forRenderer(cfg));
   }
+  phoneServer.changed();
   return hotkeyOk;
+}
+
+// ---------- Phone as a deck (remote.js) ----------
+
+// What a phone needs to draw the deck. Only the action fields the keys display (scene names,
+// muted input...): no file paths, programs or URLs leave the PC.
+const PHONE_ACTION_FIELDS = ['type', 'scene', 'verticalScene', 'source', 'verticalSource', 'input', 'page'];
+
+function phoneAction(action) {
+  const copy = Object.fromEntries(PHONE_ACTION_FIELDS.filter((f) => typeof action[f] === 'string').map((f) => [f, action[f]]));
+  // `target` is the output (horizontal / vertical) on output keys, but a path on program keys.
+  if (['obs-stream', 'obs-record', 'obs-replay'].includes(action.type) && typeof action.target === 'string') {
+    copy.target = action.target;
+  }
+  if (action.type === 'multi') copy.steps = (action.steps || []).map((step) => ({ action: phoneAction(step.action) }));
+  return copy;
+}
+
+// Changes when the key's picture changes, so the phone knows when to download it again.
+function imageTag(file) {
+  if (!file) return '';
+  try {
+    return crypto.createHash('sha1').update(`${file}|${fs.statSync(file).mtimeMs}`).digest('hex').slice(0, 12);
+  } catch {
+    return '';
+  }
+}
+
+function phoneState() {
+  return {
+    pageCount: cfg.pageCount,
+    pageGrids: cfg.pageGrids,
+    pageNames: cfg.pageNames,
+    grid: cfg.grid,
+    buttons: cfg.buttons.map((b) => ({
+      label: b.label,
+      symbol: b.symbol,
+      icon: b.icon,
+      color: b.color,
+      image: imageTag(b.image),
+      action: phoneAction(b.action),
+    })),
+    stream: streamState(),
+  };
+}
+
+const IMAGE_TYPES = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  ico: 'image/x-icon',
+};
+
+async function phoneImage(index) {
+  const file = cfg.buttons[index]?.image;
+  const mime = file && IMAGE_TYPES[path.extname(file).slice(1).toLowerCase()];
+  if (!mime) return null;
+  try {
+    const stat = await fs.promises.stat(file);
+    if (!stat.isFile() || stat.size > MAX_PHONE_IMAGE) return null;
+    return { mime, data: (await fs.promises.readFile(file)).toString('base64') };
+  } catch {
+    return null;
+  }
+}
+
+const phoneServer = remote.createRemoteServer({
+  key: () => cfg.remote.key,
+  state: phoneState,
+  i18n: () => i18n.bundle(),
+  press: (index) => runKey(index, { fromPhone: true }),
+  image: phoneImage,
+});
+// Why the server couldn't start (no network...), shown in the settings.
+let remoteError = '';
+
+function saveRemote(patch) {
+  cfg = config.save({ ...cfg, remote: { ...cfg.remote, ...patch } });
+}
+
+// Starts, restarts (new network address) or stops the phone server to match the setting.
+// One at a time: the settings page and the address check may ask together.
+let remoteSync = Promise.resolve();
+function syncRemote() {
+  remoteSync = remoteSync.then(syncRemoteNow);
+  return remoteSync;
+}
+
+async function syncRemoteNow() {
+  const address = cfg.remote.enabled ? remote.pickLanAddress(os.networkInterfaces()) : null;
+  const current = phoneServer.address();
+  if (current && address === current.host) return;
+  phoneServer.stop();
+  remoteError = '';
+  if (!cfg.remote.enabled) return;
+  if (!address) {
+    remoteError = t('phone.noNetwork');
+    return;
+  }
+  if (!cfg.remote.key) saveRemote({ key: remote.newKey() });
+  try {
+    const port = await phoneServer.start(address, cfg.remote.port);
+    // Keep the same port next time, so the phone's bookmark keeps working.
+    if (port !== cfg.remote.port) saveRemote({ port });
+  } catch (err) {
+    remoteError = err.message;
+  }
+}
+
+function remoteStatus() {
+  const address = phoneServer.address();
+  return {
+    enabled: cfg.remote.enabled,
+    url: address ? `http://${address.host}:${address.port}` : '',
+    phones: phoneServer.phones(),
+    error: remoteError,
+  };
+}
+
+// QR code of the pairing link (an SVG data: URL). The key is in the #fragment: browsers never send it.
+function remoteQr() {
+  const address = phoneServer.address();
+  if (!address) return '';
+  const qr = qrcode(0, 'M');
+  qr.addData(`http://${address.host}:${address.port}/#k=${cfg.remote.key}`);
+  qr.make();
+  const svg = qr.createSvgTag({ cellSize: 6, margin: 3, scalable: true });
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
 
 // ---------- IPC ----------
@@ -568,7 +722,8 @@ function registerIpc() {
   ipcMain.handle('config:save', (_e, next) => {
     try {
       // Position and size are set from the deck itself (see saveDeckPosition / saveDeckScale).
-      const hotkeyOk = applyConfig({ ...next, deckPosition: cfg.deckPosition, deckScale: cfg.deckScale });
+      // The phone settings change through remote:* only (the editor never sees the pairing key).
+      const hotkeyOk = applyConfig({ ...next, deckPosition: cfg.deckPosition, deckScale: cfg.deckScale, remote: cfg.remote });
       return { ok: true, hotkeyOk, failedKeyHotkeys };
     } catch (err) {
       return { ok: false, error: err.message };
@@ -708,6 +863,24 @@ function registerIpc() {
     return icons;
   });
 
+  ipcMain.handle('remote:get', async () => {
+    await syncRemote();
+    return remoteStatus();
+  });
+  ipcMain.handle('remote:setEnabled', async (_e, enabled) => {
+    saveRemote({ enabled: enabled === true });
+    await syncRemote();
+    return remoteStatus();
+  });
+  ipcMain.handle('remote:qr', () => remoteQr());
+  // A new key unpairs every phone: they need to scan the new QR code.
+  ipcMain.handle('remote:newKey', async () => {
+    saveRemote({ key: remote.newKey() });
+    phoneServer.stop();
+    await syncRemote();
+    return remoteStatus();
+  });
+
   ipcMain.handle('update:get', () => update);
   ipcMain.on('update:open', openUpdatePage);
 
@@ -722,7 +895,9 @@ function registerIpc() {
 
   for (const client of Object.values(streams)) {
     client.on('state', () => {
-      if (client === activeStream()) broadcast('stream:state', streamState());
+      if (client !== activeStream()) return;
+      broadcast('stream:state', streamState());
+      phoneServer.changed();
     });
   }
 }
@@ -736,7 +911,10 @@ if (!app.requestSingleInstanceLock()) {
   app.on('second-instance', () => openEditor());
   // Tray app: closing the editor must not quit.
   app.on('window-all-closed', () => {});
-  app.on('will-quit', () => globalShortcut.unregisterAll());
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
+    phoneServer.stop();
+  });
 
   app.whenReady().then(() => {
     app.setAppUserModelId(APP_ID);
@@ -756,6 +934,9 @@ if (!app.requestSingleInstanceLock()) {
     // A short delay keeps the check off the startup path (the app may start with Windows, before the network).
     setTimeout(checkUpdates, 15000);
     setInterval(checkUpdates, UPDATE_CHECK_MS);
+    syncRemote();
+    // The PC can change network (other Wi-Fi, new address from the router): follow it.
+    setInterval(() => cfg.remote.enabled && syncRemote(), REMOTE_ADDRESS_CHECK_MS);
 
     const hotkeyOk = registerHotkey();
     if (loaded.firstRun) {

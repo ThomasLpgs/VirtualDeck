@@ -16,8 +16,8 @@ const MAX_DECK_SCALE = 1.6;
 const DEFAULT_COLOR = '#8b8d98';
 const SOFTWARES = ['obs', 'streamlabs'];
 
-// Secret field of each streaming software's settings, stored encrypted on disk.
-const SECRETS = { obs: 'password', streamlabs: 'token' };
+// Secret field of each settings section (streaming software, phone pairing key), stored encrypted on disk.
+const SECRETS = { obs: 'password', streamlabs: 'token', remote: 'key' };
 
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
 
@@ -57,6 +57,8 @@ function defaults() {
     software: 'obs',
     obs: { url: 'ws://127.0.0.1:4455', password: '' },
     streamlabs: { url: 'ws://127.0.0.1:59650/api/websocket', token: '' },
+    // Phone as a deck (remote.js): off by default. port 0 = not chosen yet; key = pairing key.
+    remote: { enabled: false, port: 0, key: '' },
     buttons: Array.from({ length: 6 }, defaultButton),
   };
 }
@@ -94,6 +96,11 @@ function normalize(raw) {
   const scale = Number(raw?.deckScale);
   cfg.deckScale = Number.isFinite(scale) ? Math.min(MAX_DECK_SCALE, Math.max(MIN_DECK_SCALE, scale)) : base.deckScale;
   cfg.closeAfterAction = cfg.closeAfterAction !== false;
+  cfg.remote = {
+    enabled: raw?.remote?.enabled === true,
+    port: clamp(raw?.remote?.port, 0, 65535, 0),
+    key: /^[A-Za-z0-9_-]{43}$/.test(raw?.remote?.key) ? raw.remote.key : '',
+  };
   cfg.launchAtLogin = cfg.launchAtLogin === true;
 
   const buttons = Array.isArray(raw?.buttons) ? raw.buttons : [];
