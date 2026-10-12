@@ -1,6 +1,6 @@
 {
   "name": "virtualdeck",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "VirtualDeck : un Stream Deck virtuel pour Windows. Une grille de boutons qui s'ouvre au raccourci clavier et pilote OBS, Streamlabs, des sons et des programmes.",
   "author": "Thomas Laspougeas",
   "main": "src/main.js",
@@ -47,6 +47,7 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
+      "include": "build/installer.nsh",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "VirtualDeck",
