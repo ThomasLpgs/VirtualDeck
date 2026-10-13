@@ -431,15 +431,15 @@ test.describe('keyboard keys', () => {
       combo: async (...args) => calls.push(['combo', ...args]),
       text: async (...args) => calls.push(['text', ...args]),
     };
-    const microphone = (mode) => (calls.push(['mic', mode]), { notice: 'muted' });
+    const microphone = (mode, device) => (calls.push(['mic', mode, device]), { notice: 'muted' });
     return { calls, context: { keyboard, microphone } };
   };
 
   test("the PC's microphone, not a key press", async () => {
     const { calls, context } = recorder();
     assert.deepEqual(await run({ type: 'media', key: 'micMute' }, null, context), { notice: 'muted' });
-    await run({ type: 'media', key: 'micMute', mode: 'unmute' }, null, context);
-    assert.deepEqual(calls, [['mic', 'toggle'], ['mic', 'unmute']]);
+    await run({ type: 'media', key: 'micMute', mode: 'unmute', device: 'headset' }, null, context);
+    assert.deepEqual(calls, [['mic', 'toggle', ''], ['mic', 'unmute', 'headset']]);
   });
 
   test('media keys, volume keys moving several steps', async () => {

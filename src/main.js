@@ -32,7 +32,7 @@ const { saveAppIcon } = require('./app-icon');
 const hue = require('./hue');
 const govee = require('./govee');
 const { createKeyboard, KeyboardError } = require('./keyboard');
-const { createMicrophone, MicrophoneError } = require('./microphone');
+const { createMicrophone, MicrophoneError, ALL: ALL_MICS } = require('./microphone');
 
 const { t } = i18n;
 
@@ -106,8 +106,9 @@ let updateProgress = null;
 const streams = { obs: new ObsManager(), streamlabs: new StreamlabsManager() };
 const keyboard = createKeyboard({ clipboard, ClipboardItem });
 const microphone = createMicrophone();
-// Whether the PC's microphones are muted (null: unknown, or no microphone), shown on mic keys.
-let micMuted = null;
+// Whether the microphones of each mic key are muted, by its device ('' every one, 'default', or a
+// device id): true / false, null without such a microphone. Shown on mic keys.
+let micMuted = {};
 const activeStream = () => streams[cfg.software];
 
 const fileUrl = (p) => (p ? pathToFileURL(p).href : '');
@@ -644,35 +645,37 @@ const keyboardActions = Object.fromEntries(
   ]),
 );
 
-const usesMicrophone = (action) =>
-  (action.type === 'media' && action.key === 'micMute') || (action.steps || []).some((step) => usesMicrophone(step.action || {}));
-
-function setMicMuted(muted) {
-  if (muted === micMuted) return;
-  micMuted = muted;
-  broadcast('stream:state', streamState());
-}
+// The devices the mic keys of an action mute (see microphone.js), steps of a multi-action included.
+const micDevices = (action) =>
+  action.type === 'media' && action.key === 'micMute'
+    ? [typeof action.device === 'string' ? action.device : ALL_MICS]
+    : (action.steps || []).flatMap((step) => micDevices(step.action || {}));
 
 // Only when a key shows it: Windows' audio isn't touched otherwise.
 function readMicrophone() {
-  if (!cfg.buttons.some((button) => usesMicrophone(button.action))) return;
+  const devices = [...new Set(cfg.buttons.flatMap((button) => micDevices(button.action || {})))];
+  if (!devices.length) return;
   try {
-    setMicMuted(microphone.isMuted());
+    const states = microphone.states(devices);
+    if (JSON.stringify(states) === JSON.stringify(micMuted)) return;
+    micMuted = states;
+    broadcast('stream:state', streamState());
   } catch (err) {
     console.warn('microphone:', err.message);
   }
 }
 
-// mode: toggle / mute / unmute, for every microphone of the PC.
-function runMicrophone(mode) {
+// mode: toggle / mute / unmute. device: every microphone of the PC, the default one, or one by its id.
+function runMicrophone(mode, device) {
   try {
-    const muted = microphone.set(mode);
-    setMicMuted(muted);
+    const muted = microphone.set(mode, device);
     return { notice: t(muted ? 'notice.micMuted' : 'notice.micOn') };
   } catch (err) {
-    // Some may have changed all the same: the keys show how they really are now.
-    readMicrophone();
     throw err instanceof MicrophoneError ? new Error(t(`micError.${err.code}`)) : err;
+  } finally {
+    // Other mic keys may share these microphones (one for all, one for the headset): they all show
+    // how the microphones really are now, even after a failure.
+    readMicrophone();
   }
 }
 
@@ -893,8 +896,8 @@ function riskyWarning(risky) {
 
 // What a phone needs to draw the deck. Only the action fields the keys display (scene names,
 // muted input...): no file paths, programs or URLs leave the PC.
-// key: the media key, so a microphone key shows when the PC's microphones are muted.
-const PHONE_ACTION_FIELDS = ['type', 'scene', 'verticalScene', 'source', 'verticalSource', 'input', 'page', 'key'];
+// key, device: the media key and its microphone, so a mic key shows when they are muted.
+const PHONE_ACTION_FIELDS = ['type', 'scene', 'verticalScene', 'source', 'verticalSource', 'input', 'page', 'key', 'device'];
 
 function phoneAction(action = {}) {
   const copy = Object.fromEntries(PHONE_ACTION_FIELDS.filter((f) => typeof action[f] === 'string').map((f) => [f, action[f]]));
@@ -1272,6 +1275,14 @@ function registerIpc() {
   ipcMain.on('update:install', installUpdate);
 
   ipcMain.handle('stream:state', () => streamState());
+  ipcMain.handle('microphone:list', () => {
+    try {
+      return microphone.list();
+    } catch (err) {
+      console.warn('microphones unreadable:', err.message);
+      return [];
+    }
+  });
   ipcMain.handle('stream:reconnect', () => activeStream().reconnect());
   ipcMain.handle('stream:scenes', () => activeStream().getScenes().catch(() => []));
   ipcMain.handle('stream:inputs', () => activeStream().getAudioInputs().catch(() => []));

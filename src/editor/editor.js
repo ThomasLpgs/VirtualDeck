@@ -1133,6 +1133,7 @@ function fillActionFields(container, action, update, rerender) {
       );
       if (key === 'micMute') {
         container.append(
+          microphoneField(action, update),
           field(
             t('field.behavior'),
             segmented(
@@ -1214,6 +1215,45 @@ function fillActionFields(container, action, update, rerender) {
       break;
   }
 }
+// The PC's microphones, last time they were read: { id, name, isDefault }.
+let microphones = [];
+
+// Which microphones a mic key mutes: every one, Windows' default one, or one picked by its name
+// (like Discord's input device list). Shown at once from the last list, then from a fresh one.
+function microphoneField(action, update) {
+  const slot = el('div');
+  const render = () => {
+    const device = typeof action.device === 'string' ? action.device : '';
+    const fallback = microphones.find((mic) => mic.isDefault)?.name;
+    const options = [
+      ['', t('mic.all')],
+      ['default', fallback ? t('mic.defaultNamed', { name: fallback }) : t('mic.default')],
+      ...microphones.map((mic) => [mic.id, mic.name || t('mic.unnamed')]),
+    ];
+    // Unplugged since: still shown, by the name it had.
+    if (!options.some(([id]) => id === device)) options.push([device, t('mic.unplugged', { name: action.deviceName || t('mic.unnamed') })]);
+    slot.replaceChildren(
+      field(
+        t('field.microphone'),
+        themedSelect(options, device, (id) => {
+          // The name stays, to show the microphone while it is unplugged.
+          const patch = { device: id, deviceName: microphones.find((mic) => mic.id === id)?.name || '' };
+          action = { ...action, ...patch };
+          update(patch);
+        }),
+        t('field.microphoneHint'),
+      ),
+    );
+  };
+  render();
+  api.microphones().then((list) => {
+    if (JSON.stringify(list) === JSON.stringify(microphones)) return;
+    microphones = list;
+    if (slot.isConnected) render();
+  });
+  return slot;
+}
+
 async function refreshScenes() {
   [streamLists.scenes, streamLists.verticalScenes, streamLists.inputs] = await Promise.all([
     api.streamScenes(),

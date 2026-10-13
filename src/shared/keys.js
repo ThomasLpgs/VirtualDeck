@@ -51,8 +51,8 @@ function formatElapsed(since, until = Date.now()) {
 
 // Badge of keys showing a live state (stream, recording, muted input or microphone), or '' when off.
 function keyBadge(action, streamState) {
-  // The PC's microphones: whatever the streaming software does.
-  if (action.type === 'media' && action.key === 'micMute') return streamState.micMuted ? t('badge.muted') : '';
+  // The PC's microphones (all, the default one or a chosen one): whatever the streaming software does.
+  if (action.type === 'media' && action.key === 'micMute') return streamState.micMuted?.[action.device || ''] ? t('badge.muted') : '';
   if (streamState.status !== 'connected') return '';
   // Keys on both canvases show the horizontal output while it runs, else the vertical one.
   const target = action.target || 'horizontal';
