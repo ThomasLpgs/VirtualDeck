@@ -71,7 +71,7 @@ const MUTE_MODES = ['toggle', 'mute', 'unmute'];
 const HUE_MODES = ['toggle', 'on', 'off', 'scene'];
 const GOVEE_MODES = ['toggle', 'on', 'off'];
 // Media keys (keyboard.js MEDIA), in the order of a player's buttons.
-const MEDIA_KEYS = ['playPause', 'prev', 'next', 'stop', 'volumeDown', 'volumeUp', 'volumeMute'];
+const MEDIA_KEYS = ['playPause', 'prev', 'next', 'stop', 'volumeDown', 'volumeUp', 'volumeMute', 'micMute'];
 // Presses per volume key: Windows moves the volume by 2 % on each.
 const VOLUME_STEPS = [1, 5, 10];
 // Modifiers of a key combination, in the order Windows writes them ("Win + Ctrl + Alt + Shift").
@@ -165,6 +165,7 @@ function setStatus(text, warn = false) {
 }
 
 function scheduleSave() {
+  recordChange();
   setStatus(t('save.saving'));
   clearTimeout(saveTimer);
   saveTimer = setTimeout(save, SAVE_DEBOUNCE_MS);
@@ -205,6 +206,101 @@ async function save() {
     hint.classList.add('warn');
   }
 }
+
+// ---------- Undo / redo (Ctrl+Z, Ctrl+Y) ----------
+// Keys and pages only (not the settings), kept in memory while the editor is open: nothing more
+// is written to disk.
+
+const HISTORY_MAX = 50;
+// Typing in a field is one change, not one per letter.
+const TYPING_MERGE_MS = 1500;
+const undoStack = [];
+const redoStack = [];
+// The keys and pages as they are now (JSON), to compare with after each change.
+let deckNow = null;
+let lastEdit = { at: 0, field: null };
+
+const deckJson = () =>
+  JSON.stringify({
+    buttons: config.buttons,
+    pageCount: config.pageCount,
+    pageGrids: config.pageGrids,
+    pageNames: config.pageNames,
+    grid: config.grid,
+  });
+
+const isTextField = (node) =>
+  node instanceof HTMLTextAreaElement ||
+  (node instanceof HTMLInputElement && !['checkbox', 'radio', 'range', 'button', 'file', 'color'].includes(node.type));
+
+// Starts the history over (config loaded or imported).
+function resetHistory() {
+  undoStack.length = 0;
+  redoStack.length = 0;
+  deckNow = deckJson();
+  lastEdit = { at: 0, field: null };
+}
+
+// Called on every save: puts what the keys were before the change in the history.
+function recordChange() {
+  const next = deckJson();
+  if (next === deckNow) return;
+  const field = isTextField(document.activeElement) ? document.activeElement : null;
+  const typing = field && field === lastEdit.field && Date.now() - lastEdit.at < TYPING_MERGE_MS;
+  if (!typing) {
+    undoStack.push(deckNow);
+    if (undoStack.length > HISTORY_MAX) undoStack.shift();
+  }
+  redoStack.length = 0;
+  lastEdit = { at: Date.now(), field };
+  deckNow = next;
+}
+
+// Puts the keys back as they were, and shows the first key (or page) that changed.
+function restoreDeck(from, to) {
+  const previous = JSON.parse(deckNow);
+  to.push(deckNow);
+  deckNow = from.pop();
+  Object.assign(config, JSON.parse(deckNow));
+  lastEdit = { at: 0, field: null };
+  const pages = Math.max(previous.pageCount, config.pageCount);
+  const changedKey = config.buttons.findIndex((b, i) => JSON.stringify(b) !== JSON.stringify(previous.buttons[i]));
+  const changedPage = Array.from({ length: pages }, (_, p) => p).find(
+    (p) =>
+      JSON.stringify(config.pageGrids[p]) !== JSON.stringify(previous.pageGrids[p]) ||
+      config.pageNames[p] !== previous.pageNames[p],
+  );
+  let index = changedKey >= 0 ? changedKey : changedPage !== undefined ? changedPage * PAGE_SIZE : selected;
+  if (Math.floor(index / PAGE_SIZE) >= config.pageCount) index = (config.pageCount - 1) * PAGE_SIZE;
+  if (index >= config.buttons.length) index = config.buttons.length - 1;
+  showView('buttons');
+  select(index);
+  setStatus(t('save.saving'));
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, SAVE_DEBOUNCE_MS);
+}
+
+function undo() {
+  if (!undoStack.length) return false;
+  restoreDeck(undoStack, redoStack);
+  return true;
+}
+
+function redo() {
+  if (!redoStack.length) return false;
+  restoreDeck(redoStack, undoStack);
+  return true;
+}
+
+// In a text field, Ctrl+Z undoes the typing, as everywhere. Fields recording a shortcut keep it.
+document.addEventListener('keydown', (e) => {
+  if (!config || e.defaultPrevented || !e.ctrlKey || e.altKey || e.metaKey) return;
+  if (isTextField(e.target) || e.target.isContentEditable) return;
+  const key = e.key.toLowerCase();
+  const isUndo = key === 'z' && !e.shiftKey;
+  const isRedo = key === 'y' || (key === 'z' && e.shiftKey);
+  if ((isUndo && undo()) || (isRedo && redo())) e.preventDefault();
+});
 
 // ---------- Tabs ----------
 
@@ -345,7 +441,8 @@ function addPage() {
 }
 
 function removePage() {
-  if (!window.confirm(t('page.removeConfirm', { name: pageTitle(config, page) }))) return;
+  const name = pageTitle(config, page);
+  if (!window.confirm(t('page.removeConfirm', { name }))) return;
   config.buttons.splice(pageStart(), PAGE_SIZE);
   config.pageGrids.splice(page, 1);
   config.pageNames.splice(page, 1);
@@ -354,6 +451,7 @@ function removePage() {
   padPages();
   select(Math.min(page, config.pageCount - 1) * PAGE_SIZE);
   scheduleSave();
+  showCanvasNotice(t('undo.pageRemoved', { name }), false, true);
 }
 
 function markLiveScene() {
@@ -1005,6 +1103,19 @@ function fillActionFields(container, action, update, rerender) {
           ),
         ),
       );
+      if (key === 'micMute') {
+        container.append(
+          field(
+            t('field.behavior'),
+            segmented(
+              MUTE_MODES.map((mode) => [mode, t(`muteMode.${mode}`)]),
+              action.mode || 'toggle',
+              (mode) => update({ mode }),
+            ),
+            t('field.micMuteHint'),
+          ),
+        );
+      }
       if (key.startsWith('volume') && key !== 'volumeMute') {
         container.append(
           field(
@@ -1404,6 +1515,7 @@ async function importConfig() {
   if (!result) return;
   if (!result.ok) return showBackupStatus(t('backup.importFailed', { error: result.error }), true);
   config = result.config;
+  resetHistory();
   selected = 0;
   renderSettings();
   renderPreview();
@@ -1423,10 +1535,21 @@ let libraryFilter = 'all';
 let noticeTimer = null;
 const NOTICE_MS = 10000;
 
-// A message above the page tabs (a template just added), gone after a while.
-function showCanvasNotice(text, warn = false) {
+// A message above the page tabs (a template just added, a page deleted), gone after a while.
+// undoable: adds an "Undo" button, for a change that may have been a mistake.
+function showCanvasNotice(text, warn = false, undoable = false) {
   const notice = $('canvas-notice');
   notice.textContent = text;
+  if (undoable) {
+    const steps = undoStack.length;
+    const cancel = button(t('undo.button'), () => {
+      // Only if nothing else changed since: else Ctrl+Z goes back step by step.
+      if (undoStack.length === steps) undo();
+      notice.hidden = true;
+    }, 'link-btn');
+    cancel.title = t('undo.hint');
+    notice.append(' ', cancel);
+  }
   notice.classList.toggle('warn', warn);
   notice.hidden = false;
   clearTimeout(noticeTimer);
@@ -1518,7 +1641,7 @@ async function addTemplate(template) {
   let message = t(blankDeck ? 'library.addedFirst' : 'library.added', { name: built.name });
   if (built.todo) message += ` ${t('library.todo', { count: built.todo })}`;
   if (template.needsStream && streamState.status !== 'connected') message += ` ${t('library.connectFirst', { software: software().label })}`;
-  showCanvasNotice(message, Boolean(built.todo));
+  showCanvasNotice(message, Boolean(built.todo), true);
 }
 
 // ---------- Updates ----------
@@ -1583,10 +1706,13 @@ function bindStaticFields() {
   });
 
   $('clear-button').addEventListener('click', () => {
+    const wasEmpty = isEmptyButton(current());
+    const name = current().label || t('editor.buttonN', { n: (selected % PAGE_SIZE) + 1 });
     config.buttons[selected] = emptyButton();
     renderPreview();
     renderInspector();
     scheduleSave();
+    if (!wasEmpty) showCanvasNotice(t('undo.keyRemoved', { name }), false, true);
   });
 
   $('hue-enabled').addEventListener('change', (e) => setLights('hue', e.target.checked));
@@ -2117,6 +2243,7 @@ function renderSettings() {
     api.listIcons(),
     api.getUpdate(),
   ]);
+  resetHistory();
   bindStaticFields();
   renderSettings();
   renderPreview();

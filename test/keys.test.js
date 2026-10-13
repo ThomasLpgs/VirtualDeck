@@ -49,3 +49,11 @@ test('stream, record and mute badges', () => {
   assert.equal(keys.hasRunningTimer(state), true);
   assert.equal(keys.hasRunningTimer(connected()), false);
 });
+
+test("a microphone key shows the PC's microphones muted, with or without OBS", () => {
+  const mic = { type: 'media', key: 'micMute' };
+  assert.equal(keys.keyBadge(mic, { status: 'disconnected', micMuted: true }), 'MUTED');
+  assert.equal(keys.keyBadge(mic, { status: 'connected', micMuted: false }), '');
+  assert.equal(keys.keyBadge(mic, { status: 'disconnected', micMuted: null }), '');
+  assert.equal(keys.keyBadge({ type: 'media', key: 'next' }, { status: 'disconnected', micMuted: true }), '');
+});

@@ -32,6 +32,7 @@ const { saveAppIcon } = require('./app-icon');
 const hue = require('./hue');
 const govee = require('./govee');
 const { createKeyboard, KeyboardError } = require('./keyboard');
+const { createMicrophone, MicrophoneError } = require('./microphone');
 
 const { t } = i18n;
 
@@ -104,6 +105,9 @@ let update = null;
 let updateProgress = null;
 const streams = { obs: new ObsManager(), streamlabs: new StreamlabsManager() };
 const keyboard = createKeyboard({ clipboard, ClipboardItem });
+const microphone = createMicrophone();
+// Whether the PC's microphones are muted (null: unknown, or no microphone), shown on mic keys.
+let micMuted = null;
 const activeStream = () => streams[cfg.software];
 
 const fileUrl = (p) => (p ? pathToFileURL(p).href : '');
@@ -134,7 +138,7 @@ function isImportableHotkey(hotkey) {
 }
 
 function streamState() {
-  return { ...activeStream().state, software: cfg.software, label: activeStream().label };
+  return { ...activeStream().state, software: cfg.software, label: activeStream().label, micMuted };
 }
 
 function broadcast(channel, data) {
@@ -330,6 +334,8 @@ function showDeck() {
   deckWin.setBounds({ ...placedAt, width, height });
   // Keyboard keys pressed in the deck type into the window it opens over.
   if (!deckWin.isVisible()) keyboard.rememberTarget();
+  // Muted from Windows or another app meanwhile: the mic keys show it as the deck opens.
+  if (!deckWin.isVisible()) readMicrophone();
   deckWin.webContents.send('deck:show');
   deckWin.show();
   deckWin.focus();
@@ -598,8 +604,46 @@ const keyboardActions = Object.fromEntries(
   ]),
 );
 
-// What the actions need from here: the streaming software, the sound player, the lights, the keyboard.
-const keyContext = () => ({ stream: activeStream(), playSound, hue: runHue, govee: runGovee, keyboard: keyboardActions });
+const usesMicrophone = (action) =>
+  (action.type === 'media' && action.key === 'micMute') || (action.steps || []).some((step) => usesMicrophone(step.action || {}));
+
+function setMicMuted(muted) {
+  if (muted === micMuted) return;
+  micMuted = muted;
+  broadcast('stream:state', streamState());
+}
+
+// Only when a key shows it: Windows' audio isn't touched otherwise.
+function readMicrophone() {
+  if (!cfg.buttons.some((button) => usesMicrophone(button.action))) return;
+  try {
+    setMicMuted(microphone.isMuted());
+  } catch (err) {
+    console.warn('microphone:', err.message);
+  }
+}
+
+// mode: toggle / mute / unmute, for every microphone of the PC.
+function runMicrophone(mode) {
+  try {
+    const muted = microphone.set(mode);
+    setMicMuted(muted);
+    return { notice: t(muted ? 'notice.micMuted' : 'notice.micOn') };
+  } catch (err) {
+    throw err instanceof MicrophoneError ? new Error(t(`micError.${err.code}`)) : err;
+  }
+}
+
+// What the actions need from here: the streaming software, the sound player, the lights, the
+// keyboard, the microphone.
+const keyContext = () => ({
+  stream: activeStream(),
+  playSound,
+  hue: runHue,
+  govee: runGovee,
+  keyboard: keyboardActions,
+  microphone: runMicrophone,
+});
 
 // Runs a key, from the deck, from its own hotkey or from a phone. When the deck isn't on screen
 // (closed after the action, or never opened), errors and confirmations are shown as notifications.
@@ -768,7 +812,8 @@ async function runGovee(action) {
 
 // What a phone needs to draw the deck. Only the action fields the keys display (scene names,
 // muted input...): no file paths, programs or URLs leave the PC.
-const PHONE_ACTION_FIELDS = ['type', 'scene', 'verticalScene', 'source', 'verticalSource', 'input', 'page'];
+// key: the media key, so a microphone key shows when the PC's microphones are muted.
+const PHONE_ACTION_FIELDS = ['type', 'scene', 'verticalScene', 'source', 'verticalSource', 'input', 'page', 'key'];
 
 function phoneAction(action = {}) {
   const copy = Object.fromEntries(PHONE_ACTION_FIELDS.filter((f) => typeof action[f] === 'string').map((f) => [f, action[f]]));
