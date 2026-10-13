@@ -183,6 +183,8 @@
   "settings.hotkeyCapture": "Pulsa tu combinación… (Esc para cancelar)",
   "settings.closeAfter": "Cerrar el deck tras una acción",
   "settings.closeAfterHint": "Si no, sigue abierto hasta pulsar Esc o hacer clic fuera.",
+  "settings.closeOutside": "Cerrar el deck al hacer clic fuera",
+  "settings.closeOutsideHint": "Desactivado, sigue abierto hasta pulsar Esc, su atajo o una acción.",
   "settings.login": "Iniciar con Windows",
   "settings.loginHint": "La app se inicia discretamente en el área de notificación.",
 

@@ -12,6 +12,12 @@ test('an empty config gets the defaults', () => {
   assert.equal(cfg.deckScale, 1);
   assert.equal(cfg.deckPosition, null);
   assert.equal(cfg.software, 'obs');
+  assert.equal(cfg.closeOnClickOutside, true);
+});
+
+test('the deck may stay open on a click outside', () => {
+  assert.equal(normalize({ closeOnClickOutside: false }).closeOnClickOutside, false);
+  assert.equal(normalize({ closeOnClickOutside: 'no' }).closeOnClickOutside, true);
 });
 
 test('grid, deck size and software are kept within bounds', () => {

@@ -48,6 +48,8 @@ function defaults() {
     language: 'auto',
     hotkey: 'Control+Shift+Space',
     closeAfterAction: true,
+    // A click anywhere else closes the deck.
+    closeOnClickOutside: true,
     launchAtLogin: false,
     grid: { cols: 3, rows: 2 },
     pageCount: 1,
@@ -105,6 +107,7 @@ function normalize(raw) {
   const scale = Number(raw?.deckScale);
   cfg.deckScale = Number.isFinite(scale) ? Math.min(MAX_DECK_SCALE, Math.max(MIN_DECK_SCALE, scale)) : base.deckScale;
   cfg.closeAfterAction = cfg.closeAfterAction !== false;
+  cfg.closeOnClickOutside = cfg.closeOnClickOutside !== false;
   cfg.remote = {
     enabled: raw?.remote?.enabled === true,
     port: clamp(raw?.remote?.port, 0, 65535, 0),

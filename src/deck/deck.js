@@ -108,7 +108,7 @@ document.addEventListener('keydown', (e) => {
 
 // The transparent margin around the panel belongs to the window: treat clicks there as "outside".
 document.body.addEventListener('mousedown', (e) => {
-  if (e.target === document.body) window.api.hideDeck();
+  if (e.target === document.body && config?.closeOnClickOutside !== false) window.api.hideDeck();
 });
 
 // Corner grip: main.js follows the mouse in screen pixels while the button is held.
