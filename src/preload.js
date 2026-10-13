@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('api', {
   programIcon: (target) => ipcRenderer.invoke('icon:fromProgram', target),
   listIcons: () => ipcRenderer.invoke('icons:list'),
   streamState: () => ipcRenderer.invoke('stream:state'),
+  microphones: () => ipcRenderer.invoke('microphone:list'),
   streamReconnect: () => ipcRenderer.invoke('stream:reconnect'),
   streamScenes: () => ipcRenderer.invoke('stream:scenes'),
   streamVerticalScenes: () => ipcRenderer.invoke('stream:verticalScenes'),

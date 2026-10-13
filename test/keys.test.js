@@ -50,10 +50,15 @@ test('stream, record and mute badges', () => {
   assert.equal(keys.hasRunningTimer(connected()), false);
 });
 
-test("a microphone key shows the PC's microphones muted, with or without OBS", () => {
+test("a microphone key shows its microphones muted, with or without OBS", () => {
   const mic = { type: 'media', key: 'micMute' };
-  assert.equal(keys.keyBadge(mic, { status: 'disconnected', micMuted: true }), 'MUTED');
-  assert.equal(keys.keyBadge(mic, { status: 'connected', micMuted: false }), '');
-  assert.equal(keys.keyBadge(mic, { status: 'disconnected', micMuted: null }), '');
-  assert.equal(keys.keyBadge({ type: 'media', key: 'next' }, { status: 'disconnected', micMuted: true }), '');
+  const headset = { ...mic, device: 'headset' };
+  assert.equal(keys.keyBadge(mic, { status: 'disconnected', micMuted: { '': true } }), 'MUTED');
+  assert.equal(keys.keyBadge(mic, { status: 'connected', micMuted: { '': false } }), '');
+  assert.equal(keys.keyBadge(mic, { status: 'disconnected', micMuted: { '': null } }), '');
+  assert.equal(keys.keyBadge(mic, { status: 'disconnected', micMuted: {} }), '');
+  // Each key follows its own microphone.
+  assert.equal(keys.keyBadge(headset, { status: 'disconnected', micMuted: { '': false, headset: true } }), 'MUTED');
+  assert.equal(keys.keyBadge(mic, { status: 'disconnected', micMuted: { '': false, headset: true } }), '');
+  assert.equal(keys.keyBadge({ type: 'media', key: 'next' }, { status: 'disconnected', micMuted: { '': true } }), '');
 });

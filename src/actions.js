@@ -112,7 +112,7 @@ async function runAction(action, context) {
     case 'media': {
       const key = action.key || 'playPause';
       // The PC's microphones (microphone.js): muted for every app at once.
-      if (key === 'micMute') return context.microphone(action.mode || 'toggle');
+      if (key === 'micMute') return context.microphone(action.mode || 'toggle', typeof action.device === 'string' ? action.device : '');
       // Media keys (keyboard.js): the music / video player and the Windows volume.
       // Volume up / down can move several steps at once (2 % each).
       await context.keyboard.media(key, key === 'volumeUp' || key === 'volumeDown' ? action.repeat : 1);
