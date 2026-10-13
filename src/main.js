@@ -7,6 +7,7 @@ const {
   dialog,
   globalShortcut,
   clipboard,
+  ClipboardItem,
   ipcMain,
   nativeImage,
   screen,
@@ -102,7 +103,7 @@ let update = null;
 // Download progress (0-100) while the update is being downloaded, null otherwise.
 let updateProgress = null;
 const streams = { obs: new ObsManager(), streamlabs: new StreamlabsManager() };
-const keyboard = createKeyboard({ clipboard });
+const keyboard = createKeyboard({ clipboard, ClipboardItem });
 const activeStream = () => streams[cfg.software];
 
 const fileUrl = (p) => (p ? pathToFileURL(p).href : '');

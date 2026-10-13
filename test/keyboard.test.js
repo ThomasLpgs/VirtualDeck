@@ -16,17 +16,34 @@ function fakeSystem({ held = new Set(), accepted = true } = {}) {
   return { system: () => system, sent, focused, held };
 }
 
-function fakeClipboard(initial = 'copied before') {
-  const clip = { text: initial, html: '', rtf: '', image: { isEmpty: () => true }, writes: [] };
+// Same asynchronous API as Electron's clipboard. extra: other formats it holds ({ mime: data }).
+function fakeClipboard(initial = 'copied before', extra = {}) {
+  const clip = { text: initial, extra, writes: [] };
+  const data = () => ({ ...(clip.text ? { 'text/plain': clip.text } : {}), ...clip.extra });
   return Object.assign(clip, {
-    readText: () => clip.text,
-    readHTML: () => clip.html,
-    readRTF: () => clip.rtf,
-    readImage: () => clip.image,
-    writeText: (text) => ((clip.text = text), clip.writes.push(text)),
-    write: (data) => ((clip.text = data.text ?? ''), clip.writes.push(data)),
-    clear: () => ((clip.text = ''), clip.writes.push('cleared')),
+    read: async () => {
+      const held = data();
+      return Object.keys(held).length ? [{ types: Object.keys(held), getType: async (type) => held[type] }] : [];
+    },
+    readText: async () => clip.text,
+    writeText: async (text) => {
+      clip.text = text;
+      clip.extra = {};
+      clip.writes.push(text);
+    },
+    write: async (items) => {
+      clip.text = items[0].data['text/plain'] ?? '';
+      clip.extra = items[0].data;
+      clip.writes.push(items);
+    },
+    clear: () => ((clip.text = ''), (clip.extra = {}), clip.writes.push('cleared')),
   });
+}
+
+class FakeClipboardItem {
+  constructor(data) {
+    this.data = data;
+  }
 }
 
 const vkNames = (events) => events.map(({ vk, up }) => `${up ? '-' : '+'}${vk.toString(16)}`).join(' ');
@@ -102,7 +119,7 @@ test('gives the keyboard back to the window the deck opened over', async () => {
 test('pastes a text, presses Enter, then puts the clipboard back', async () => {
   const fake = fakeSystem();
   const clipboard = fakeClipboard();
-  await createKeyboard({ system: fake.system, clipboard, restoreDelay: 10 }).text('GG ! 🎉', { enter: true });
+  await createKeyboard({ system: fake.system, clipboard, ClipboardItem: FakeClipboardItem, restoreDelay: 10 }).text('GG ! 🎉', { enter: true });
   assert.equal(clipboard.text, 'GG ! 🎉');
   assert.deepEqual(fake.sent.map(vkNames), ['+11 +56 -56 -11', '+d -d']);
   await wait(30);
@@ -112,7 +129,7 @@ test('pastes a text, presses Enter, then puts the clipboard back', async () => {
 test('does not overwrite something copied meanwhile', async () => {
   const fake = fakeSystem();
   const clipboard = fakeClipboard();
-  await createKeyboard({ system: fake.system, clipboard, restoreDelay: 10 }).text('hello');
+  await createKeyboard({ system: fake.system, clipboard, ClipboardItem: FakeClipboardItem, restoreDelay: 10 }).text('hello');
   clipboard.text = 'copied just now';
   await wait(30);
   assert.equal(clipboard.text, 'copied just now');
@@ -121,7 +138,25 @@ test('does not overwrite something copied meanwhile', async () => {
 test('an empty clipboard is emptied again', async () => {
   const fake = fakeSystem();
   const clipboard = fakeClipboard('');
-  await createKeyboard({ system: fake.system, clipboard, restoreDelay: 10 }).text('hello');
+  await createKeyboard({ system: fake.system, clipboard, ClipboardItem: FakeClipboardItem, restoreDelay: 10 }).text('hello');
   await wait(30);
   assert.equal(clipboard.writes.at(-1), 'cleared');
+});
+
+test('formatted text copied before comes back too', async () => {
+  const fake = fakeSystem();
+  const clipboard = fakeClipboard('bold', { 'text/html': '<b>bold</b>', 'electron application/osclipboard;format="Private"': 'x' });
+  await createKeyboard({ system: fake.system, clipboard, ClipboardItem: FakeClipboardItem, restoreDelay: 10 }).text('hello');
+  await wait(30);
+  assert.deepEqual(clipboard.extra, { 'text/plain': 'bold', 'text/html': '<b>bold</b>' });
+});
+
+test('an unreadable clipboard does not stop the paste', async () => {
+  const fake = fakeSystem();
+  const clipboard = fakeClipboard();
+  clipboard.read = async () => {
+    throw new Error('held by another app');
+  };
+  await createKeyboard({ system: fake.system, clipboard, ClipboardItem: FakeClipboardItem, restoreDelay: 10 }).text('hello');
+  assert.equal(fake.sent.length, 1);
 });

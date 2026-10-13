@@ -405,7 +405,7 @@
   "key.Delete": "Supr",
   "action.media": "Multimedia",
   "action.media.hint": "Las teclas multimedia del teclado: reproducir, pausa, pista siguiente, volumen de Windows. Funciona con Spotify, YouTube, Deezer…, incluso en segundo plano.",
-  "action.keys": "Teclado",
+  "action.keys": "Atajo de teclado",
   "action.keys.hint": "Pulsa una combinación de teclas por ti (Ctrl + C, Win + Mayús + S…), en la ventana sobre la que abriste el deck.",
   "action.text": "Texto",
   "action.text.hint": "Pega un texto ya preparado en la ventana sobre la que abriste el deck (el chat, Discord…). Tu portapapeles vuelve a quedar como estaba justo después.",

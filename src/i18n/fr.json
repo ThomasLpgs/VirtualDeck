@@ -405,7 +405,7 @@
   "key.Delete": "Suppr",
   "action.media": "Média",
   "action.media.hint": "Les touches multimédia du clavier : lecture, pause, piste suivante, volume de Windows. Marche avec Spotify, YouTube, Deezer…, même en arrière-plan.",
-  "action.keys": "Clavier",
+  "action.keys": "Raccourci clavier",
   "action.keys.hint": "Appuie sur une combinaison de touches à ta place (Ctrl + C, Win + Maj + S…), dans la fenêtre sur laquelle tu as ouvert le deck.",
   "action.text": "Texte",
   "action.text.hint": "Colle un texte tout prêt dans la fenêtre sur laquelle tu as ouvert le deck (le chat, Discord…). Ton presse-papiers est remis comme avant juste après.",

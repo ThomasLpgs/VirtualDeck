@@ -7,6 +7,7 @@ const MAX_TEXT = 2000;
 const MODIFIERS_WAIT_MS = 1000;
 // The app pasted into reads the clipboard after Ctrl+V: the previous content comes back after that.
 const CLIPBOARD_RESTORE_MS = 500;
+const CLIPBOARD_TYPES = ['text/plain', 'text/html', 'text/rtf', 'image/png'];
 // Left for the focus to come back to the window the deck was opened over.
 const FOCUS_SETTLE_MS = 60;
 
@@ -149,10 +150,28 @@ class KeyboardError extends Error {
 }
 
 // system: the Windows calls (loadWin32 by default, a fake in the tests).
-// clipboard: Electron's clipboard, for pasted text.
-function createKeyboard({ system = loadWin32, clipboard, restoreDelay = CLIPBOARD_RESTORE_MS } = {}) {
+// clipboard, ClipboardItem: Electron's, for pasted text.
+function createKeyboard({ system = loadWin32, clipboard, ClipboardItem, restoreDelay = CLIPBOARD_RESTORE_MS } = {}) {
   // Window the deck was opened over: keys pressed in the deck go back to it.
   let target = null;
+
+  // What the clipboard holds (text, formatted text, image), to put it back after a paste.
+  // Other formats some apps add (their own private data) are not kept.
+  const saveClipboard = async () => {
+    const saved = [];
+    try {
+      for (const item of await clipboard.read()) {
+        const data = {};
+        for (const type of item.types.filter((type) => CLIPBOARD_TYPES.includes(type))) {
+          data[type] = await item.getType(type);
+        }
+        if (Object.keys(data).length) saved.push(data);
+      }
+    } catch {
+      // Unreadable clipboard (held by another app): the text is pasted all the same.
+    }
+    return saved;
+  };
 
   const send = (events) => {
     if (!system().send(events)) throw new KeyboardError('blocked');
@@ -205,13 +224,8 @@ function createKeyboard({ system = loadWin32, clipboard, restoreDelay = CLIPBOAR
       if (typeof text !== 'string' || !text) throw new KeyboardError('emptyText');
       const value = text.slice(0, MAX_TEXT);
       await modifiersReleased();
-      const saved = {
-        text: clipboard.readText(),
-        html: clipboard.readHTML(),
-        rtf: clipboard.readRTF(),
-        image: clipboard.readImage(),
-      };
-      clipboard.writeText(value);
+      const saved = await saveClipboard();
+      await clipboard.writeText(value);
       try {
         send(comboEvents(parseCombo('Control+V')));
         if (enter) {
@@ -220,15 +234,14 @@ function createKeyboard({ system = loadWin32, clipboard, restoreDelay = CLIPBOAR
           send(comboEvents(parseCombo('Enter')));
         }
       } finally {
-        setTimeout(() => {
-          if (clipboard.readText() !== value) return;
-          const restored = {};
-          if (saved.text) restored.text = saved.text;
-          if (saved.html) restored.html = saved.html;
-          if (saved.rtf) restored.rtf = saved.rtf;
-          if (saved.image && !saved.image.isEmpty()) restored.image = saved.image;
-          if (Object.keys(restored).length) clipboard.write(restored);
-          else clipboard.clear();
+        setTimeout(async () => {
+          try {
+            if ((await clipboard.readText()) !== value) return;
+            if (saved.length) await clipboard.write(saved.map((data) => new ClipboardItem(data)));
+            else clipboard.clear();
+          } catch {
+            // The pasted text stays in the clipboard: nothing else is lost.
+          }
         }, restoreDelay);
       }
     },
