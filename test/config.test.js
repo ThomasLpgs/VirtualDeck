@@ -2,7 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { electron } = require('./helpers');
 const fs = require('fs');
-const { normalize, save } = require('../src/config');
+const path = require('path');
+const { normalize, save, load, configPath } = require('../src/config');
 
 test('an empty config gets the defaults', () => {
   const cfg = normalize({});
@@ -155,4 +156,34 @@ test('connected lights are off until turned on, except a Hue bridge paired befor
   assert.deepEqual(normalize({ hue, lights: { hue: false } }).lights, { hue: false, govee: false });
   assert.deepEqual(normalize({ lights: { hue: true, govee: true } }).lights, { hue: true, govee: true });
   assert.deepEqual(normalize({ lights: { hue: 'yes', govee: 1 } }).lights, { hue: false, govee: false });
+});
+
+test('an unreadable config file is set aside, not overwritten', (t) => {
+  const dir = electron.app.getPath('userData');
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(configPath(), '{ "buttons": [ broken');
+  const { config, firstRun, damaged } = load();
+  assert.equal(firstRun, false);
+  assert.equal(config.hotkey, 'Control+Shift+Space');
+  assert.equal(fs.readFileSync(damaged, 'utf8'), '{ "buttons": [ broken');
+  assert.match(path.basename(damaged), /^config\.damaged-.+\.json$/);
+});
+
+test('a password Windows cannot decrypt any more is kept, not erased', (t) => {
+  const dir = electron.app.getPath('userData');
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(configPath(), JSON.stringify({ obs: { url: 'ws://127.0.0.1:4455', passwordEnc: 'b2xk' } }));
+  t.mock.method(electron.safeStorage, 'isEncryptionAvailable', () => true);
+  t.mock.method(electron.safeStorage, 'decryptString', () => {
+    throw new Error('other Windows profile');
+  });
+  const { config } = load();
+  assert.equal(config.obs.password, '');
+  save({ ...config, hotkey: 'F13' });
+  assert.equal(JSON.parse(fs.readFileSync(configPath(), 'utf8')).obs.passwordEnc, 'b2xk');
+  // Typed again: the new one replaces it.
+  save({ ...config, obs: { ...config.obs, password: 'new' } });
+  assert.notEqual(JSON.parse(fs.readFileSync(configPath(), 'utf8')).obs.passwordEnc, 'b2xk');
 });

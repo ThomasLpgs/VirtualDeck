@@ -155,6 +155,10 @@ class KeyboardError extends Error {
 function createKeyboard({ system = loadWin32, clipboard, ClipboardItem, restoreDelay = CLIPBOARD_RESTORE_MS } = {}) {
   // Window the deck was opened over: keys pressed in the deck go back to it.
   let target = null;
+  // A paste whose clipboard isn't put back yet: { saved, timer }. A second paste meanwhile keeps
+  // what the first one saved (else it would save its own text as the user's clipboard).
+  let pending = null;
+  let mouseFailed = false;
 
   // What the clipboard holds (text, formatted text, image), to put it back after a paste.
   // Other formats some apps add (their own private data) are not kept.
@@ -174,8 +178,9 @@ function createKeyboard({ system = loadWin32, clipboard, ClipboardItem, restoreD
     return saved;
   };
 
+  // Windows may insert only part of the keys (blocked midway): a modifier could then stay down.
   const send = (events) => {
-    if (!system().send(events)) throw new KeyboardError('blocked');
+    if (system().send(events) !== events.length) throw new KeyboardError('blocked');
   };
 
   // A key's own hotkey (Ctrl+Shift+F1…) is often still held when it runs: those modifiers would
@@ -187,15 +192,18 @@ function createKeyboard({ system = loadWin32, clipboard, ClipboardItem, restoreD
   }
 
   return {
-    // Called just before the deck shows.
     // Whether a mouse button (left, right or middle) is held down right now, anywhere on screen.
     mouseDown() {
       try {
         return MOUSE_BUTTONS.some((vk) => system().isDown(vk));
-      } catch {
+      } catch (err) {
+        // The deck still closes when it loses the focus.
+        if (!mouseFailed) console.warn('mouse buttons unreadable:', err.message);
+        mouseFailed = true;
         return false;
       }
     },
+    // Called just before the deck shows.
     rememberTarget() {
       try {
         target = system().foreground();
@@ -233,7 +241,8 @@ function createKeyboard({ system = loadWin32, clipboard, ClipboardItem, restoreD
       if (typeof text !== 'string' || !text) throw new KeyboardError('emptyText');
       const value = text.slice(0, MAX_TEXT);
       await modifiersReleased();
-      const saved = await saveClipboard();
+      const saved = pending ? pending.saved : await saveClipboard();
+      if (pending) clearTimeout(pending.timer);
       await clipboard.writeText(value);
       try {
         send(comboEvents(parseCombo('Control+V')));
@@ -243,15 +252,18 @@ function createKeyboard({ system = loadWin32, clipboard, ClipboardItem, restoreD
           send(comboEvents(parseCombo('Enter')));
         }
       } finally {
-        setTimeout(async () => {
+        const timer = setTimeout(async () => {
+          pending = null;
           try {
             if ((await clipboard.readText()) !== value) return;
             if (saved.length) await clipboard.write(saved.map((data) => new ClipboardItem(data)));
             else clipboard.clear();
-          } catch {
-            // The pasted text stays in the clipboard: nothing else is lost.
+          } catch (err) {
+            // The pasted text then stays in the clipboard.
+            console.warn('clipboard not put back:', err.message);
           }
         }, restoreDelay);
+        pending = { saved, timer };
       }
     },
   };
