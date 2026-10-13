@@ -6,6 +6,7 @@ const {
   Tray,
   dialog,
   globalShortcut,
+  clipboard,
   ipcMain,
   nativeImage,
   screen,
@@ -22,13 +23,14 @@ const config = require('./config');
 const i18n = require('./i18n');
 const { ObsManager } = require('./obs');
 const { StreamlabsManager } = require('./streamlabs');
-const { runAction, needsStream } = require('./actions');
+const { runAction, needsStream, needsFocus } = require('./actions');
 const backup = require('./backup');
 const { checkForUpdate, downloadInstaller } = require('./updates');
 const remote = require('./remote');
 const { saveAppIcon } = require('./app-icon');
 const hue = require('./hue');
 const govee = require('./govee');
+const { createKeyboard, KeyboardError } = require('./keyboard');
 
 const { t } = i18n;
 
@@ -100,6 +102,7 @@ let update = null;
 // Download progress (0-100) while the update is being downloaded, null otherwise.
 let updateProgress = null;
 const streams = { obs: new ObsManager(), streamlabs: new StreamlabsManager() };
+const keyboard = createKeyboard({ clipboard });
 const activeStream = () => streams[cfg.software];
 
 const fileUrl = (p) => (p ? pathToFileURL(p).href : '');
@@ -324,6 +327,8 @@ function showDeck() {
     y: clamp(wanted.y, area.y - SHADOW_MARGIN, area.y + area.height - height + SHADOW_MARGIN),
   };
   deckWin.setBounds({ ...placedAt, width, height });
+  // Keyboard keys pressed in the deck type into the window it opens over.
+  if (!deckWin.isVisible()) keyboard.rememberTarget();
   deckWin.webContents.send('deck:show');
   deckWin.show();
   deckWin.focus();
@@ -578,8 +583,22 @@ function wakeStream(action) {
   });
 }
 
-// What the actions need from here: the streaming software, the sound player, the lights.
-const keyContext = () => ({ stream: activeStream(), playSound, hue: runHue, govee: runGovee });
+// Keyboard keys (keyboard.js), with their errors as sentences for the user.
+const keyboardActions = Object.fromEntries(
+  ['combo', 'media', 'text'].map((name) => [
+    name,
+    async (...args) => {
+      try {
+        await keyboard[name](...args);
+      } catch (err) {
+        throw err instanceof KeyboardError ? new Error(t(`keyboardError.${err.code}`)) : err;
+      }
+    },
+  ]),
+);
+
+// What the actions need from here: the streaming software, the sound player, the lights, the keyboard.
+const keyContext = () => ({ stream: activeStream(), playSound, hue: runHue, govee: runGovee, keyboard: keyboardActions });
 
 // Runs a key, from the deck, from its own hotkey or from a phone. When the deck isn't on screen
 // (closed after the action, or never opened), errors and confirmations are shown as notifications.
@@ -596,9 +615,12 @@ async function runKey(index, { fromDeck = false, origin = null, fromPhone = fals
       return { ok: false, error: hidePaths(err.message) };
     }
   }
-  // A page key changes what the deck shows: it must not close it.
-  const closes = fromDeck && cfg.closeAfterAction && button.action.type !== 'page';
+  // A page key changes what the deck shows: it must not close it. A key that types (combination,
+  // text) always does: the keys must reach the window the deck was opened over.
+  const types = needsFocus(button.action);
+  const closes = (fromDeck && cfg.closeAfterAction && button.action.type !== 'page') || (types && deckWin.isVisible());
   if (closes) hideDeck();
+  if (closes && types) await keyboard.restoreTarget();
   const unseen = !fromDeck || closes;
   // After closing the deck: waiting for OBS must not keep it on screen.
   await wakeStream(button.action);
@@ -949,10 +971,14 @@ function registerIpc() {
       return { ok: false, error: err.message };
     }
 
-    // An imported deck may come from someone else: point out buttons that launch things.
-    const opens = (action) =>
-      action?.type === 'open' ? 1 : (Array.isArray(action?.steps) ? action.steps : []).filter((s) => s?.action?.type === 'open').length;
-    const openCount = bundle.config.buttons.reduce((count, b) => count + opens(b?.action), 0);
+    // An imported deck may come from someone else: point out buttons that launch things or type
+    // on the keyboard (Win+R then a command would run it).
+    const RISKY = ['open', 'keys', 'text'];
+    const risky = (action) =>
+      RISKY.includes(action?.type)
+        ? 1
+        : (Array.isArray(action?.steps) ? action.steps : []).filter((s) => RISKY.includes(s?.action?.type)).length;
+    const openCount = bundle.config.buttons.reduce((count, b) => count + risky(b?.action), 0);
     const { response } = await dialog.showMessageBox(editorWin, {
       type: 'question',
       buttons: [t('backup.importConfirm'), t('common.cancel')],

@@ -109,6 +109,17 @@ async function runAction(action, context) {
       // Govee lights, on the home network (govee.js, through main.js).
       await context.govee(action);
       return;
+    case 'media':
+      // Media keys (keyboard.js): the music / video player and the Windows volume.
+      // Volume keys can move several steps at once (2 % each).
+      await context.keyboard.media(action.key || 'playPause', String(action.key).startsWith('volume') ? action.repeat : 1);
+      return;
+    case 'keys':
+      await context.keyboard.combo(required(action.keys, 'field.keys'));
+      return;
+    case 'text':
+      await context.keyboard.text(required(action.text, 'field.text'), { enter: action.enter === true });
+      return;
     case 'page':
       return { page: action.page || 'next' };
     case 'multi':
@@ -152,4 +163,11 @@ function needsStream(action) {
   return typeof action?.type === 'string' && action.type.startsWith('obs-');
 }
 
-module.exports = { runAction, needsStream };
+// Whether an action types into the window in front (a key combination or text, directly or in one
+// of its steps): pressed in the deck, the deck must first give the keyboard back to that window.
+function needsFocus(action) {
+  if (action?.type === 'multi') return (action.steps || []).some((step) => needsFocus(step?.action));
+  return action?.type === 'keys' || action?.type === 'text';
+}
+
+module.exports = { runAction, needsStream, needsFocus };

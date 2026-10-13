@@ -1,5 +1,7 @@
-/* global PAGE_SIZE, pageGrid, pageTitle, isEmptyButton, api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader, markKeys, countVerticalIssues, hasRunningTimer
-   -- api comes from preload.js, t/I18N/loadI18n from shared/i18n.js, the rest from shared/keys.js */
+/* global PAGE_SIZE, pageGrid, pageTitle, isEmptyButton, api, t, I18N, loadI18n, createKey, createGlyph, renderDeckHeader, markKeys, countVerticalIssues, hasRunningTimer,
+   TEMPLATES, TEMPLATE_CATEGORIES, buildTemplate
+   -- api comes from preload.js, t/I18N/loadI18n from shared/i18n.js, the templates from shared/templates.js,
+   the rest from shared/keys.js */
 const $ = (id) => document.getElementById(id);
 
 // Autosave once typing pauses for a second (closing the editor saves right away, see pagehide).
@@ -42,6 +44,9 @@ const ACTIONS = [
   { type: 'obs-stream', icon: 'radio', defaults: {} },
   { type: 'sound', icon: 'volume-2', defaults: { file: '', volume: 1 } },
   { type: 'open', icon: 'external-link', defaults: { target: '' } },
+  { type: 'media', icon: 'music', defaults: { key: 'playPause', repeat: 5 } },
+  { type: 'keys', icon: 'keyboard', defaults: { keys: '' } },
+  { type: 'text', icon: 'text-cursor-input', defaults: { text: '', enter: false } },
   {
     type: 'hue',
     icon: 'lightbulb',
@@ -65,6 +70,13 @@ const OUTPUT_TARGETS = ['horizontal', 'vertical', 'both'];
 const MUTE_MODES = ['toggle', 'mute', 'unmute'];
 const HUE_MODES = ['toggle', 'on', 'off', 'scene'];
 const GOVEE_MODES = ['toggle', 'on', 'off'];
+// Media keys (keyboard.js MEDIA), in the order of a player's buttons.
+const MEDIA_KEYS = ['playPause', 'prev', 'next', 'stop', 'volumeDown', 'volumeUp', 'volumeMute'];
+// Presses per volume key: Windows moves the volume by 2 % on each.
+const VOLUME_STEPS = [1, 5, 10];
+// Modifiers of a key combination, in the order Windows writes them ("Win + Ctrl + Alt + Shift").
+const COMBO_MODIFIERS = ['Super', 'Control', 'Alt', 'Shift'];
+const MAX_TEXT = 2000;
 const HUE_BRIGHTNESS = [10, 25, 50, 75, 100];
 // Colours a Hue key can set: the whites are colour temperatures (saved by name), the others RGB.
 const HUE_WHITES = ['warm', 'neutral', 'cool'];
@@ -201,6 +213,7 @@ function showView(name) {
   document.querySelectorAll('.view').forEach((v) => (v.hidden = v.id !== `view-${name}`));
   watchPhone(name === 'settings');
   if (name === 'settings') refreshHueSettings();
+  if (name === 'library') renderLibrary();
   // Survives the page reload that follows a language change.
   sessionStorage.setItem('view', name);
 }
@@ -235,6 +248,8 @@ function renderPreview() {
   markLiveScene();
   $('cols-value').value = cols;
   $('rows-value').value = rows;
+  // An empty page: a template is a quick way to fill it.
+  $('empty-page-hint').hidden = !isPageEmpty(page);
   $('preview-hotkey').textContent = formatHotkey(config.hotkey).join(' + ');
 }
 
@@ -974,6 +989,60 @@ function fillActionFields(container, action, update, rerender) {
       break;
     }
 
+    case 'media': {
+      const key = MEDIA_KEYS.includes(action.key) ? action.key : 'playPause';
+      container.append(
+        el('p', { className: 'muted', textContent: t('action.media.hint') }),
+        field(
+          t('field.mediaKey'),
+          themedSelect(
+            MEDIA_KEYS.map((value) => [value, t(`media.${value}`)]),
+            key,
+            (value) => {
+              update({ key: value });
+              rerender();
+            },
+          ),
+        ),
+      );
+      if (key.startsWith('volume') && key !== 'volumeMute') {
+        container.append(
+          field(
+            t('field.volumeStep'),
+            segmented(
+              VOLUME_STEPS.map((n) => [n, `${n * 2} %`]),
+              VOLUME_STEPS.includes(action.repeat) ? action.repeat : 5,
+              (repeat) => update({ repeat }),
+            ),
+          ),
+        );
+      }
+      break;
+    }
+
+    case 'keys':
+      container.append(el('p', { className: 'muted', textContent: t('action.keys.hint') }), comboField(action, update));
+      break;
+
+    case 'text': {
+      const text = el('textarea', { value: action.text || '', maxLength: MAX_TEXT, rows: 4, spellcheck: true });
+      text.placeholder = t('field.textPlaceholder');
+      text.addEventListener('input', () => update({ text: text.value }));
+      const enter = el('input', { type: 'checkbox', checked: action.enter === true });
+      enter.addEventListener('change', () => update({ enter: enter.checked }));
+      container.append(
+        el('p', { className: 'muted', textContent: t('action.text.hint') }),
+        field(t('field.text'), text),
+        el(
+          'div',
+          { className: 'toggle-row' },
+          el('span', { textContent: t('field.textEnter') }),
+          el('label', { className: 'switch' }, enter, el('span')),
+        ),
+      );
+      break;
+    }
+
     case 'hue':
     case 'govee':
       if (!config.lights[action.type]) container.append(lightsOffCallout(action.type));
@@ -1143,6 +1212,92 @@ function keyHotkeyField() {
   return wrap;
 }
 
+// ---------- Key combination sent by a key ("keys" action) ----------
+
+// Sent, not registered: any key may stand alone, and a few more keys than hotkeys are allowed.
+const SEND_ONLY_KEYS = { Escape: 'Escape', Backspace: 'Backspace', PrintScreen: 'PrintScreen' };
+const MODIFIER_KEYS = ['Control', 'Shift', 'Alt', 'Meta', 'OS'];
+
+function comboFromEvent(e) {
+  const key = keyFromEvent(e) || SEND_ONLY_KEYS[e.code];
+  if (!key) return null;
+  const held = { Super: e.metaKey, Control: e.ctrlKey, Alt: e.altKey, Shift: e.shiftKey };
+  return [...COMBO_MODIFIERS.filter((mod) => held[mod]), key].join('+');
+}
+
+// "Control+Shift+M" -> { mods: ['Control', 'Shift'], key: 'M' }.
+function splitCombo(accelerator) {
+  const parts = accelerator ? accelerator.split('+') : [];
+  const key = parts.pop() || '';
+  return { mods: COMBO_MODIFIERS.filter((mod) => parts.includes(mod)), key };
+}
+
+// Records the combination from the keyboard; the Ctrl / Alt / Shift / Win buttons below add or
+// remove a modifier (Windows keeps most Win + … combinations for itself, they never reach the page).
+function comboField(action, update) {
+  const capture = el('button', { type: 'button', className: 'hotkey' });
+  const chips = el('div', { className: 'combo-mods' });
+  let capturing = false;
+
+  const set = (accelerator) => {
+    action.keys = accelerator;
+    update({ keys: accelerator });
+    render();
+  };
+  function render() {
+    if (action.keys) renderAccelerator(capture, action.keys);
+    else capture.replaceChildren(el('span', { className: 'muted', textContent: t('field.keysCapture') }));
+    const { mods, key } = splitCombo(action.keys);
+    chips.replaceChildren(
+      ...COMBO_MODIFIERS.map((mod) => {
+        const chip = el('button', { type: 'button', className: 'combo-mod', textContent: formatHotkey(mod)[0], disabled: !key });
+        chip.classList.toggle('selected', mods.includes(mod));
+        chip.setAttribute('aria-pressed', String(mods.includes(mod)));
+        chip.addEventListener('click', () => {
+          const next = mods.includes(mod) ? mods.filter((m) => m !== mod) : [...mods, mod];
+          set([...COMBO_MODIFIERS.filter((m) => next.includes(m)), key].join('+'));
+        });
+        return chip;
+      }),
+    );
+  }
+  const stop = () => {
+    if (!capturing) return;
+    capturing = false;
+    capture.classList.remove('capturing');
+    render();
+    api.pauseHotkey(false);
+  };
+  const pick = (e) => {
+    const combo = comboFromEvent(e);
+    if (!combo) return;
+    set(combo);
+    stop();
+  };
+  capture.addEventListener('click', () => {
+    if (capturing) return;
+    capturing = true;
+    // So the deck's and the keys' hotkeys reach the page instead of running.
+    api.pauseHotkey(true);
+    capture.classList.add('capturing');
+    capture.textContent = t('settings.hotkeyCapture');
+  });
+  capture.addEventListener('blur', stop);
+  capture.addEventListener('keydown', (e) => {
+    if (!capturing) return;
+    e.preventDefault();
+    if (MODIFIER_KEYS.includes(e.key)) return;
+    if (e.key === 'Escape' && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) return stop();
+    pick(e);
+  });
+  // Windows only lets the page see Print Screen when it is released.
+  capture.addEventListener('keyup', (e) => {
+    if (capturing && e.code === 'PrintScreen') pick(e);
+  });
+  render();
+  return field(t('field.keys'), el('div', { className: 'combo-capture' }, capture, chips), t('field.keysHint'));
+}
+
 function renderKeyHotkeyHint() {
   const hint = $('key-hotkey-hint');
   if (!hint) return;
@@ -1262,6 +1417,110 @@ async function importConfig() {
   );
 }
 
+// ---------- Library of templates (shared/templates.js) ----------
+
+let libraryFilter = 'all';
+let noticeTimer = null;
+const NOTICE_MS = 10000;
+
+// A message above the page tabs (a template just added), gone after a while.
+function showCanvasNotice(text, warn = false) {
+  const notice = $('canvas-notice');
+  notice.textContent = text;
+  notice.classList.toggle('warn', warn);
+  notice.hidden = false;
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => (notice.hidden = true), NOTICE_MS);
+}
+
+const isPageEmpty = (p) => {
+  const { cols, rows } = pageGrid(config, p);
+  return config.buttons.slice(p * PAGE_SIZE, p * PAGE_SIZE + cols * rows).every(isEmptyButton);
+};
+
+function renderLibrary() {
+  const filters = ['all', ...TEMPLATE_CATEGORIES].map((category) => [category, t(`library.category.${category}`)]);
+  const picker = segmented(filters, libraryFilter, (category) => {
+    libraryFilter = category;
+    renderLibraryCards();
+  });
+  picker.id = 'library-filters';
+  picker.classList.add('library-filters');
+  $('library-filters').replaceWith(picker);
+  renderLibraryCards();
+}
+
+function renderLibraryCards() {
+  const shown = TEMPLATES.filter((template) => libraryFilter === 'all' || template.category === libraryFilter);
+  $('library-grid').replaceChildren(...shown.map(templateCard));
+}
+
+function templateCard(template) {
+  const built = buildTemplate(template);
+  const preview = el('div', { className: 'keys template-keys' });
+  preview.style.gridTemplateColumns = `repeat(${template.grid.cols}, var(--key-size))`;
+  preview.append(...built.buttons.map((b, i) => createKey(b, i)));
+  for (let i = built.buttons.length; i < template.grid.cols * template.grid.rows; i++) {
+    preview.append(createKey({ ...emptyButton(), color: DEFAULT_COLOR }, i));
+  }
+  // Only a picture: the keys can't be pressed or focused here.
+  preview.inert = true;
+
+  const tags = el('div', { className: 'template-tags' }, el('span', { className: 'tag', textContent: t('library.keyCount', { count: built.buttons.length }) }));
+  if (template.needsStream) tags.append(el('span', { className: 'tag accent', textContent: t('library.needsStream') }));
+  const add = button(t('library.add'), () => addTemplate(template), 'btn primary');
+  add.prepend(createGlyph('plus'));
+  return el(
+    'article',
+    { className: 'template-card' },
+    el('div', { className: 'template-preview' }, preview),
+    el(
+      'div',
+      { className: 'template-body' },
+      el('h3', {}, createGlyph(template.icon), el('span', { textContent: built.name })),
+      el('p', { className: 'muted', textContent: t(`tpl.${template.id}.description`) }),
+      el('div', { className: 'template-foot' }, tags, add),
+    ),
+  );
+}
+
+// Adds a template as a new page (or on the first page, while the deck is still all empty).
+// The keys already there never move.
+async function addTemplate(template) {
+  const lists = template.needsStream && streamState.status === 'connected'
+    ? { scenes: await api.streamScenes(), inputs: await api.streamInputs() }
+    : {};
+  const built = buildTemplate(template, lists);
+  const blankDeck = config.pageCount === 1 && config.buttons.every(isEmptyButton);
+  if (!blankDeck && config.pageCount >= MAX_PAGES) {
+    showView('buttons');
+    showCanvasNotice(t('library.noRoom', { max: MAX_PAGES }), true);
+    return;
+  }
+  const p = blankDeck ? 0 : config.pageCount;
+  if (!blankDeck) {
+    config.pageCount += 1;
+    config.pageGrids.push({ ...built.grid });
+    config.pageNames.push(built.name);
+  } else {
+    config.pageGrids[0] = { ...built.grid };
+    // A single page has no name shown; it gets one once a second page is added.
+    config.pageNames[0] = built.name;
+  }
+  config.grid = { ...config.pageGrids[0] };
+  padPages();
+  built.buttons.forEach((b, i) => {
+    config.buttons[p * PAGE_SIZE + i] = { ...emptyButton(), ...b, id: crypto.randomUUID(), imageUrl: '' };
+  });
+  showView('buttons');
+  select(p * PAGE_SIZE);
+  scheduleSave();
+  let message = t(blankDeck ? 'library.addedFirst' : 'library.added', { name: built.name });
+  if (built.todo) message += ` ${t('library.todo', { count: built.todo })}`;
+  if (template.needsStream && streamState.status !== 'connected') message += ` ${t('library.connectFirst', { software: software().label })}`;
+  showCanvasNotice(message, Boolean(built.todo));
+}
+
 // ---------- Updates ----------
 
 // update: { version, oneClick, progress } from main.js, or null.
@@ -1287,6 +1546,8 @@ function bindStaticFields() {
 
   document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => showView(tab.dataset.view)));
   $('stream-pill').addEventListener('click', () => showView('connection'));
+  $('empty-page-glyph').replaceWith(createGlyph('layout-template'));
+  $('empty-page-open').addEventListener('click', () => showView('library'));
   $('update-glyph').replaceWith(createGlyph('download'));
   $('update-pill').addEventListener('click', () => api.installUpdate());
 
