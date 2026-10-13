@@ -339,6 +339,37 @@ function showDeck() {
   deckWin.webContents.send('deck:show');
   deckWin.show();
   deckWin.focus();
+  watchOutsideClicks();
+}
+
+// A click elsewhere closes the deck. Losing the focus (see hideIfFocusLeft) usually tells, but
+// Windows doesn't always give the focus to a window opened from a hotkey: the mouse buttons are
+// also checked, only while the deck is on screen.
+const OUTSIDE_CLICK_MS = 50;
+let outsideWatch = null;
+
+function watchOutsideClicks() {
+  clearInterval(outsideWatch);
+  // A button already held as the deck opens (opened from a mouse button) isn't a click elsewhere.
+  let wasDown = keyboard.mouseDown();
+  outsideWatch = setInterval(() => {
+    if (!deckWin || deckWin.isDestroyed() || !deckWin.isVisible()) {
+      clearInterval(outsideWatch);
+      return;
+    }
+    const down = keyboard.mouseDown();
+    if (down && !wasDown && !isOverDeck(screen.getCursorScreenPoint())) hideDeck();
+    wasDown = down;
+  }, OUTSIDE_CLICK_MS);
+}
+
+// Over the deck or its popup page (their transparent margin included: the page handles it).
+function isOverDeck({ x, y }) {
+  return [deckWin, popupWin].some((win) => {
+    if (!win || win.isDestroyed() || !win.isVisible()) return false;
+    const b = win.getBounds();
+    return x >= b.x && x < b.x + b.width && y >= b.y && y < b.y + b.height;
+  });
 }
 
 // target: 'next' / 'prev' (wrapping around) or a page number (1-based).
@@ -469,6 +500,7 @@ function hideDeck() {
   closePopup();
   if (!deckWin || deckWin.isDestroyed() || !deckWin.isVisible()) return;
   deckWin.hide();
+  clearInterval(outsideWatch);
   // The page stays loaded (instant opening): tell it to stop refreshing what nobody sees.
   deckWin.webContents.send('deck:hidden');
 }
