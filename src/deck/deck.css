@@ -76,8 +76,33 @@ body {
 
 .deck-actions {
   display: flex;
+  flex: 1;
+  justify-content: flex-end;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+}
+
+.deck-actions > * {
+  flex: none;
+}
+
+/* A narrow deck (one or two columns): the texts give way, the buttons stay. */
+.deck-header {
+  container-type: inline-size;
+}
+
+@container (max-width: 300px) {
+  .deck-actions kbd {
+    display: none;
+  }
+}
+
+@container (max-width: 200px) {
+  #deck-status,
+  #page-label {
+    display: none;
+  }
 }
 
 .deck-icon-btn {
@@ -98,6 +123,7 @@ body {
 
 .is-popup #deck-status,
 .is-popup #open-editor,
+.is-popup #close-deck,
 .is-popup .resize-grip {
   display: none;
 }
@@ -184,6 +210,11 @@ body {
 .deck-icon-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.9);
+}
+
+.close-btn:hover {
+  background: rgba(242, 85, 90, 0.16);
+  color: #ff8a8e;
 }
 
 .deck-icon-btn .glyph {

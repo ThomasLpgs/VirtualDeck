@@ -18,6 +18,7 @@
   "key.Space": "Leertaste",
   "key.Super": "Win",
   "deck.configure": "Deck konfigurieren",
+  "deck.close": "Schließen (Esc)",
 
   "status.connected": "{software} verbunden",
   "status.connecting": "Verbinden…",

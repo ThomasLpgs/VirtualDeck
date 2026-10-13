@@ -18,6 +18,7 @@
   "key.Space": "Espace",
   "key.Super": "Win",
   "deck.configure": "Configurer le deck",
+  "deck.close": "Fermer (Échap)",
 
   "status.connected": "{software} connecté",
   "status.connecting": "Connexion…",
