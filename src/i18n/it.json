@@ -183,6 +183,8 @@
   "settings.hotkeyCapture": "Premi la tua combinazione… (Esc per annullare)",
   "settings.closeAfter": "Chiudi il deck dopo un'azione",
   "settings.closeAfterHint": "Altrimenti resta aperto fino a Esc o a un clic all'esterno.",
+  "settings.closeOutside": "Chiudi il deck cliccando all'esterno",
+  "settings.closeOutsideHint": "Disattivato, resta aperto fino a Esc, la sua scorciatoia o un'azione.",
   "settings.login": "Avvia all'avvio di Windows",
   "settings.loginHint": "L'app si avvia in silenzio nell'area di notifica.",
 

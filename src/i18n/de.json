@@ -183,6 +183,8 @@
   "settings.hotkeyCapture": "Drücke deine Kombination… (Esc zum Abbrechen)",
   "settings.closeAfter": "Deck nach einer Aktion schließen",
   "settings.closeAfterHint": "Sonst bleibt es offen, bis du Esc drückst oder daneben klickst.",
+  "settings.closeOutside": "Deck beim Klick daneben schließen",
+  "settings.closeOutsideHint": "Aus: Es bleibt offen bis Esc, sein Tastenkürzel oder eine Aktion.",
   "settings.login": "Mit Windows starten",
   "settings.loginHint": "Die App startet unauffällig im Infobereich.",
 

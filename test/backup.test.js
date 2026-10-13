@@ -21,6 +21,7 @@ test('export then import restores buttons and their media', (t) => {
   const cfg = {
     hotkey: 'Control+Shift+Space',
     closeAfterAction: true,
+    closeOnClickOutside: false,
     grid: { cols: 2, rows: 1 },
     obs: { url: 'ws://127.0.0.1:4455', password: 'secret' },
     buttons: [
@@ -38,6 +39,7 @@ test('export then import restores buttons and their media', (t) => {
   assert.equal(fs.readFileSync(restored.buttons[0].image, 'utf8'), 'PNG');
   assert.equal(fs.readFileSync(restored.buttons[1].action.file, 'utf8'), 'MP3');
   assert.equal(restored.buttons[1].label, 'Horn');
+  assert.equal(restored.closeOnClickOutside, false);
 });
 
 test('missing media files are reported, not fatal', () => {

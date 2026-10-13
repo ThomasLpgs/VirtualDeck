@@ -45,6 +45,7 @@ function exportBundle(cfg) {
     config: {
       hotkey: cfg.hotkey,
       closeAfterAction: cfg.closeAfterAction,
+      closeOnClickOutside: cfg.closeOnClickOutside,
       grid: cfg.grid,
       pageCount: cfg.pageCount,
       pageGrids: cfg.pageGrids,
@@ -104,6 +105,7 @@ function restoreBundle(bundle, mediaDir) {
   return {
     hotkey: bundle.config.hotkey,
     closeAfterAction: bundle.config.closeAfterAction,
+    closeOnClickOutside: bundle.config.closeOnClickOutside,
     grid: bundle.config.grid,
     pageCount: bundle.config.pageCount,
     pageGrids: bundle.config.pageGrids,

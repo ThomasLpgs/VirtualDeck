@@ -350,6 +350,8 @@ let outsideWatch = null;
 
 function watchOutsideClicks() {
   clearInterval(outsideWatch);
+  // Turned off in the settings: the deck stays until its hotkey, Esc or an action closes it.
+  if (!cfg.closeOnClickOutside) return;
   // A button already held as the deck opens (opened from a mouse button) isn't a click elsewhere.
   let wasDown = keyboard.mouseDown();
   outsideWatch = setInterval(() => {
@@ -490,6 +492,7 @@ function closePopup() {
 
 // The deck and its popup page act as one: they close when the focus goes anywhere else.
 function hideIfFocusLeft() {
+  if (!cfg.closeOnClickOutside) return;
   setTimeout(() => {
     const focused = BrowserWindow.getFocusedWindow();
     if (focused !== deckWin && focused !== popupWin) hideDeck();
@@ -1075,6 +1078,7 @@ function registerIpc() {
         ...cfg,
         hotkey: isImportableHotkey(imported.hotkey) ? imported.hotkey : cfg.hotkey,
         closeAfterAction: imported.closeAfterAction !== false,
+        closeOnClickOutside: imported.closeOnClickOutside !== false,
         grid: imported.grid,
         pageCount: imported.pageCount,
         pageGrids: imported.pageGrids,

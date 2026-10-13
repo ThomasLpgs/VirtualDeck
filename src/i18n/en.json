@@ -184,6 +184,8 @@
   "settings.hotkeyCapture": "Press your combination… (Esc to cancel)",
   "settings.closeAfter": "Close the deck after an action",
   "settings.closeAfterHint": "Otherwise it stays open until Esc or a click outside.",
+  "settings.closeOutside": "Close the deck when clicking outside",
+  "settings.closeOutsideHint": "Off, it stays open until Esc, its hotkey or an action.",
   "settings.login": "Launch when Windows starts",
   "settings.loginHint": "The app starts quietly in the notification area.",
 

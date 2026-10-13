@@ -1749,6 +1749,10 @@ function bindStaticFields() {
     config.closeAfterAction = e.target.checked;
     scheduleSave();
   });
+  $('close-outside').addEventListener('change', (e) => {
+    config.closeOnClickOutside = e.target.checked;
+    scheduleSave();
+  });
   $('login').addEventListener('change', (e) => {
     config.launchAtLogin = e.target.checked;
     scheduleSave();
@@ -2257,6 +2261,7 @@ function renderSettings() {
   renderHotkey();
   renderConnectionForm();
   $('close-after').checked = config.closeAfterAction;
+  $('close-outside').checked = config.closeOnClickOutside;
   $('login').checked = config.launchAtLogin;
   renderLightsSettings();
 }

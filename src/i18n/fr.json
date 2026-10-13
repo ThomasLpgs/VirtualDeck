@@ -183,6 +183,8 @@
   "settings.hotkeyCapture": "Appuie sur ta combinaison… (Échap pour annuler)",
   "settings.closeAfter": "Fermer le deck après une action",
   "settings.closeAfterHint": "Sinon il reste ouvert jusqu'à Échap ou un clic à côté.",
+  "settings.closeOutside": "Fermer le deck en cliquant à côté",
+  "settings.closeOutsideHint": "Désactivé, il reste ouvert jusqu'à Échap, son raccourci ou une action.",
   "settings.login": "Lancer au démarrage de Windows",
   "settings.loginHint": "L'app démarre discrètement dans la zone de notification.",
 
