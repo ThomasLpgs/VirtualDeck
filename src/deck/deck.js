@@ -146,6 +146,9 @@ for (const [id, icon, delta] of [
 const openEditorButton = document.getElementById('open-editor');
 openEditorButton.append(createGlyph('settings'));
 openEditorButton.addEventListener('click', () => window.api.openEditor());
+const closeButton = document.getElementById('close-deck');
+closeButton.append(createGlyph('x'));
+closeButton.addEventListener('click', () => window.api.hideDeck());
 
 document.addEventListener('contextmenu', (e) => {
   e.preventDefault();
