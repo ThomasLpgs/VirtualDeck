@@ -307,6 +307,7 @@ document.addEventListener('keydown', (e) => {
 // Resolves true when the user confirms. Escape, Cancel or a click beside the box: false.
 function confirmDialog(text, okLabel) {
   const dialog = $('confirm-dialog');
+  if (dialog.open) return Promise.resolve(false);
   $('confirm-text').textContent = text;
   $('confirm-ok').textContent = okLabel;
   return new Promise((resolve) => {
@@ -1568,10 +1569,10 @@ function showCanvasNotice(text, warn = false, undoable = false) {
   const notice = $('canvas-notice');
   notice.textContent = text;
   if (undoable) {
-    const steps = undoStack.length;
+    const shown = deckNow;
     const cancel = button(t('undo.button'), () => {
       // Only if nothing else changed since: else Ctrl+Z goes back step by step.
-      if (undoStack.length === steps) undo();
+      if (deckNow === shown) undo();
       notice.hidden = true;
     }, 'link-btn');
     cancel.title = t('undo.hint');
@@ -1636,10 +1637,28 @@ function templateCard(template) {
 
 // Adds a template as a new page (or on the first page, while the deck is still all empty).
 // The keys already there never move.
+let addingTemplate = false;
+
 async function addTemplate(template) {
-  const lists = template.needsStream && streamState.status === 'connected'
-    ? { scenes: await api.streamScenes(), inputs: await api.streamInputs() }
-    : {};
+  // A double click on "Add" must not add it twice (OBS takes a moment to list its scenes).
+  if (addingTemplate) return;
+  addingTemplate = true;
+  try {
+    await insertTemplate(template);
+  } finally {
+    addingTemplate = false;
+  }
+}
+
+async function insertTemplate(template) {
+  let lists = {};
+  if (template.needsStream && streamState.status === 'connected') {
+    try {
+      lists = { scenes: await api.streamScenes(), inputs: await api.streamInputs() };
+    } catch {
+      // Added all the same, with the keys to complete (the notice says so).
+    }
+  }
   const built = buildTemplate(template, lists);
   const blankDeck = config.pageCount === 1 && config.buttons.every(isEmptyButton);
   if (!blankDeck && config.pageCount >= MAX_PAGES) {

@@ -168,3 +168,20 @@ test('tells when a mouse button is held down', () => {
   fake.held.add(0x02);
   assert.equal(keyboard.mouseDown(), true);
 });
+
+test('two pastes in a row still put back what was copied before', async () => {
+  const fake = fakeSystem();
+  const clipboard = fakeClipboard();
+  const keyboard = createKeyboard({ system: fake.system, clipboard, ClipboardItem: FakeClipboardItem, restoreDelay: 20 });
+  await keyboard.text('first');
+  await keyboard.text('second');
+  await wait(50);
+  assert.equal(clipboard.text, 'copied before');
+});
+
+test('keys only partly accepted by Windows are reported', async () => {
+  const fake = fakeSystem();
+  const system = fake.system();
+  system.send = (events) => events.length - 1;
+  await assert.rejects(createKeyboard({ system: () => system }).combo('Control+V'), { code: 'blocked' });
+});

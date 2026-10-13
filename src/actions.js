@@ -109,13 +109,15 @@ async function runAction(action, context) {
       // Govee lights, on the home network (govee.js, through main.js).
       await context.govee(action);
       return;
-    case 'media':
+    case 'media': {
+      const key = action.key || 'playPause';
       // The PC's microphones (microphone.js): muted for every app at once.
-      if (action.key === 'micMute') return context.microphone(action.mode || 'toggle');
+      if (key === 'micMute') return context.microphone(action.mode || 'toggle');
       // Media keys (keyboard.js): the music / video player and the Windows volume.
-      // Volume keys can move several steps at once (2 % each).
-      await context.keyboard.media(action.key || 'playPause', String(action.key).startsWith('volume') ? action.repeat : 1);
+      // Volume up / down can move several steps at once (2 % each).
+      await context.keyboard.media(key, key === 'volumeUp' || key === 'volumeDown' ? action.repeat : 1);
       return;
+    }
     case 'keys':
       await context.keyboard.combo(required(action.keys, 'field.keys'));
       return;

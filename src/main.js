@@ -196,7 +196,8 @@ async function installUpdate() {
     installer.unref();
     // The installer waits for the app to close before replacing it.
     app.quit();
-  } catch {
+  } catch (err) {
+    console.error('Update failed:', err);
     updateProgress = null;
     updateTray();
     broadcast('update:available', updateInfo());
@@ -333,13 +334,15 @@ function showDeck() {
   };
   deckWin.setBounds({ ...placedAt, width, height });
   // Keyboard keys pressed in the deck type into the window it opens over.
-  if (!deckWin.isVisible()) keyboard.rememberTarget();
-  // Muted from Windows or another app meanwhile: the mic keys show it as the deck opens.
-  if (!deckWin.isVisible()) readMicrophone();
+  const opening = !deckWin.isVisible();
+  if (opening) keyboard.rememberTarget();
   deckWin.webContents.send('deck:show');
   deckWin.show();
   deckWin.focus();
   watchOutsideClicks();
+  // Muted from Windows or another app meanwhile: the mic keys show it (after the deck is on
+  // screen, so the opening doesn't wait for Windows' audio).
+  if (opening) readMicrophone();
 }
 
 // A click elsewhere closes the deck. Losing the focus (see hideIfFocusLeft) usually tells, but
@@ -355,7 +358,7 @@ function watchOutsideClicks() {
   // A button already held as the deck opens (opened from a mouse button) isn't a click elsewhere.
   let wasDown = keyboard.mouseDown();
   outsideWatch = setInterval(() => {
-    if (!deckWin || deckWin.isDestroyed() || !deckWin.isVisible()) {
+    if (!isDeckShown()) {
       clearInterval(outsideWatch);
       return;
     }
@@ -499,11 +502,13 @@ function hideIfFocusLeft() {
   }, 50);
 }
 
+const isDeckShown = () => Boolean(deckWin && !deckWin.isDestroyed() && deckWin.isVisible());
+
 function hideDeck() {
   closePopup();
-  if (!deckWin || deckWin.isDestroyed() || !deckWin.isVisible()) return;
-  deckWin.hide();
   clearInterval(outsideWatch);
+  if (!isDeckShown()) return;
+  deckWin.hide();
   // The page stays loaded (instant opening): tell it to stop refreshing what nobody sees.
   deckWin.webContents.send('deck:hidden');
 }
@@ -665,6 +670,8 @@ function runMicrophone(mode) {
     setMicMuted(muted);
     return { notice: t(muted ? 'notice.micMuted' : 'notice.micOn') };
   } catch (err) {
+    // Some may have changed all the same: the keys show how they really are now.
+    readMicrophone();
     throw err instanceof MicrophoneError ? new Error(t(`micError.${err.code}`)) : err;
   }
 }
@@ -686,8 +693,16 @@ const keyContext = () => ({
 async function runKey(index, { fromDeck = false, origin = null, fromPhone = false } = {}) {
   const button = cfg.buttons[index];
   if (!button) return { ok: false, error: t('error.buttonNotFound') };
+  // A key that types (combination, text) must reach the window the deck was opened over: an open
+  // deck always closes first, even for a key pressed on a phone.
+  const types = needsFocus(button.action);
+  const typesOverDeck = types && isDeckShown();
   if (fromPhone) {
     try {
+      if (typesOverDeck) {
+        hideDeck();
+        await keyboard.restoreTarget();
+      }
       await wakeStream(button.action);
       const result = await runAction(button.action, keyContext());
       return { ok: true, warning: hidePaths(result?.warning), notice: hidePaths(result?.notice), page: result?.page };
@@ -695,23 +710,22 @@ async function runKey(index, { fromDeck = false, origin = null, fromPhone = fals
       return { ok: false, error: hidePaths(err.message) };
     }
   }
-  // A page key changes what the deck shows: it must not close it. A key that types (combination,
-  // text) always does: the keys must reach the window the deck was opened over.
-  const types = needsFocus(button.action);
-  const closes = (fromDeck && cfg.closeAfterAction && button.action.type !== 'page') || (types && deckWin.isVisible());
-  if (closes) hideDeck();
-  if (closes && types) await keyboard.restoreTarget();
+  // A page key changes what the deck shows: it must not close it.
+  const closes = (fromDeck && cfg.closeAfterAction && button.action.type !== 'page') || typesOverDeck;
   const unseen = !fromDeck || closes;
-  // After closing the deck: waiting for OBS must not keep it on screen.
-  await wakeStream(button.action);
   try {
+    if (closes) hideDeck();
+    if (closes && types) await keyboard.restoreTarget();
+    // After closing the deck: waiting for OBS must not keep it on screen.
+    await wakeStream(button.action);
     const result = await runAction(button.action, keyContext());
     if (result?.page) {
       // From a hotkey (or after the deck closed), open the deck on that page.
-      if (!deckWin.isVisible()) showDeck();
+      if (!isDeckShown()) showDeck();
       goToPage(result.page, origin);
     }
     if (unseen && result?.notice) notify(result.notice);
+    if (unseen && result?.warning) notify(result.warning);
     return { ok: true, warning: result?.warning, notice: result?.notice };
   } catch (err) {
     if (unseen) notify(err.message);
@@ -844,6 +858,38 @@ async function runGovee(action) {
 }
 
 // ---------- Phone as a deck (remote.js) ----------
+
+// Buttons of an imported deck that open a program or a link, or type on the keyboard, with what
+// they do: [{ label, does: ['opens …', …] }].
+const RISKY_LINES = 6;
+// "Super+Shift+S" -> "Win + Maj + S", as the editor shows it.
+const keyNames = (combo) =>
+  combo
+    .split('+')
+    .map((name) => (t(`key.${name}`) === `key.${name}` ? name : t(`key.${name}`)))
+    .join(' + ');
+function riskyButtons(buttons) {
+  const short = (text) => {
+    const line = String(text ?? '').replace(/\s+/g, ' ').trim();
+    return line.length > 60 ? `${line.slice(0, 59)}…` : line;
+  };
+  const does = (action) => {
+    if (action?.type === 'open') return [t('backup.riskyOpen', { target: short(action.target) })];
+    if (action?.type === 'keys') return [t('backup.riskyKeys', { keys: keyNames(short(action.keys)) })];
+    if (action?.type === 'text') return [t('backup.riskyText', { text: short(action.text) })];
+    if (action?.type === 'multi' && Array.isArray(action.steps)) return action.steps.flatMap((step) => does(step?.action));
+    return [];
+  };
+  return (Array.isArray(buttons) ? buttons : [])
+    .map((button) => ({ label: short(button?.label) || t('editor.untitled'), does: does(button?.action) }))
+    .filter((button) => button.does.length);
+}
+
+function riskyWarning(risky) {
+  const lines = risky.slice(0, RISKY_LINES).map(({ label, does }) => `• ${t('backup.riskyLine', { label, does: does.join(', ') })}`);
+  if (risky.length > RISKY_LINES) lines.push(t('backup.riskyMore', { count: risky.length - RISKY_LINES }));
+  return `${t('backup.importOpenWarning', { count: risky.length })}\n${lines.join('\n')}`;
+}
 
 // What a phone needs to draw the deck. Only the action fields the keys display (scene names,
 // muted input...): no file paths, programs or URLs leave the PC.
@@ -1052,14 +1098,9 @@ function registerIpc() {
       return { ok: false, error: err.message };
     }
 
-    // An imported deck may come from someone else: point out buttons that launch things or type
-    // on the keyboard (Win+R then a command would run it).
-    const RISKY = ['open', 'keys', 'text'];
-    const risky = (action) =>
-      RISKY.includes(action?.type)
-        ? 1
-        : (Array.isArray(action?.steps) ? action.steps : []).filter((s) => RISKY.includes(s?.action?.type)).length;
-    const openCount = bundle.config.buttons.reduce((count, b) => count + risky(b?.action), 0);
+    // An imported deck may come from someone else: show the buttons that launch things or type on
+    // the keyboard (Win+R then a command would run it), and what they do.
+    const risky = riskyButtons(bundle.config.buttons);
     const { response } = await dialog.showMessageBox(editorWin, {
       type: 'question',
       buttons: [t('backup.importConfirm'), t('common.cancel')],
@@ -1068,7 +1109,7 @@ function registerIpc() {
       noLink: true,
       title: t('backup.importTitle'),
       message: t('backup.importQuestion', { file: path.basename(filePaths[0]) }),
-      detail: t('backup.importDetail') + (openCount ? `\n\n${t('backup.importOpenWarning', { count: openCount })}` : ''),
+      detail: t('backup.importDetail') + (risky.length ? `\n\n${riskyWarning(risky)}` : ''),
     });
     if (response !== 0) return null;
 
@@ -1292,6 +1333,8 @@ if (!app.requestSingleInstanceLock()) {
     if (!hotkeyOk && !loaded.firstRun) notify(t('notify.hotkeyTaken', { hotkey: cfg.hotkey }));
     // Started again by the installer of a one-click update.
     if (process.argv.includes('--updated')) notify(t('update.done', { version: app.getVersion() }));
+    // The config file couldn't be read: the app started with a new deck, the old file is kept aside.
+    if (loaded.damaged) notify(t('notify.configDamaged', { file: path.basename(loaded.damaged) }));
     // Opened by the user: show it, otherwise it looks like nothing happened (it lives in the tray).
     if (loaded.firstRun || !hotkeyOk || !process.argv.includes(LOGIN_ARG)) openEditor();
   });

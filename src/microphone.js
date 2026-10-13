@@ -124,7 +124,16 @@ function createMicrophone({ system = loadCoreAudio } = {}) {
       const states = system().eachMicrophone((mic) => mic.muted());
       if (!states.length) throw new MicrophoneError('noMic');
       const muted = mode === 'mute' || (mode !== 'unmute' && !states.every(Boolean));
-      system().eachMicrophone((mic) => mic.setMuted(muted));
+      // Every microphone is tried, even after one refused (unplugged meanwhile, held by an app).
+      const refused = system().eachMicrophone((mic) => {
+        try {
+          mic.setMuted(muted);
+          return false;
+        } catch {
+          return true;
+        }
+      });
+      if (refused.some(Boolean)) throw new MicrophoneError('refused');
       return muted;
     },
   };

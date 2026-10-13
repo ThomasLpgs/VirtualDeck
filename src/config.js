@@ -28,6 +28,9 @@ const configPath = () => path.join(app.getPath('userData'), 'config.json');
 // The config as last read or written, to skip writing the disk when nothing changed. Compared
 // before encryption: an encrypted password differs on every call even when it is the same.
 let lastSaved = null;
+// Secrets Windows couldn't decrypt (e.g. after a Windows profile change), kept as they were on
+// disk until the user types them again, rather than being erased by the next save.
+const undecrypted = {};
 
 function defaultButton() {
   return {
@@ -180,27 +183,45 @@ function decrypt(encrypted) {
   try {
     return safeStorage.decryptString(Buffer.from(encrypted, 'base64'));
   } catch {
-    return '';
+    return null;
   }
 }
 
+// Returns { config, firstRun, damaged }. damaged: where an unreadable config file was set aside
+// (its keys would otherwise be lost at the next save), for the app to tell the user.
 function load() {
   let raw;
   try {
     raw = JSON.parse(fs.readFileSync(configPath(), 'utf8'));
   } catch (err) {
-    if (err.code !== 'ENOENT') console.error('Unreadable config, using defaults:', err);
-    return { config: defaults(), firstRun: err.code === 'ENOENT' };
+    if (err.code === 'ENOENT') return { config: defaults(), firstRun: true, damaged: null };
+    console.error('Unreadable config, using defaults:', err);
+    return { config: defaults(), firstRun: false, damaged: setAside() };
   }
   for (const [software, field] of Object.entries(SECRETS)) {
     const settings = raw[software];
     if (!settings?.[`${field}Enc`]) continue;
-    settings[field] = decrypt(settings[`${field}Enc`]);
+    const secret = decrypt(settings[`${field}Enc`]);
+    if (secret === null) undecrypted[software] = settings[`${field}Enc`];
+    settings[field] = secret ?? '';
     delete settings[`${field}Enc`];
   }
   const config = normalize(raw);
   lastSaved = JSON.stringify(config);
   return { config, firstRun: false };
+}
+
+// Copies an unreadable config file next to it (config.damaged-<date>.json). Returns its path.
+function setAside() {
+  const file = configPath();
+  const copy = path.join(path.dirname(file), `config.damaged-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+  try {
+    fs.copyFileSync(file, copy);
+    return copy;
+  } catch (err) {
+    console.error('Could not keep the unreadable config:', err);
+    return null;
+  }
 }
 
 function save(next) {
@@ -209,7 +230,9 @@ function save(next) {
   if (text === lastSaved) return cfg;
   const onDisk = structuredClone(cfg);
   for (const [software, field] of Object.entries(SECRETS)) {
-    const enc = encrypt(cfg[software][field]);
+    // Typed again: the old undecryptable one is no longer needed.
+    if (cfg[software][field]) delete undecrypted[software];
+    const enc = encrypt(cfg[software][field]) || undecrypted[software];
     if (!enc) continue;
     onDisk[software][`${field}Enc`] = enc;
     delete onDisk[software][field];

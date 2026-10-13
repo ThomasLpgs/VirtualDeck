@@ -47,3 +47,24 @@ test('without a microphone', () => {
   assert.equal(microphone.isMuted(), null);
   assert.throws(() => microphone.set(), { code: 'noMic' });
 });
+
+test('a microphone that refuses does not stop the others', () => {
+  const mics = [false, false];
+  // The first one is unplugged.
+  const microphone = createMicrophone({
+    system: () => ({
+      eachMicrophone: (fn) =>
+        mics.map((_, i) =>
+          fn({
+            muted: () => mics[i],
+            setMuted: (muted) => {
+              if (i === 0) throw new Error('unplugged');
+              mics[i] = muted;
+            },
+          }),
+        ),
+    }),
+  });
+  assert.throws(() => microphone.set('mute'), { code: 'refused' });
+  assert.deepEqual(mics, [false, true]);
+});
