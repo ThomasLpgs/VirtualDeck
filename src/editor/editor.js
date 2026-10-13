@@ -302,6 +302,33 @@ document.addEventListener('keydown', (e) => {
   if ((isUndo && undo()) || (isRedo && redo())) e.preventDefault();
 });
 
+// ---------- Confirmation (in the app's look, not Windows' white box) ----------
+
+// Resolves true when the user confirms. Escape, Cancel or a click beside the box: false.
+function confirmDialog(text, okLabel) {
+  const dialog = $('confirm-dialog');
+  $('confirm-text').textContent = text;
+  $('confirm-ok').textContent = okLabel;
+  return new Promise((resolve) => {
+    const close = (confirmed) => {
+      dialog.removeEventListener('close', onClose);
+      dialog.onclick = null;
+      $('confirm-ok').onclick = null;
+      $('confirm-cancel').onclick = null;
+      if (dialog.open) dialog.close();
+      resolve(confirmed);
+    };
+    const onClose = () => close(false);
+    dialog.addEventListener('close', onClose);
+    $('confirm-ok').onclick = () => close(true);
+    $('confirm-cancel').onclick = () => close(false);
+    // Around the box, the click lands on the dialog itself (its backdrop): it cancels.
+    dialog.onclick = (e) => e.target === dialog && close(false);
+    dialog.showModal();
+    $('confirm-ok').focus();
+  });
+}
+
 // ---------- Tabs ----------
 
 function showView(name) {
@@ -440,9 +467,9 @@ function addPage() {
   scheduleSave();
 }
 
-function removePage() {
+async function removePage() {
   const name = pageTitle(config, page);
-  if (!window.confirm(t('page.removeConfirm', { name }))) return;
+  if (!(await confirmDialog(t('page.removeConfirm', { name }), t('page.removeOk')))) return;
   config.buttons.splice(pageStart(), PAGE_SIZE);
   config.pageGrids.splice(page, 1);
   config.pageNames.splice(page, 1);
@@ -1666,6 +1693,7 @@ function bindStaticFields() {
   $('brand-glyph').replaceWith(createGlyph('layout-grid'));
   $('search-glyph').replaceWith(createGlyph('search'));
   $('clear-button').append(createGlyph('trash-2'));
+  $('confirm-glyph').append(createGlyph('triangle-alert'));
 
   document.querySelectorAll('.tab').forEach((tab) => tab.addEventListener('click', () => showView(tab.dataset.view)));
   $('stream-pill').addEventListener('click', () => showView('connection'));
@@ -2215,7 +2243,7 @@ function setupPhone() {
   $('phone-enabled').addEventListener('change', async (e) => renderPhone(await api.setRemoteEnabled(e.target.checked)));
   $('phone-qr-toggle').addEventListener('click', toggleQr);
   $('phone-new-key').addEventListener('click', async () => {
-    if (!window.confirm(t('phone.newKeyConfirm'))) return;
+    if (!(await confirmDialog(t('phone.newKeyConfirm'), t('phone.newKeyOk')))) return;
     const wasShown = !$('phone-qr').hidden;
     hideQr();
     renderPhone(await api.newRemoteKey());
