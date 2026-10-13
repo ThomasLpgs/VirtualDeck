@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { electron, connectedObs, aitum } = require('./helpers');
-const { runAction, needsStream } = require('../src/actions');
+const { runAction, needsStream, needsFocus } = require('../src/actions');
 
 const run = (action, obs, extra = {}) => runAction(action, { stream: obs, playSound: () => {}, ...extra });
 const requests = (calls, type) => calls.filter(([request]) => request === type);
@@ -420,4 +420,48 @@ test('only keys driving OBS / Streamlabs wait for a connection attempt', () => {
   assert.ok(!needsStream({ type: 'multi', steps: [{ action: { type: 'sound' } }, { action: { type: 'page' } }] }));
   assert.ok(!needsStream({ type: 'multi', steps: [{}, null] }));
   assert.ok(!needsStream(undefined));
+});
+
+test.describe('keyboard keys', () => {
+  // What the keys ask of keyboard.js (main.js passes it in the context).
+  const recorder = () => {
+    const calls = [];
+    const keyboard = {
+      media: async (...args) => calls.push(['media', ...args]),
+      combo: async (...args) => calls.push(['combo', ...args]),
+      text: async (...args) => calls.push(['text', ...args]),
+    };
+    return { calls, context: { keyboard } };
+  };
+
+  test('media keys, volume keys moving several steps', async () => {
+    const { calls, context } = recorder();
+    await run({ type: 'media', key: 'next', repeat: 5 }, null, context);
+    await run({ type: 'media', key: 'volumeUp', repeat: 5 }, null, context);
+    await run({ type: 'media' }, null, context);
+    assert.deepEqual(calls, [['media', 'next', 1], ['media', 'volumeUp', 5], ['media', 'playPause', 1]]);
+  });
+
+  test('a key combination', async () => {
+    const { calls, context } = recorder();
+    await run({ type: 'keys', keys: 'Control+Shift+M' }, null, context);
+    assert.deepEqual(calls, [['combo', 'Control+Shift+M']]);
+    await assert.rejects(run({ type: 'keys', keys: '' }, null, context), /Keys to send/);
+  });
+
+  test('a text, with or without Enter', async () => {
+    const { calls, context } = recorder();
+    await run({ type: 'text', text: 'GG', enter: true }, null, context);
+    await run({ type: 'text', text: 'hi', enter: 'yes' }, null, context);
+    assert.deepEqual(calls, [['text', 'GG', { enter: true }], ['text', 'hi', { enter: false }]]);
+    await assert.rejects(run({ type: 'text' }, null, context), /Text/);
+  });
+});
+
+test('only keys that type need the window the deck opened over', () => {
+  for (const type of ['keys', 'text']) assert.ok(needsFocus({ type }), type);
+  for (const type of ['media', 'sound', 'open', 'obs-scene', 'page', 'none']) assert.ok(!needsFocus({ type }), type);
+  assert.ok(needsFocus({ type: 'multi', steps: [{ action: { type: 'sound' } }, { action: { type: 'text' } }] }));
+  assert.ok(!needsFocus({ type: 'multi', steps: [{ action: { type: 'media' } }, {}, null] }));
+  assert.ok(!needsFocus(undefined));
 });

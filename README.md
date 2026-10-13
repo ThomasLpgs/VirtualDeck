@@ -28,6 +28,10 @@
 - **Raccourci par bouton** : déclenche n'importe quel bouton de partout, sans ouvrir le deck (les touches F13 à F24 marchent seules).
 - **Format vertical (TikTok, Shorts…)** avec le plugin [Aitum Vertical](https://github.com/Aitum/obs-vertical-canvas) : scènes, sources, live, enregistrement et clips en horizontal, en vertical ou les deux en même temps.
 - **Sons** (mp3, wav, ogg…) avec réglage du volume ; un second clic coupe le son.
+- **Touches multimédia** : lecture / pause, piste suivante ou précédente, volume de Windows, pour Spotify, YouTube, Deezer…
+- **Raccourcis clavier** : un bouton appuie à ta place sur une combinaison de touches (Ctrl + C, Win + Maj + S, le micro de Discord ou de Teams…).
+- **Texte tout prêt** : un bouton colle un message dans le chat (et l'envoie si tu veux) : « Merci pour le follow ! », « Je reviens dans 5 minutes »…
+- **Bibliothèque de modèles** : des decks tout prêts (stream, messages du chat, Discord, musique, raccourcis Windows, navigateur, Teams, Zoom) à ajouter en un clic sur une nouvelle page.
 - **Ouvrir** un programme, un fichier ou un lien (`https://`, `spotify:`, `steam://`, `discord://`…).
 - **Lumières Philips Hue** : allume, éteins, change la couleur ou lance une scène de tes lampes, en passant par le pont Hue de la maison (sans compte Hue).
 - **Lumières Govee** : allume, éteins ou change la couleur de tes lampes Govee, directement sur le réseau de la maison (sans compte Govee).
@@ -86,10 +90,15 @@ Dans l'onglet **Boutons**, clique sur une case puis choisis :
 | **Stream** | Démarre ou arrête le live, avec le chrono sur le bouton. |
 | **Son** | Joue un fichier audio, ou le coupe s'il est en cours. |
 | **Ouvrir** | Lance un programme, un fichier ou un lien. **Utiliser l'icône de l'application** met l'icône du programme (Spotify, OBS…) sur le bouton. |
+| **Média** | Lecture / pause, piste suivante ou précédente, stop, volume de Windows (+, − ou muet). Marche avec la plupart des lecteurs, même en arrière-plan. |
+| **Clavier** | Appuie sur une combinaison de touches à ta place, dans la fenêtre sur laquelle tu as ouvert le deck. Enregistre-la au clavier ; les boutons Ctrl, Alt, Maj et Win ajoutent les touches que Windows garde pour lui (Win + …). |
+| **Texte** | Colle un texte tout prêt dans la fenêtre sur laquelle tu as ouvert le deck, et appuie sur Entrée si tu le choisis. Ton presse-papiers est remis comme avant juste après. |
 | **Lumières Hue** | Allume, éteint ou bascule une lampe, une pièce, une zone ou toutes les lampes, avec une luminosité et une couleur au choix ; ou lance une scène Hue. Le pont s'associe dans **Réglages › Lumières connectées**. |
 | **Lumières Govee** | Allume, éteint ou bascule une lampe Govee ou toutes à la fois, avec une luminosité et une couleur au choix. Il faut activer « Contrôle LAN » sur la lampe dans l'appli Govee Home. |
 | **Page** | Va à la page suivante, précédente ou à une page précise, sans fermer le deck. |
 | **Multi** | Enchaîne plusieurs de ces actions dans l'ordre, avec une attente possible avant chacune. Si une étape échoue, les suivantes s'exécutent quand même. |
+
+Pas d'idée pour commencer ? L'onglet **Modèles** propose des decks tout prêts : **Ajouter** en met un sur une nouvelle page (ou sur la première tant que le deck est vide), sans toucher à tes boutons. Avec OBS ou Streamlabs connecté, le modèle *Stream* prend tout seul tes scènes et ton micro.
 
 En bas des réglages de chaque bouton, **Raccourci** lui donne une combinaison de touches qui le déclenche de n'importe où.
 

@@ -18,6 +18,7 @@
       </div>
       <nav class="tabs" role="tablist">
         <button class="tab active" type="button" role="tab" data-view="buttons" data-i18n="tab.buttons"></button>
+        <button class="tab" type="button" role="tab" data-view="library" data-i18n="tab.library"></button>
         <button class="tab" type="button" role="tab" data-view="connection" data-i18n="tab.connection"></button>
         <button class="tab" type="button" role="tab" data-view="settings" data-i18n="tab.settings"></button>
       </nav>
@@ -36,6 +37,7 @@
     <main id="view-buttons" class="view view-buttons">
       <section class="canvas">
         <div class="canvas-inner">
+          <p id="canvas-notice" class="canvas-notice" aria-live="polite" hidden></p>
           <nav id="page-tabs" class="page-tabs"></nav>
           <div class="deck-panel preview-panel">
             <header class="deck-header">
@@ -64,6 +66,11 @@
             </label>
           </div>
           <p class="canvas-hint" data-i18n="grid.hint"></p>
+          <div id="empty-page-hint" class="empty-page-hint" hidden>
+            <span id="empty-page-glyph"></span>
+            <span data-i18n="library.emptyPage"></span>
+            <button id="empty-page-open" class="btn" type="button" data-i18n="library.open"></button>
+          </div>
         </div>
       </section>
 
@@ -120,6 +127,18 @@
           <div id="action-fields" class="action-fields"></div>
         </section>
       </aside>
+    </main>
+
+    <!-- ===================== Library ===================== -->
+    <main id="view-library" class="view view-page" hidden>
+      <div class="page library">
+        <header class="page-head">
+          <h1 data-i18n="library.title"></h1>
+          <p data-i18n="library.subtitle"></p>
+        </header>
+        <div id="library-filters" class="library-filters" role="radiogroup" data-i18n-aria-label="library.title"></div>
+        <div id="library-grid" class="library-grid"></div>
+      </div>
     </main>
 
     <!-- ===================== Connection ===================== -->
@@ -343,6 +362,7 @@
 
     <script src="../shared/i18n.js"></script>
     <script src="../shared/keys.js"></script>
+    <script src="../shared/templates.js"></script>
     <script src="editor.js"></script>
   </body>
 </html>
