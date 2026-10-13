@@ -15,6 +15,7 @@ const MODIFIERS = { Control: 0x11, Alt: 0x12, Shift: 0x10, Super: 0x5b };
 // Order modifiers are pressed in (and shown in): Ctrl, Alt, Shift, Win.
 const MODIFIER_ORDER = Object.keys(MODIFIERS);
 const RIGHT_WIN = 0x5c;
+const MOUSE_BUTTONS = [0x01, 0x02, 0x04];
 
 // Keys a combination can end with, by their Electron accelerator name (what the editor records).
 const KEYS = {
@@ -187,6 +188,14 @@ function createKeyboard({ system = loadWin32, clipboard, ClipboardItem, restoreD
 
   return {
     // Called just before the deck shows.
+    // Whether a mouse button (left, right or middle) is held down right now, anywhere on screen.
+    mouseDown() {
+      try {
+        return MOUSE_BUTTONS.some((vk) => system().isDown(vk));
+      } catch {
+        return false;
+      }
+    },
     rememberTarget() {
       try {
         target = system().foreground();

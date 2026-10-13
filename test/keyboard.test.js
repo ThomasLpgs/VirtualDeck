@@ -160,3 +160,11 @@ test('an unreadable clipboard does not stop the paste', async () => {
   await createKeyboard({ system: fake.system, clipboard, ClipboardItem: FakeClipboardItem, restoreDelay: 10 }).text('hello');
   assert.equal(fake.sent.length, 1);
 });
+
+test('tells when a mouse button is held down', () => {
+  const fake = fakeSystem();
+  const keyboard = createKeyboard({ system: fake.system });
+  assert.equal(keyboard.mouseDown(), false);
+  fake.held.add(0x02);
+  assert.equal(keyboard.mouseDown(), true);
+});
