@@ -405,7 +405,7 @@
   "key.Delete": "Del",
   "action.media": "Mídia",
   "action.media.hint": "As teclas de mídia do teclado: reproduzir, pausar, próxima faixa, volume do Windows. Funciona com Spotify, YouTube, Deezer…, mesmo em segundo plano.",
-  "action.keys": "Teclado",
+  "action.keys": "Atalho de teclado",
   "action.keys.hint": "Pressiona uma combinação de teclas por você (Ctrl + C, Win + Shift + S…), na janela sobre a qual você abriu o deck.",
   "action.text": "Texto",
   "action.text.hint": "Cola um texto pronto na janela sobre a qual você abriu o deck (o chat, o Discord…). Sua área de transferência volta a ser como era logo depois.",

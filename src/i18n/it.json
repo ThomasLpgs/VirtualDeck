@@ -405,7 +405,7 @@
   "key.Delete": "Canc",
   "action.media": "Multimedia",
   "action.media.hint": "I tasti multimediali della tastiera: riproduci, pausa, brano successivo, volume di Windows. Funziona con Spotify, YouTube, Deezer…, anche in secondo piano.",
-  "action.keys": "Tastiera",
+  "action.keys": "Scorciatoia",
   "action.keys.hint": "Preme una combinazione di tasti al posto tuo (Ctrl + C, Win + Maiusc + S…), nella finestra sopra cui hai aperto il deck.",
   "action.text": "Testo",
   "action.text.hint": "Incolla un testo già pronto nella finestra sopra cui hai aperto il deck (la chat, Discord…). Gli appunti tornano com'erano subito dopo.",

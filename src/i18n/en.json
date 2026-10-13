@@ -406,7 +406,7 @@
   "key.Delete": "Del",
   "action.media": "Media",
   "action.media.hint": "The keyboard's media keys: play, pause, next track, Windows volume. Works with Spotify, YouTube, Deezer…, even in the background.",
-  "action.keys": "Keyboard",
+  "action.keys": "Keyboard shortcut",
   "action.keys.hint": "Presses a key combination for you (Ctrl + C, Win + Shift + S…), in the window you opened the deck over.",
   "action.text": "Text",
   "action.text.hint": "Pastes a ready-made text into the window you opened the deck over (the chat, Discord…). Your clipboard is put back right after.",

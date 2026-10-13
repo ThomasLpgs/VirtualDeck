@@ -91,7 +91,7 @@ Dans l'onglet **Boutons**, clique sur une case puis choisis :
 | **Son** | Joue un fichier audio, ou le coupe s'il est en cours. |
 | **Ouvrir** | Lance un programme, un fichier ou un lien. **Utiliser l'icône de l'application** met l'icône du programme (Spotify, OBS…) sur le bouton. |
 | **Média** | Lecture / pause, piste suivante ou précédente, stop, volume de Windows (+, − ou muet). Marche avec la plupart des lecteurs, même en arrière-plan. |
-| **Clavier** | Appuie sur une combinaison de touches à ta place, dans la fenêtre sur laquelle tu as ouvert le deck. Enregistre-la au clavier ; les boutons Ctrl, Alt, Maj et Win ajoutent les touches que Windows garde pour lui (Win + …). |
+| **Raccourci clavier** | Appuie sur une combinaison de touches à ta place, dans la fenêtre sur laquelle tu as ouvert le deck. Enregistre-la au clavier ; les boutons Ctrl, Alt, Maj et Win ajoutent les touches que Windows garde pour lui (Win + …). |
 | **Texte** | Colle un texte tout prêt dans la fenêtre sur laquelle tu as ouvert le deck, et appuie sur Entrée si tu le choisis. Ton presse-papiers est remis comme avant juste après. |
 | **Lumières Hue** | Allume, éteint ou bascule une lampe, une pièce, une zone ou toutes les lampes, avec une luminosité et une couleur au choix ; ou lance une scène Hue. Le pont s'associe dans **Réglages › Lumières connectées**. |
 | **Lumières Govee** | Allume, éteint ou bascule une lampe Govee ou toutes à la fois, avec une luminosité et une couleur au choix. Il faut activer « Contrôle LAN » sur la lampe dans l'appli Govee Home. |
