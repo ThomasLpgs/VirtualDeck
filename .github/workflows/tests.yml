@@ -5,6 +5,10 @@ on:
   push:
   pull_request:
 
+# Read-only token: the job only checks out the code and runs the tests.
+permissions:
+  contents: read
+
 jobs:
   test:
     # The app is Windows-only: test where it runs (paths, line endings).
