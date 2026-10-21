@@ -5,188 +5,192 @@
 <h1 align="center">VirtualDeck</h1>
 
 <p align="center">
-  Un Stream Deck virtuel pour Windows.<br />
-  Un raccourci clavier ouvre une grille de boutons sous ta souris : un clic change de scène OBS, lance une animation, joue un son ou ouvre un programme.
+  A virtual Stream Deck for Windows.<br />
+  A hotkey opens a grid of buttons under your mouse: one click switches your OBS scene, plays an animation, plays a sound or opens a program.
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Démo : un clic sur le deck change la scène dans OBS" width="860" />
+  <b>English</b> · <a href="README.fr.md">Français</a>
+</p>
+
+<p align="center">
+  <img src="docs/demo.gif" alt="Demo: one click on the deck switches the scene in OBS" width="860" />
   <br />
-  <sub>Vidéo en meilleure qualité : <a href="docs/demo.mp4">docs/demo.mp4</a></sub>
+  <sub>Higher-quality video: <a href="docs/demo.mp4">docs/demo.mp4</a></sub>
 </p>
 
 ---
 
-## Fonctionnalités
+## Features
 
-- **Une grille qui s'ouvre où tu es** : `Ctrl + Maj + Espace` (modifiable) l'affiche sous la souris, par-dessus les jeux en plein écran fenêtré. `Échap` ou un clic à côté la ferme. Les touches `1` à `9` déclenchent les boutons au clavier.
-- **Pilote OBS Studio et Streamlabs Desktop** : scènes, sources et animations, sons coupés, clips, live et enregistrement.
-- **État en direct sur les boutons** : badge LIVE sur la scène à l'antenne, chrono « LIVE 1:02:03 » et « REC 12:03 » (ou « PAUSE ») sur les boutons Stream et Enregistrer, « MUET » sur un son coupé. Tout suit aussi ce que tu fais directement dans OBS.
-- **Multi-actions** : un seul bouton enchaîne plusieurs actions, avec une attente possible avant chacune (par exemple « Pause » : scène Pause, puis musique, puis webcam masquée).
-- **Pages** : jusqu'à 10 grilles, chacune avec son nom (« Sons », « Scènes »…) et son propre nombre de colonnes et de lignes. Elles s'ouvrent dans le deck ou dans une bulle qui sort du bouton, au-dessus du deck (au choix dans les Réglages).
-- **Ton téléphone comme deck** : scanne un QR code et ton téléphone devient un Stream Deck tactile, sur le wifi de la maison, sans appli à installer et sans rien ouvrir sur internet.
-- **Raccourci par bouton** : déclenche n'importe quel bouton de partout, sans ouvrir le deck (les touches F13 à F24 marchent seules).
-- **Format vertical (TikTok, Shorts…)** avec le plugin [Aitum Vertical](https://github.com/Aitum/obs-vertical-canvas) : scènes, sources, live, enregistrement et clips en horizontal, en vertical ou les deux en même temps.
-- **Sons** (mp3, wav, ogg…) avec réglage du volume ; un second clic coupe le son.
-- **Touches multimédia** : lecture / pause, piste suivante ou précédente, volume de Windows, pour Spotify, YouTube, Deezer…
-- **Micro de tout le PC** : un bouton coupe tous les micros d'un coup, pour Discord, OBS, Teams et les jeux à la fois. Il affiche « MUET » tant qu'ils sont coupés.
-- **Raccourcis clavier** : un bouton appuie à ta place sur une combinaison de touches (Ctrl + C, Win + Maj + S, le micro de Discord ou de Teams…).
-- **Texte tout prêt** : un bouton colle un message dans le chat (et l'envoie si tu veux) : « Merci pour le follow ! », « Je reviens dans 5 minutes »…
-- **Bibliothèque de modèles** : des decks tout prêts (stream, messages du chat, Discord, musique, raccourcis Windows, navigateur, Teams, Zoom) à ajouter en un clic sur une nouvelle page.
-- **Ouvrir** un programme, un fichier ou un lien (`https://`, `spotify:`, `steam://`, `discord://`…).
-- **Lumières Philips Hue** : allume, éteins, change la couleur ou lance une scène de tes lampes, en passant par le pont Hue de la maison (sans compte Hue).
-- **Lumières Govee** : allume, éteins ou change la couleur de tes lampes Govee, directement sur le réseau de la maison (sans compte Govee).
-- **Personnalisation** : plus de 2 000 icônes, emojis ou tes propres images, 10 couleurs ou une couleur libre, grille jusqu'à 8 × 6. Le deck se déplace et se redimensionne (60 % à 160 %).
-- **Export / import** de toute la configuration (sons et images compris), pour changer de PC ou partager ton deck.
-- **Mises à jour en un clic** : une pastille dans l'éditeur prévient quand une nouvelle version sort ; un clic la télécharge, l'installe et relance VirtualDeck.
-- **6 langues** : français, anglais, espagnol, allemand, italien, portugais (ou automatique selon Windows).
-- Tourne discrètement dans la zone de notification, peut se lancer au démarrage de Windows.
+- **A grid that opens where you are**: `Ctrl + Shift + Space` (customizable) shows it under the mouse, on top of games in windowed fullscreen. `Esc` or a click outside closes it. Keys `1` to `9` trigger the buttons from the keyboard.
+- **Controls OBS Studio and Streamlabs Desktop**: scenes, sources and animations, muted audio, clips, streaming and recording.
+- **Live status on the buttons**: LIVE badge on the scene on air, "LIVE 1:02:03" and "REC 12:03" (or "PAUSED") timers on the Stream and Record buttons, "MUTED" on muted audio. Everything also follows what you do directly in OBS.
+- **Multi-actions**: one button chains several actions, with an optional wait before each one (for example "Break": Break scene, then music, then webcam hidden).
+- **Pages**: up to 10 grids, each with its own name ("Sounds", "Scenes"…) and its own number of columns and rows. They open inside the deck or in a bubble coming out of the button, above the deck (your choice in Settings).
+- **Your phone as a deck**: scan a QR code and your phone becomes a touch Stream Deck, over your home Wi-Fi, with no app to install and nothing opened to the internet.
+- **Per-button hotkey**: trigger any button from anywhere, without opening the deck (F13 to F24 keys work on their own).
+- **Vertical format (TikTok, Shorts…)** with the [Aitum Vertical](https://github.com/Aitum/obs-vertical-canvas) plugin: scenes, sources, streaming, recording and clips in horizontal, vertical or both at once.
+- **Sounds** (mp3, wav, ogg…) with volume control; a second click stops the sound.
+- **Media keys**: play / pause, next or previous track, Windows volume, for Spotify, YouTube, Deezer…
+- **PC-wide microphone**: one button mutes every microphone at once, for Discord, OBS, Teams and games together. It shows "MUTED" while they are off.
+- **Keyboard shortcuts**: a button presses a key combination for you (Ctrl + C, Win + Shift + S, the Discord or Teams mic…).
+- **Ready-made text**: a button pastes a message into the chat (and sends it if you want): "Thanks for the follow!", "Back in 5 minutes"…
+- **Template library**: ready-made decks (stream, chat messages, Discord, music, Windows shortcuts, browser, Teams, Zoom) added in one click on a new page.
+- **Open** a program, a file or a link (`https://`, `spotify:`, `steam://`, `discord://`…).
+- **Philips Hue lights**: turn your lights on or off, change their color or start a scene, through your home Hue bridge (no Hue account).
+- **Govee lights**: turn your Govee lights on or off or change their color, directly over your home network (no Govee account).
+- **Customization**: over 2,000 icons, emojis or your own images, 10 colors or a custom color, grid up to 8 × 6. The deck can be moved and resized (60% to 160%).
+- **Export / import** of your whole setup (sounds and images included), to move to a new PC or share your deck.
+- **One-click updates**: a pill in the editor tells you when a new version is out; one click downloads it, installs it and restarts VirtualDeck.
+- **6 languages**: English, French, Spanish, German, Italian, Portuguese (or automatic, based on Windows).
+- Runs quietly in the notification area and can start with Windows.
 
-## Captures
+## Screenshots
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/deck.png" alt="Le deck" /><br /><sub>Le deck, ouvert par le raccourci</sub></td>
-    <td width="50%"><img src="docs/screenshots/editor-buttons.png" alt="Éditeur de boutons" /><br /><sub>Éditeur : apparence et action de chaque bouton</sub></td>
+    <td width="50%"><img src="docs/screenshots/deck.png" alt="The deck" /><br /><sub>The deck, opened with the hotkey</sub></td>
+    <td width="50%"><img src="docs/screenshots/editor-buttons.png" alt="Button editor" /><br /><sub>Editor: appearance and action of each button</sub></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/editor-connection.png" alt="Connexion à OBS" /><br /><sub>Connexion à OBS ou Streamlabs, avec guide pas à pas</sub></td>
-    <td><img src="docs/screenshots/editor-settings.png" alt="Réglages" /><br /><sub>Réglages : langue, raccourci, taille du deck, pages, sauvegarde</sub></td>
+    <td><img src="docs/screenshots/editor-connection.png" alt="Connecting to OBS" /><br /><sub>Connecting to OBS or Streamlabs, with a step-by-step guide</sub></td>
+    <td><img src="docs/screenshots/editor-settings.png" alt="Settings" /><br /><sub>Settings: language, hotkey, deck size, pages, backup</sub></td>
   </tr>
 </table>
 
 ## Installation
 
-Pas besoin de Node.js ni de npm : l'installateur contient tout.
+No need for Node.js or npm: the installer contains everything.
 
-1. Va sur la [dernière version](https://github.com/ThomasLpgs/VirtualDeck/releases/latest) et télécharge `VirtualDeck-Setup-x.y.z.exe` dans la section **Assets**.
-2. Lance-le et suis l'installateur. Windows SmartScreen peut afficher « Windows a protégé votre ordinateur » car l'app n'est pas signée par un éditeur reconnu : clique sur **Informations complémentaires** puis **Exécuter quand même**.
-3. VirtualDeck s'ouvre sur l'éditeur. Ensuite, il vit dans la zone de notification (à côté de l'horloge).
+1. Go to the [latest release](https://github.com/ThomasLpgs/VirtualDeck/releases/latest) and download `VirtualDeck-Setup-x.y.z.exe` from the **Assets** section.
+2. Run it and follow the installer. Windows SmartScreen may show "Windows protected your PC" because the app isn't signed by a known publisher: click **More info**, then **Run anyway**.
+3. VirtualDeck opens on the editor. After that, it lives in the notification area (next to the clock).
 
-Pour mettre à jour, clique sur **Installer la mise à jour** en haut de l'éditeur (ou dans le menu de l'icône près de l'horloge) : VirtualDeck télécharge la nouvelle version, vérifie que le fichier est intact, l'installe et se relance. Tu peux aussi lancer le nouvel installateur toi-même. Dans les deux cas, tes boutons, tes réglages et l'épingle de la barre des tâches sont conservés.
+To update, click **Install update** at the top of the editor (or in the menu of the icon next to the clock): VirtualDeck downloads the new version, checks that the file is intact, installs it and restarts. You can also run the new installer yourself. Either way, your buttons, your settings and the taskbar pin are kept.
 
-## Premiers pas
+## Getting started
 
-### 1. Connecter OBS
+### 1. Connect OBS
 
-Dans l'onglet **Connexion** de VirtualDeck :
+In the **Connection** tab of VirtualDeck:
 
-1. Dans OBS (version 28 ou plus), ouvre **Outils → Paramètres du serveur WebSocket** et coche **Activer le serveur WebSocket** (port `4455`).
-2. Clique sur **Afficher les informations de connexion** et copie le mot de passe.
-3. Colle-le dans VirtualDeck et clique sur **Se connecter**. La pastille passe au vert.
+1. In OBS (version 28 or later), open **Tools → WebSocket Server Settings** and tick **Enable WebSocket server** (port `4455`).
+2. Click **Show Connect Info** and copy the password.
+3. Paste it into VirtualDeck and click **Connect**. The dot turns green.
 
-Pour **Streamlabs Desktop** : **Settings → Remote Control**, clique sur le QR code puis **Show details**, et copie l'**API Token**.
+For **Streamlabs Desktop**: **Settings → Remote Control**, click the QR code then **Show details**, and copy the **API Token**.
 
-### 2. Créer tes boutons
+### 2. Create your buttons
 
-Dans l'onglet **Boutons**, clique sur une case puis choisis :
+In the **Buttons** tab, click a slot, then choose:
 
-| Action | Ce que fait le bouton |
+| Action | What the button does |
 | --- | --- |
-| **Scène** | Passe sur la scène choisie (la liste vient directement d'OBS). Avec Aitum Vertical : une scène horizontale et/ou une scène verticale, changées ensemble. |
-| **Source / animation** | *Animation* : affiche la source, attend sa durée puis la cache (idéal pour une vidéo `.webm` transparente). *Basculer*, *Afficher*, *Masquer* : contrôle la visibilité. Avec Aitum Vertical : la même animation en horizontal et en vertical. |
-| **Muet** | Coupe ou réactive une source audio (micro, musique…). Le bouton affiche « MUET » en rouge tant qu'elle est coupée. |
-| **Clip** | Sauvegarde les dernières secondes dans un fichier vidéo (tampon de relecture d'OBS, à démarrer dans OBS). En vertical avec le Backtrack d'Aitum. |
-| **Enregistrer** | Démarre ou arrête l'enregistrement, avec le chrono sur le bouton. |
-| **Stream** | Démarre ou arrête le live, avec le chrono sur le bouton. |
-| **Son** | Joue un fichier audio, ou le coupe s'il est en cours. |
-| **Ouvrir** | Lance un programme, un fichier ou un lien. **Utiliser l'icône de l'application** met l'icône du programme (Spotify, OBS…) sur le bouton. |
-| **Média** | Lecture / pause, piste suivante ou précédente, stop, volume de Windows (+, − ou muet). Marche avec la plupart des lecteurs, même en arrière-plan. Aussi : couper le micro de tout le PC (basculer, couper ou réactiver), comme le bouton muet des paramètres son de Windows. |
-| **Raccourci clavier** | Appuie sur une combinaison de touches à ta place, dans la fenêtre sur laquelle tu as ouvert le deck. Enregistre-la au clavier ; les boutons Ctrl, Alt, Maj et Win ajoutent les touches que Windows garde pour lui (Win + …). |
-| **Texte** | Colle un texte tout prêt dans la fenêtre sur laquelle tu as ouvert le deck, et appuie sur Entrée si tu le choisis. Ton presse-papiers est remis comme avant juste après. |
-| **Lumières Hue** | Allume, éteint ou bascule une lampe, une pièce, une zone ou toutes les lampes, avec une luminosité et une couleur au choix ; ou lance une scène Hue. Le pont s'associe dans **Réglages › Lumières connectées**. |
-| **Lumières Govee** | Allume, éteint ou bascule une lampe Govee ou toutes à la fois, avec une luminosité et une couleur au choix. Il faut activer « Contrôle LAN » sur la lampe dans l'appli Govee Home. |
-| **Page** | Va à la page suivante, précédente ou à une page précise, sans fermer le deck. |
-| **Multi** | Enchaîne plusieurs de ces actions dans l'ordre, avec une attente possible avant chacune. Si une étape échoue, les suivantes s'exécutent quand même. |
+| **Scene** | Switches to the chosen scene (the list comes straight from OBS). With Aitum Vertical: a horizontal and/or a vertical scene, switched together. |
+| **Source / animation** | *Animation*: shows the source, waits for its duration, then hides it (ideal for a transparent `.webm` video). *Toggle*, *Show*, *Hide*: control its visibility. With Aitum Vertical: the same animation in horizontal and vertical. |
+| **Mute** | Mutes or unmutes an audio source (mic, music…). The button shows "MUTED" in red while it is muted. |
+| **Clip** | Saves the last seconds to a video file (OBS replay buffer, to start in OBS). In vertical with Aitum's Backtrack. |
+| **Record** | Starts or stops recording, with the timer on the button. |
+| **Stream** | Starts or stops the stream, with the timer on the button. |
+| **Sound** | Plays an audio file, or stops it if it is playing. |
+| **Open** | Launches a program, a file or a link. **Use the app's icon** puts the program's icon (Spotify, OBS…) on the button. |
+| **Media** | Play / pause, next or previous track, stop, Windows volume (+, − or mute). Works with most players, even in the background. Also: mute the microphone of the whole PC (toggle, mute or unmute), like the mute button of Windows' sound settings. |
+| **Keyboard shortcut** | Presses a key combination for you, in the window you opened the deck over. Record it from the keyboard; the Ctrl, Alt, Shift and Win buttons add the keys Windows keeps for itself (Win + …). |
+| **Text** | Pastes a ready-made text into the window you opened the deck over, and presses Enter if you choose. Your clipboard is put back right after. |
+| **Hue lights** | Turns on, off or toggles a light, a room, a zone or all lights, with the brightness and color you want; or starts a Hue scene. Link the bridge in **Settings › Connected lights**. |
+| **Govee lights** | Turns on, off or toggles one Govee light or all of them, with the brightness and color you want. "LAN Control" must be turned on for the light in the Govee Home app. |
+| **Page** | Goes to the next, previous or a specific page, without closing the deck. |
+| **Multi** | Runs several of these actions in order, with an optional wait before each one. If a step fails, the next ones still run. |
 
-Pas d'idée pour commencer ? L'onglet **Modèles** propose des decks tout prêts : **Ajouter** en met un sur une nouvelle page (ou sur la première tant que le deck est vide), sans toucher à tes boutons. Avec OBS ou Streamlabs connecté, le modèle *Stream* prend tout seul tes scènes et ton micro.
+No idea where to start? The **Templates** tab offers ready-made decks: **Add** puts one on a new page (or on the first one while the deck is empty), without touching your buttons. With OBS or Streamlabs connected, the *Stream essentials* template picks up your scenes and microphone by itself.
 
-Une erreur ? `Ctrl + Z` annule la dernière modification des boutons et des pages (même une page supprimée), et `Ctrl + Y` la refait. Après une suppression, un bandeau propose aussi **Annuler**.
+Made a mistake? `Ctrl + Z` undoes the last change to buttons and pages (even a deleted page), and `Ctrl + Y` redoes it. After a deletion, a banner also offers **Undo**.
 
-En bas des réglages de chaque bouton, **Raccourci** lui donne une combinaison de touches qui le déclenche de n'importe où.
+At the bottom of each button's settings, **Hotkey** gives it a key combination that triggers it from anywhere.
 
-Glisse-dépose les boutons pour les réorganiser. Pour changer un bouton de page, dépose-le sur l'onglet de la page (il prend la première place libre), ou garde-le une demi-seconde au-dessus pour ouvrir la page et le poser où tu veux. Ajoute des pages avec **+** au-dessus de l'aperçu, et donne-leur un nom dans le champ **Nom** sous l'aperçu. Tout est enregistré automatiquement.
+Drag and drop buttons to reorder them. To move a button to another page, drop it on the page's tab (it takes the first free spot), or hold it over the tab for half a second to open the page and drop it where you want. Add pages with **+** above the preview, and name them in the **Name** field under the preview. Everything is saved automatically.
 
-### 3. Utiliser le deck
+### 3. Use the deck
 
-Appuie sur `Ctrl + Maj + Espace` n'importe où (ou sur la touche choisie dans **Réglages** : les touches F13 à F24 des souris et claviers programmables marchent aussi), puis clique sur un bouton.
+Press `Ctrl + Shift + Space` anywhere (or the key chosen in **Settings**: F13 to F24 keys of programmable mice and keyboards work too), then click a button.
 
-- **Changer de page** : flèches ‹ › en haut du deck, touches ← → du clavier, ou un bouton **Page**.
-- **Déplacer** le deck en le tirant par sa barre du haut : il se rouvre ensuite au même endroit. **Redimensionner** par le coin en bas à droite.
-- Dans **Réglages › Ouverture des pages**, *Deck superposé* ouvre les pages dans une bulle qui sort du bouton : re-cliquer sur le bouton ou sur le deck la referme.
+- **Change page**: ‹ › arrows at the top of the deck, ← → keyboard keys, or a **Page** button.
+- **Move** the deck by dragging its top bar: it then reopens in the same place. **Resize** it from the bottom-right corner.
+- In **Settings › Opening pages**, *Deck on top* opens pages in a bubble coming out of the button: clicking the button or the deck again closes it.
 
-### 4. Ton téléphone comme deck (optionnel)
+### 4. Your phone as a deck (optional)
 
-1. **Réglages › Téléphone** : active *Utiliser mon téléphone comme deck*, puis **Afficher le QR code**.
-2. Scanne-le avec l'appareil photo du téléphone (même wifi que le PC). Ajoute la page à l'écran d'accueil pour l'ouvrir comme une appli.
-3. Si Windows demande une autorisation pour VirtualDeck, accepte-la pour le type de réseau de ta maison (Privé ou Public, indiqué dans **Paramètres › Réseau et Internet**) : c'est ce qui permet au téléphone de se connecter. Le deck téléphone reste protégé par sa propre clé, celle du QR code.
+1. **Settings › Phone**: turn on *Use my phone as a deck*, then **Show QR code**.
+2. Scan it with the phone's camera (same Wi-Fi as the PC). Add the page to the home screen to open it like an app.
+3. If Windows asks for permission for VirtualDeck, allow it for your home network's type (Private or Public, shown in **Settings › Network & internet**): that is what lets your phone connect. The phone deck stays protected by its own key, the one in the QR code.
 
-Les pages se changent avec les flèches ou en glissant le doigt. Les badges LIVE / REC / MUET suivent en direct.
+Change pages with the arrows or by swiping. The LIVE / REC / MUTED badges update live.
 
-**Téléphones autorisés** (1 par défaut, jusqu'à 3 ou sans limite) : les premiers appareils qui scannent le QR code prennent les places, les suivants sont refusés même avec le QR code.
+**Allowed phones** (1 by default, up to 3 or no limit): the first devices that scan the QR code take the places; the next ones are refused, even with the QR code.
 
-Sécurité : le serveur n'existe que pendant que l'option est activée et n'écoute que sur le réseau local (rien sur la box, rien sur internet). Chaque appui est signé avec une clé secrète transmise par le QR code : un appareil du wifi qui ne l'a pas scanné ne peut rien déclencher, même en rejouant une requête. **Nouveau QR code** déconnecte tous les téléphones. Évite de montrer le QR code en stream : même s'il ne marche que depuis ton wifi, autant le garder pour toi.
+Security: the server only exists while the option is on and only listens on the local network (nothing on the router, nothing on the internet). Every press is signed with a secret key passed through the QR code: a device on the Wi-Fi that didn't scan it can't trigger anything, even by replaying a request. **New QR code** disconnects every phone. Avoid showing the QR code on stream: even though it only works from your Wi-Fi, better keep it to yourself.
 
-### 5. Lumières Philips Hue (optionnel)
+### 5. Philips Hue lights (optional)
 
-1. **Réglages › Lumières connectées** : active **Philips Hue**, puis **Rechercher le pont** et **Associer**. Si le pont n'apparaît pas, saisis son adresse IP (appli Hue › Paramètres › Ponts Hue).
-2. Appuie sur le gros bouton rond au centre du pont dans les 30 secondes.
-3. Crée un bouton **Lumières Hue** et choisis la lampe ou la pièce, ou une scène.
+1. **Settings › Connected lights**: turn on **Philips Hue**, then **Find the bridge** and **Link**. If the bridge doesn't show up, enter its IP address (Hue app › Settings › Hue Bridges).
+2. Press the big round button in the middle of the bridge within 30 seconds.
+3. Create a **Hue lights** button and pick the light or room, or a scene.
 
-Tout passe par le réseau de la maison : pas de compte Hue, rien à ouvrir sur la box. La liaison avec le pont est chiffrée et VirtualDeck vérifie à chaque fois que c'est bien ton pont qui répond. Si la box donne une nouvelle adresse au pont, VirtualDeck le retrouve tout seul.
+Everything goes through your home network: no Hue account, nothing to open on the router. The link with the bridge is encrypted and VirtualDeck checks every time that it really is your bridge answering. If the router gives the bridge a new address, VirtualDeck finds it by itself.
 
-### 6. Lumières Govee (optionnel)
+### 6. Govee lights (optional)
 
-Hue et Govee sont désactivés tant que tu ne les actives pas : sans lumières connectées, VirtualDeck n'envoie aucune requête vers des lampes ou un pont.
+Hue and Govee stay off until you turn them on: without connected lights, VirtualDeck sends no request to any light or bridge.
 
-1. Dans l'appli **Govee Home**, ouvre ta lampe › **Paramètres** et active **Contrôle LAN** (LAN Control).
-2. **Réglages › Lumières connectées** : active **Govee**.
-3. Dans VirtualDeck, crée un bouton **Lumières Govee** : les lampes du réseau apparaissent toutes seules. Choisis-en une, ou toutes.
+1. In the **Govee Home** app, open your light › **Settings** and turn on **LAN Control**.
+2. **Settings › Connected lights**: turn on **Govee**.
+3. In VirtualDeck, create a **Govee lights** button: the lights on the network show up by themselves. Pick one, or all of them.
 
-Tout passe par le réseau de la maison : pas de compte Govee, pas d'Internet, rien à ouvrir sur la box ni dans le pare-feu. VirtualDeck n'écoute les réponses des lampes que pendant l'appui sur une touche. Les scènes Govee ne sont pas disponibles en local, seulement l'allumage, la luminosité et la couleur.
+Everything goes through your home network: no Govee account, no internet, nothing to open on the router or in the firewall. VirtualDeck only listens for the lights' answers while a key is pressed. Govee scenes aren't available locally, only power, brightness and color.
 
-### 7. Format vertical avec Aitum Vertical (optionnel)
+### 7. Vertical format with Aitum Vertical (optional)
 
-Si le plugin [Aitum Vertical](https://github.com/Aitum/obs-vertical-canvas) est installé dans OBS, VirtualDeck le détecte tout seul :
+If the [Aitum Vertical](https://github.com/Aitum/obs-vertical-canvas) plugin is installed in OBS, VirtualDeck detects it by itself:
 
-- **Scène** et **Source / animation** proposent des champs verticaux en plus des horizontaux ; chaque champ rempli agit sur son format, les deux en même temps si les deux sont remplis.
-- **Stream**, **Enregistrer** et **Clip** ont un choix **Sortie** : *Horizontal* (OBS), *Vertical* (Aitum) ou *Les deux*.
-- Les sources des scènes verticales nécessitent OBS 32 ou plus récent.
+- **Scene** and **Source / animation** offer vertical fields in addition to the horizontal ones; each filled field acts on its format, both at once if both are filled.
+- **Stream**, **Record** and **Clip** have an **Output** choice: *Horizontal* (OBS), *Vertical* (Aitum) or *Both*.
+- Sources of vertical scenes require OBS 32 or later.
 
-Si le plugin n'est plus détecté, la partie horizontale continue de marcher et le deck signale les boutons concernés.
+If the plugin is no longer detected, the horizontal part keeps working and the deck flags the affected buttons.
 
-## Sauvegarde et changement de PC
+## Backup and moving to a new PC
 
-**Réglages → Exporter ma configuration** crée un fichier `.vdeck` avec tes boutons, leurs sons et leurs images. Sur l'autre PC : **Importer une configuration**. Les mots de passe et jetons de connexion ne sont jamais exportés.
+**Settings → Export my setup** creates a `.vdeck` file with your buttons, their sounds and their images. On the other PC: **Import a setup**. Connection passwords and tokens are never exported.
 
-## Développement
+## Development
 
-Prérequis : Node.js et Windows.
+Requirements: Node.js and Windows.
 
 ```bash
 npm install
-npm start          # lance l'app en mode développement
-npm run dist       # crée l'installateur dans release/
-npm test           # lance les tests automatiques (aussi exécutés par GitHub à chaque push)
+npm start          # runs the app in development mode
+npm run dist       # builds the installer into release/
+npm test           # runs the automated tests (also run by GitHub on every push)
 ```
 
-Organisation du code :
+Code layout:
 
 ```
 src/
-├── main.js          processus principal : fenêtres, raccourci global, icône de notification
-├── config.js        lecture/écriture de la config (secrets chiffrés via safeStorage)
-├── actions.js       exécution des actions des boutons
-├── obs.js           client OBS WebSocket v5
-├── streamlabs.js    client Streamlabs Remote Control
+├── main.js          main process: windows, global hotkey, notification icon
+├── config.js        config read/write (secrets encrypted with safeStorage)
+├── actions.js       runs the button actions
+├── obs.js           OBS WebSocket v5 client
+├── streamlabs.js    Streamlabs Remote Control client
 ├── backup.js        export / import
-├── updates.js       vérification des nouvelles versions (GitHub Releases)
-├── i18n.js          traductions côté processus principal
-├── i18n/*.json      un fichier par langue
-├── deck/            la grille (fenêtre transparente)
-├── editor/          l'éditeur
-└── shared/          code commun aux deux fenêtres
-test/                tests automatiques (node:test, avec un faux OBS)
+├── updates.js       checks for new versions (GitHub Releases)
+├── i18n.js          translations for the main process
+├── i18n/*.json      one file per language
+├── deck/            the grid (transparent window)
+├── editor/          the editor
+└── shared/          code shared by both windows
+test/                automated tests (node:test, with a fake OBS)
 ```
 
-Ajouter une langue : copie `src/i18n/en.json` vers `src/i18n/<code>.json`, traduis les valeurs, puis ajoute le code dans `LANGUAGES` (`src/i18n.js`). Une clé absente retombe sur l'anglais.
+Adding a language: copy `src/i18n/en.json` to `src/i18n/<code>.json`, translate the values, then add the code to `LANGUAGES` (`src/i18n.js`). A missing key falls back to English.
