@@ -3,6 +3,10 @@
 // ---- À modifier ici ----
 // Lien de l'installateur (à changer quand le repo GitHub passe en privé).
 const DOWNLOAD_URL = 'https://github.com/ThomasLpgs/VirtualDeck/releases/latest';
+// Dernière version publiée : le bouton télécharge directement son installateur.
+const LATEST_RELEASE_API = 'https://api.github.com/repos/ThomasLpgs/VirtualDeck/releases/latest';
+const INSTALLER_URL_PREFIX = 'https://github.com/ThomasLpgs/VirtualDeck/releases/download/';
+const INSTALLER_NAME = /^VirtualDeck-Setup-\d+\.\d+\.\d+\.exe$/;
 
 // Offre payante : prix et liens de paiement (Lemon Squeezy / Paddle).
 // Un lien vide affiche « Bientôt disponible ».
@@ -194,7 +198,22 @@ document.querySelectorAll('.billing-btn').forEach((btn) => {
   });
 });
 
+// GitHub injoignable ou réponse inattendue : le bouton garde la page des versions.
+async function linkLatestInstaller() {
+  try {
+    const res = await fetch(LATEST_RELEASE_API);
+    if (!res.ok) return;
+    const release = await res.json();
+    const asset = (release.assets || []).find((a) => INSTALLER_NAME.test(a.name));
+    const url = asset && asset.browser_download_url;
+    if (typeof url === 'string' && url.startsWith(INSTALLER_URL_PREFIX)) {
+      document.getElementById('download-link').href = url;
+    }
+  } catch {}
+}
+
 document.getElementById('download-link').href = DOWNLOAD_URL;
+linkLatestInstaller();
 document.getElementById('year').textContent = new Date().getFullYear();
 
 lang = savedLanguage() || (navigator.language.toLowerCase().startsWith('fr') ? 'fr' : 'en');
