@@ -229,7 +229,7 @@ p { margin: 0; }
 .billing-btn.is-active { background: var(--surface-2); color: var(--text); }
 .save { color: var(--ok); font-size: 12px; margin-left: 4px; }
 
-.plans { grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: stretch; }
+.plans { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; max-width: 720px; }
 .plan {
   position: relative;
   display: flex;
@@ -240,17 +240,6 @@ p { margin: 0; }
   background: var(--bg);
 }
 .plan-featured { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
-.ribbon {
-  position: absolute;
-  top: -11px;
-  left: 24px;
-  padding: 1px 10px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #0b0c10;
-  font-size: 12px;
-  font-weight: 600;
-}
 .price { margin-top: 12px; display: flex; align-items: baseline; gap: 4px; }
 .amount { font-size: 36px; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .per { color: var(--muted); font-size: 14px; }
@@ -278,7 +267,6 @@ details p { margin-top: 12px; color: var(--muted); }
 
 /* Responsive */
 @media (max-width: 960px) {
-  .plans { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .split { grid-template-columns: minmax(0, 1fr); gap: 40px; }
   .span-2, .span-3 { grid-column: 1 / -1; }

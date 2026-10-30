@@ -4,19 +4,15 @@
 // Lien de l'installateur (à changer quand le repo GitHub passe en privé).
 const DOWNLOAD_URL = 'https://github.com/ThomasLpgs/VirtualDeck/releases/latest';
 
-// Offres payantes : prix et liens de paiement (Lemon Squeezy / Paddle).
+// Offre payante : prix et liens de paiement (Lemon Squeezy / Paddle).
 // Un lien vide affiche « Bientôt disponible ».
 const PLANS = {
-  starter: { monthly: 2.99, yearly: 29.99, checkout: { monthly: '', yearly: '' } },
   pro: { monthly: 4.99, yearly: 49.99, checkout: { monthly: '', yearly: '' } },
-  studio: { monthly: 9.99, yearly: 99.99, checkout: { monthly: '', yearly: '' } },
 };
 
-// Contenu provisoire de chaque offre (clés de traduction ci-dessous).
+// Contenu provisoire de l'offre (clés de traduction ci-dessous).
 const PLAN_FEATURES = {
-  starter: ['pf.phone1', 'pf.allpc'],
-  pro: ['pf.phone3', 'pf.allpc', 'pf.support'],
-  studio: ['pf.phoneInf', 'pf.allpc', 'pf.support', 'pf.early'],
+  pro: ['pf.phoneInf', 'pf.allpc', 'pf.support'],
 };
 // ------------------------
 
@@ -70,22 +66,16 @@ const EN = {
   'plan.free.f2': 'Unlimited pages, templates and icons',
   'plan.free.f3': 'Updates included',
   'plan.free.cta': 'Download',
-  'plan.starter.name': 'Mobile',
-  'plan.pro.name': 'Pro',
-  'plan.studio.name': 'Studio',
-  'plan.popular': 'Most popular',
+  'plan.pro.name': 'Premium',
   'plan.soon': 'Coming soon',
   'plan.buy': 'Subscribe',
   'per.month': '/ month',
   'per.year': '/ year',
   'sub.yearly': 'That is {x} / month',
   'sub.monthly': 'Billed monthly',
-  'pf.phone1': 'Phone deck, 1 phone',
-  'pf.phone3': 'Phone deck, up to 3 phones',
   'pf.phoneInf': 'Phone deck, unlimited phones',
   'pf.allpc': 'Everything in Free',
   'pf.support': 'Priority support',
-  'pf.early': 'Early access to new features',
   'faq.title': 'Frequently asked questions',
   'faq.q1': 'Is VirtualDeck really free?',
   'faq.a1': 'Yes. Every feature on PC is free, with no time limit. Only the phone deck needs a subscription.',
@@ -110,12 +100,9 @@ const FR_EXTRA = {
   'per.year': '/ an',
   'sub.yearly': 'Soit {x} / mois',
   'sub.monthly': 'Facturé chaque mois',
-  'pf.phone1': 'Deck sur téléphone, 1 téléphone',
-  'pf.phone3': "Deck sur téléphone, jusqu'à 3 téléphones",
   'pf.phoneInf': 'Deck sur téléphone, téléphones illimités',
   'pf.allpc': "Tout ce qu'inclut l'offre Gratuite",
   'pf.support': 'Support prioritaire',
-  'pf.early': 'Accès anticipé aux nouveautés',
 };
 
 // French texts come from the HTML itself, read once at startup.
