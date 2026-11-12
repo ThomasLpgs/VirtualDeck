@@ -27,7 +27,7 @@ const EN = {
   'nav.faq': 'FAQ',
   'nav.compare': 'Comparison',
   'nav.download': 'Download',
-  'hero.badge': 'Version 1.13 · Windows 10 and 11',
+  'hero.badge': 'Version 1.18 · Windows 10 and 11',
   'hero.title': 'The free Stream Deck alternative.',
   'hero.lead': 'A keyboard shortcut opens a grid of buttons under your mouse. One click switches your OBS scene, plays an animation or a sound, turns on your lights or opens an app.',
   'hero.cta': 'Download for free',
