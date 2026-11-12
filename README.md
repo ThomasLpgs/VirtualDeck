@@ -5,7 +5,7 @@
 <h1 align="center">VirtualDeck</h1>
 
 <p align="center">
-  A virtual Stream Deck for Windows · Un Stream Deck virtuel pour Windows
+  A free Stream Deck alternative for Windows · L'alternative gratuite au Stream Deck pour Windows
 </p>
 
 <p align="center">

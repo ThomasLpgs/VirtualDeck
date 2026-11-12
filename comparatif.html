@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self' https://api.github.com; script-src 'self'; base-uri 'none'; form-action 'none'" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <title>Alternative gratuite au Stream Deck : VirtualDeck comparé à Elgato, Touch Portal et Macro Deck</title>
+  <meta name="description" content="Comparatif honnête : VirtualDeck, Stream Deck d'Elgato, Touch Portal et Macro Deck. Prix, deck sur l'écran du PC, téléphone, plugins. Lequel choisir pour ton stream ?" />
+  <link rel="icon" href="assets/icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <a class="brand" href="index.html">
+        <img src="assets/icon.png" alt="" width="28" height="28" />
+        <span>VirtualDeck</span>
+      </a>
+      <nav class="nav-links" aria-label="Navigation">
+        <a href="index.html#features" data-i18n="nav.features">Fonctionnalités</a>
+        <a href="index.html#phone" data-i18n="nav.phone">Téléphone</a>
+        <a href="index.html#pricing" data-i18n="nav.pricing">Tarifs</a>
+        <a href="comparatif.html" aria-current="page" data-i18n="nav.compare">Comparatif</a>
+        <a href="index.html#faq" data-i18n="nav.faq">FAQ</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="lang" type="button" id="lang-toggle" aria-label="Change language / Changer de langue">EN</button>
+        <a class="btn btn-primary btn-sm" href="index.html#download" data-i18n="nav.download">Télécharger</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero hero-compact">
+      <div class="container">
+        <p class="eyebrow" data-i18n="cmp.eyebrow">Comparatif</p>
+        <h1 class="h1-wide" data-i18n="cmp.title">VirtualDeck, Stream Deck, Touch Portal ou Macro Deck&#8239;?</h1>
+        <p class="lead" data-i18n="cmp.lead">Quatre façons de piloter ton stream avec des boutons. Voici ce qui les différencie, sans langue de bois, y compris quand un autre outil te conviendra mieux.</p>
+      </div>
+    </section>
+
+    <section class="section section-flush">
+      <div class="container">
+        <div class="table-wrap">
+          <table class="compare">
+            <thead>
+              <tr>
+                <th scope="col"></th>
+                <th scope="col" class="us">VirtualDeck</th>
+                <th scope="col" data-i18n="cmp.col.elgato">Stream Deck (Elgato)</th>
+                <th scope="col">Touch Portal</th>
+                <th scope="col">Macro Deck</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row" data-i18n="cmp.r1">Prix sur PC</th>
+                <td class="us" data-i18n="cmp.r1.vd">Gratuit, toutes les fonctions</td>
+                <td data-i18n="cmp.r1.el">Boîtier physique à acheter</td>
+                <td data-i18n="cmp.r1.tp">Gratuit, version Pro en achat unique (plugins, plus de boutons)</td>
+                <td data-i18n="cmp.r1.md">Gratuit et open source</td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="cmp.r2">Deck sur l'écran du PC</th>
+                <td class="us" data-i18n="cmp.r2.vd">Oui, gratuit : un raccourci l'ouvre sous ta souris</td>
+                <td data-i18n="cmp.r2.el">Virtual Stream Deck : demande un appareil Elgato compatible ou Stream Deck Mobile Pro</td>
+                <td data-i18n="cmp.r2.tp">Pensé pour un téléphone ou une tablette</td>
+                <td data-i18n="cmp.r2.md">Client web dans un navigateur</td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="cmp.r3">Sur le téléphone</th>
+                <td class="us" data-i18n="cmp.r3.vd">Dans le navigateur, sans appli, avec Premium</td>
+                <td data-i18n="cmp.r3.el">Appli Stream Deck Mobile : 6 touches gratuites, Pro payant</td>
+                <td data-i18n="cmp.r3.tp">Appli Android et iOS, Pro en achat unique</td>
+                <td data-i18n="cmp.r3.md">Client web gratuit, appli Companion en achat unique après 7 jours d'essai</td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="cmp.r4">Plugins</th>
+                <td class="us" data-i18n="cmp.r4.vd">Pas encore : intégrations incluses</td>
+                <td data-i18n="cmp.r4.el">Marketplace Elgato</td>
+                <td data-i18n="cmp.r4.tp">Oui, avec la version Pro</td>
+                <td data-i18n="cmp.r4.md">Store de plugins vérifiés</td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="cmp.r6">Compte</th>
+                <td class="us" data-i18n="cmp.r6.vd">Aucun, même pour Premium</td>
+                <td data-i18n="cmp.r6.el">Voir le site de l'éditeur</td>
+                <td data-i18n="cmp.r6.tp">Voir le site de l'éditeur</td>
+                <td data-i18n="cmp.r6.md">Connexion demandée pour accéder à l'appli</td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="cmp.r5">Systèmes</th>
+                <td class="us" data-i18n="cmp.r5.vd">Windows 10 et 11</td>
+                <td data-i18n="cmp.r5.el">Windows et macOS</td>
+                <td data-i18n="cmp.r5.tp">Voir le site de l'éditeur</td>
+                <td data-i18n="cmp.r5.md">Windows, macOS et Linux</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="hint" data-i18n="cmp.checked">Informations relevées en novembre 2026 sur les sites officiels. Elles peuvent avoir changé depuis : vérifie chez chaque éditeur.</p>
+      </div>
+    </section>
+
+    <section class="section section-tint">
+      <div class="container">
+        <p class="eyebrow" data-i18n="cmp.why.eyebrow">Pourquoi VirtualDeck</p>
+        <h2 data-i18n="cmp.why.title">Fait pour les streamers qui ne veulent pas de boîtier.</h2>
+        <div class="grid features">
+          <article class="card">
+            <h3 data-i18n="cmp.w1.t">Sous ta souris, même en jeu</h3>
+            <p data-i18n="cmp.w1.d">Un raccourci ouvre la grille là où tu es, par-dessus les jeux en plein écran fenêtré. Un clic à côté la ferme.</p>
+          </article>
+          <article class="card">
+            <h3 data-i18n="cmp.w2.t">Tout le PC est gratuit</h3>
+            <p data-i18n="cmp.w2.d">OBS, Streamlabs, sons, lumières, micro, volume par appli : rien n'est bridé sur PC. Seul le téléphone est Premium.</p>
+          </article>
+          <article class="card">
+            <h3 data-i18n="cmp.w3.t">Sans compte</h3>
+            <p data-i18n="cmp.w3.d">Pas d'inscription, ni pour l'appli ni pour Premium : une clé de licence reçue par e-mail suffit.</p>
+          </article>
+          <article class="card">
+            <h3 data-i18n="cmp.w4.t">L'état du live sur les boutons</h3>
+            <p data-i18n="cmp.w4.d">LIVE 1:02:03, REC, MUET : tu vois d'un coup d'œil ce qui tourne, sur le PC comme sur le téléphone.</p>
+          </article>
+          <article class="card">
+            <h3 data-i18n="cmp.w5.t">Le son de chaque appli</h3>
+            <p data-i18n="cmp.w5.d">Coupe Spotify, Discord ou ton jeu séparément, ou tous les micros du PC d'un coup.</p>
+          </article>
+          <article class="card">
+            <h3 data-i18n="cmp.w6.t">Tout reste chez toi</h3>
+            <p data-i18n="cmp.w6.d">Le téléphone passe par le wifi de la maison, jamais par internet. Chaque appui est signé.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container narrow">
+        <p class="eyebrow" data-i18n="cmp.other.eyebrow">En toute honnêteté</p>
+        <h2 data-i18n="cmp.other.title">Quand choisir autre chose</h2>
+        <ul class="plain">
+          <li data-i18n="cmp.o1">Tu veux de vrais boutons physiques à appuyer : un Stream Deck d'Elgato.</li>
+          <li data-i18n="cmp.o2">Tu es sur Mac ou Linux : Macro Deck tourne sur les trois systèmes, VirtualDeck seulement sur Windows.</li>
+          <li data-i18n="cmp.o3">Tu as besoin d'un plugin précis qui n'existe que chez un autre : leurs stores sont plus fournis.</li>
+        </ul>
+        <div class="cta-row cta-left">
+          <a class="btn btn-primary" href="index.html#download" data-i18n="cmp.cta">Essayer VirtualDeck gratuitement</a>
+          <a class="btn btn-ghost" href="index.html#faq" data-i18n="cmp.cta2">Lire la FAQ</a>
+        </div>
+        <p class="hint small" data-i18n="cmp.tm">Stream Deck est une marque d'Elgato (Corsair). Touch Portal et Macro Deck appartiennent à leurs éditeurs. VirtualDeck n'est affilié à aucun d'eux.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <span>© <span id="year"></span> VirtualDeck</span>
+      <span class="muted" data-i18n="footer.made">Fait en France</span>
+    </div>
+  </footer>
+</body>
+</html>
