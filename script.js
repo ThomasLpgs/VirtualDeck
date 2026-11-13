@@ -100,6 +100,8 @@ const EN = {
   'faq.a7': 'Yes, if the game runs in windowed fullscreen (or borderless). The shortcut opens the grid under your mouse; click outside or press Esc to close it.',
   'faq.q8': 'Does the phone work on mobile data or away from home?',
   'faq.a8': 'No. Your phone and PC must be on the same Wi-Fi. Nothing goes through the internet and no port is opened on your router.',
+  'faq.q12': 'The phone icon no longer opens',
+  'faq.a12': "Your PC's address has probably changed, for example after your router restarted. Scan the QR code again and add the page back to your home screen. To stop it happening again, reserve a fixed IP address for your PC in your router settings (\"DHCP reservation\" or \"static lease\").",
   'faq.q9': 'Does it work on Mac or Linux?',
   'faq.a9': 'Not yet: VirtualDeck runs on Windows 10 and 11 (64-bit). The phone deck works on both iPhone and Android.',
   'faq.q10': 'How is it different from an Elgato Stream Deck?',
