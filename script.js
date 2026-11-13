@@ -45,6 +45,8 @@ const EN = {
   'f.lights.d': 'Turn your lamps on, off or change their color, right on your home network.',
   'f.templates.t': 'Ready-made templates',
   'f.templates.d': 'Stream, chat, Discord, music, Teams, Zoom: one click adds a full deck.',
+  'f.widgets.t': 'Live widgets',
+  'f.widgets.d': 'Clock, CPU and RAM, PC or per-app volume with a bar, now playing with cover art and controls. On large keys spanning several cells, on screen and on your phone.',
   'f.vertical.t': 'Vertical format and 6 languages',
   'f.vertical.d': 'Works with Aitum Vertical for TikTok and Shorts. Over 2,000 icons, grids up to 8 × 6, full config export, one-click updates.',
   'phone.pill': 'Premium',
